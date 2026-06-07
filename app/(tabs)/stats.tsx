@@ -105,10 +105,7 @@ export default function StatsScreen() {
         {/* Header */}
         <View className="flex-row items-start justify-between px-4 pt-4 pb-5">
           <View>
-            <Text className="font-anton text-white text-3xl tracking-widest uppercase mb-1">
-              Command Center
-            </Text>
-            <Text className="font-mono text-text-muted text-xs tracking-widest uppercase">
+            <Text className="font-anton text-white text-3xl tracking-widest uppercase">
               Stats
             </Text>
           </View>

@@ -96,10 +96,9 @@ export default function TrainScreen() {
 
   const handleSetComplete = useCallback(
     (exerciseLocalId: string, setLocalId: string) => {
-      const nowComplete = toggleSetComplete(exerciseLocalId, setLocalId);
-      if (nowComplete) restTimer.start();
+      toggleSetComplete(exerciseLocalId, setLocalId);
     },
-    [toggleSetComplete, restTimer]
+    [toggleSetComplete]
   );
 
   const handleFinish = useCallback(() => {
@@ -180,10 +179,7 @@ export default function TrainScreen() {
       <SafeAreaView className="flex-1 bg-obsidian">
         <View className="flex-row items-start justify-between px-4 pt-4">
           <View>
-            <Text className="font-anton text-white text-3xl tracking-widest uppercase mb-1">
-              The Workspace
-            </Text>
-            <Text className="font-mono text-text-muted text-xs tracking-widest uppercase mb-8">
+            <Text className="font-anton text-white text-3xl tracking-widest uppercase mb-8">
               Train
             </Text>
           </View>

@@ -56,11 +56,8 @@ export default function ProgramsScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 pt-4 pb-5">
         <View>
-          <Text className="font-anton text-white text-3xl tracking-widest uppercase mb-1">
+          <Text className="font-anton text-white text-3xl tracking-widest uppercase">
             Programs
-          </Text>
-          <Text className="font-mono text-text-muted text-xs tracking-widest uppercase">
-            Templates
           </Text>
         </View>
         <TouchableOpacity

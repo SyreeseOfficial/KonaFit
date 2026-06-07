@@ -15,9 +15,6 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools }: Props) {
     <View className="flex-row items-start justify-between px-4 pt-2 pb-3 border-b border-surface-2">
       <View>
         <Text className="font-anton text-white text-3xl tracking-widest uppercase">
-          The Workspace
-        </Text>
-        <Text className="font-mono text-text-muted text-xs tracking-widest uppercase">
           Train
         </Text>
       </View>

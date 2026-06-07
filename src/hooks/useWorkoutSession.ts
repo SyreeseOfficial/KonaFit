@@ -133,11 +133,16 @@ export function useWorkoutSession() {
       if (!exercise?.dbId) return;
       const setNumber = exercise.sets.length + 1;
       const dbId = await createLoggedSet(exercise.dbId, setNumber);
+      // Copy lbs/reps/rpe from the last set so the user doesn't retype them
+      const lastSet = exercise.sets[exercise.sets.length - 1];
+      const prefill = lastSet
+        ? { weightLbs: lastSet.weightLbs, reps: lastSet.reps, rpe: lastSet.rpe }
+        : {};
       updateSession((prev) => ({
         ...prev,
         exercises: prev.exercises.map((e) =>
           e.localId === exerciseLocalId
-            ? { ...e, sets: [...e.sets, { ...defaultSet(setNumber), dbId }] }
+            ? { ...e, sets: [...e.sets, { ...defaultSet(setNumber), dbId, ...prefill }] }
             : e
         ),
       }));
