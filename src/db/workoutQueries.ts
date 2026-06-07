@@ -150,24 +150,29 @@ export async function getGhostSets(
 
 export async function createCustomExercise(
   name: string,
-  muscleGroup: string,
-  equipmentType: string
+  muscleGroups: string[],
+  equipmentTypes: string[],
+  targetType: string
 ): Promise<Exercise> {
   const db = await getDatabase();
+  const muscle_group = muscleGroups.join(", ");
+  const equipment_type = equipmentTypes.join(", ");
   const result = await db.runAsync(
-    "INSERT INTO exercises (name, muscle_group, equipment_type) VALUES (?, ?, ?)",
-    [name.trim(), muscleGroup, equipmentType]
+    "INSERT INTO exercises (name, muscle_group, equipment_type, target_type) VALUES (?, ?, ?, ?)",
+    [name.trim(), muscle_group, equipment_type, targetType]
   );
-  // Also insert into FTS index
-  await db.runAsync(
-    "INSERT INTO exercises_fts (rowid, name) VALUES (?, ?)",
-    [result.lastInsertRowId, name.trim()]
-  );
+  try {
+    await db.runAsync(
+      "INSERT INTO exercises_fts (rowid, name) VALUES (?, ?)",
+      [result.lastInsertRowId, name.trim()]
+    );
+  } catch { /* FTS optional */ }
   return {
     id: result.lastInsertRowId,
     name: name.trim(),
-    muscle_group: muscleGroup,
-    equipment_type: equipmentType,
+    muscle_group,
+    equipment_type,
+    target_type: targetType,
     use_count: 0,
   };
 }
@@ -186,11 +191,11 @@ export async function searchExercises(
     params.push(query.trim());
   }
   if (muscleGroup) {
-    conditions.push("muscle_group = ?");
+    conditions.push("LOWER(muscle_group) LIKE '%' || LOWER(?) || '%'");
     params.push(muscleGroup);
   }
   if (equipment) {
-    conditions.push("LOWER(equipment_type) = LOWER(?)");
+    conditions.push("LOWER(equipment_type) LIKE '%' || LOWER(?) || '%'");
     params.push(equipment);
   }
 

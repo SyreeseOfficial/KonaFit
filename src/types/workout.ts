@@ -37,7 +37,8 @@ export type ActiveSession = {
 export type Exercise = {
   id: number;
   name: string;
-  muscle_group: string;
-  equipment_type: string;
+  muscle_group: string;   // comma-separated, e.g. "Chest, Front Delts"
+  equipment_type: string; // comma-separated, e.g. "Barbell, Dumbbell"
+  target_type: string;    // 'reps' | 'time' | 'distance' | 'weight' | 'calories'
   use_count: number;
 };

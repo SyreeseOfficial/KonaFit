@@ -18,8 +18,30 @@ import type { Exercise } from "../../types/workout";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MUSCLE_GROUPS = ["Chest", "Back", "Shoulders", "Arms", "Legs", "Core", "Glutes", "Full Body"];
-const EQUIPMENT_TYPES = ["Barbell", "Dumbbell", "Cable", "Machine", "Bodyweight", "Kettlebell", "Bands", "Other"];
+const MUSCLE_GROUPS = [
+  "Chest", "Front Delts", "Mid Delts", "Rear Delts",
+  "Biceps", "Forearms", "Triceps", "Lats", "Upper Back",
+  "Lower Back", "Abs", "Neck", "Glutes", "Quads",
+  "Hamstrings", "Adductors", "Abductors", "Calves",
+  "Olympic", "Full Body", "Other",
+];
+
+const EQUIPMENT_TYPES = [
+  "Barbell", "Dumbbell", "Kettlebell", "Bodyweight",
+  "Cable", "Machine", "Smith Machine", "Safety Bar",
+  "Weight Plates", "Resistance Bands", "Cardio",
+  "Battle Rope", "Medicine Ball", "Suspension Trainer",
+  "Gymnastic Rings", "Parallettes", "Foam Roller",
+  "Boxes", "Collars", "Other",
+];
+
+const TARGET_TYPES = [
+  { key: "reps",     label: "Reps" },
+  { key: "time",     label: "Time" },
+  { key: "distance", label: "Distance" },
+  { key: "weight",   label: "Weight" },
+  { key: "calories", label: "Calories" },
+];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -163,8 +185,9 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
 
   // Create form
   const [createName, setCreateName] = useState("");
-  const [createMuscle, setCreateMuscle] = useState("");
-  const [createEquipment, setCreateEquipment] = useState("");
+  const [createMuscles, setCreateMuscles] = useState<string[]>([]);
+  const [createEquipments, setCreateEquipments] = useState<string[]>([]);
+  const [createTargetType, setCreateTargetType] = useState("reps");
   const [creating, setCreating] = useState(false);
 
   const runSearch = useCallback(async (q: string, mg: string, eq: string) => {
@@ -192,16 +215,32 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
 
   const openCreate = () => {
     setCreateName(query.trim());
-    setCreateMuscle("");
-    setCreateEquipment("");
+    setCreateMuscles([]);
+    setCreateEquipments([]);
+    setCreateTargetType("reps");
     setMode("create");
   };
 
+  const toggleMuscle = (mg: string) =>
+    setCreateMuscles((prev) =>
+      prev.includes(mg) ? prev.filter((m) => m !== mg) : [...prev, mg]
+    );
+
+  const toggleEquipment = (eq: string) =>
+    setCreateEquipments((prev) =>
+      prev.includes(eq) ? prev.filter((e) => e !== eq) : [...prev, eq]
+    );
+
   const handleCreate = async () => {
-    if (!createName.trim() || !createMuscle || !createEquipment || creating) return;
+    if (!createName.trim() || createMuscles.length === 0 || createEquipments.length === 0 || creating) return;
     setCreating(true);
     try {
-      const exercise = await createCustomExercise(createName, createMuscle, createEquipment.toLowerCase());
+      const exercise = await createCustomExercise(
+        createName,
+        createMuscles,
+        createEquipments,
+        createTargetType
+      );
       onSelect(exercise);
       onClose();
     } finally {
@@ -209,7 +248,10 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
     }
   };
 
-  const canCreate = createName.trim().length > 0 && createMuscle !== "" && createEquipment !== "";
+  const canCreate =
+    createName.trim().length > 0 &&
+    createMuscles.length > 0 &&
+    createEquipments.length > 0;
   const sectionLabel = query || muscleFilter || equipFilter ? "Results" : "Recent Exercise";
 
   return (
@@ -371,53 +413,86 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
                       />
                     </View>
 
-                    {/* Muscle group */}
+                    {/* Target Type */}
                     <View>
                       <Text className="font-mono text-text-muted text-xs tracking-widest uppercase mb-2">
-                        Muscle Group *
+                        Target Type
                       </Text>
                       <View className="flex-row flex-wrap gap-2">
-                        {MUSCLE_GROUPS.map((mg) => (
+                        {TARGET_TYPES.map((t) => (
                           <TouchableOpacity
-                            key={mg}
-                            onPress={() => setCreateMuscle(mg)}
+                            key={t.key}
+                            onPress={() => setCreateTargetType(t.key)}
                             className={`px-3 py-2 border ${
-                              createMuscle === mg
+                              createTargetType === t.key
                                 ? "bg-crimson border-crimson"
                                 : "bg-surface-2 border-surface-3"
                             }`}
                             activeOpacity={0.7}
                           >
-                            <Text className={`font-montserrat-semibold text-xs ${createMuscle === mg ? "text-white" : "text-text-secondary"}`}>
-                              {mg}
+                            <Text className={`font-montserrat-semibold text-xs ${createTargetType === t.key ? "text-white" : "text-text-secondary"}`}>
+                              {t.label}
                             </Text>
                           </TouchableOpacity>
                         ))}
                       </View>
                     </View>
 
-                    {/* Equipment */}
+                    {/* Muscle Groups — multi-select */}
                     <View>
-                      <Text className="font-mono text-text-muted text-xs tracking-widest uppercase mb-2">
-                        Equipment *
-                      </Text>
+                      <View className="flex-row items-center justify-between mb-2">
+                        <Text className="font-mono text-text-muted text-xs tracking-widest uppercase">
+                          Muscle Groups *
+                        </Text>
+                        {createMuscles.length > 0 && (
+                          <Text className="font-mono text-crimson text-xs">{createMuscles.length} selected</Text>
+                        )}
+                      </View>
                       <View className="flex-row flex-wrap gap-2">
-                        {EQUIPMENT_TYPES.map((eq) => (
-                          <TouchableOpacity
-                            key={eq}
-                            onPress={() => setCreateEquipment(eq)}
-                            className={`px-3 py-2 border ${
-                              createEquipment === eq
-                                ? "bg-crimson border-crimson"
-                                : "bg-surface-2 border-surface-3"
-                            }`}
-                            activeOpacity={0.7}
-                          >
-                            <Text className={`font-montserrat-semibold text-xs ${createEquipment === eq ? "text-white" : "text-text-secondary"}`}>
-                              {eq}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
+                        {MUSCLE_GROUPS.map((mg) => {
+                          const selected = createMuscles.includes(mg);
+                          return (
+                            <TouchableOpacity
+                              key={mg}
+                              onPress={() => toggleMuscle(mg)}
+                              className={`px-3 py-2 border ${selected ? "bg-crimson border-crimson" : "bg-surface-2 border-surface-3"}`}
+                              activeOpacity={0.7}
+                            >
+                              <Text className={`font-montserrat-semibold text-xs ${selected ? "text-white" : "text-text-secondary"}`}>
+                                {mg}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+
+                    {/* Equipment — multi-select */}
+                    <View>
+                      <View className="flex-row items-center justify-between mb-2">
+                        <Text className="font-mono text-text-muted text-xs tracking-widest uppercase">
+                          Equipment *
+                        </Text>
+                        {createEquipments.length > 0 && (
+                          <Text className="font-mono text-crimson text-xs">{createEquipments.length} selected</Text>
+                        )}
+                      </View>
+                      <View className="flex-row flex-wrap gap-2">
+                        {EQUIPMENT_TYPES.map((eq) => {
+                          const selected = createEquipments.includes(eq);
+                          return (
+                            <TouchableOpacity
+                              key={eq}
+                              onPress={() => toggleEquipment(eq)}
+                              className={`px-3 py-2 border ${selected ? "bg-crimson border-crimson" : "bg-surface-2 border-surface-3"}`}
+                              activeOpacity={0.7}
+                            >
+                              <Text className={`font-montserrat-semibold text-xs ${selected ? "text-white" : "text-text-secondary"}`}>
+                                {eq}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
                       </View>
                     </View>
                   </ScrollView>

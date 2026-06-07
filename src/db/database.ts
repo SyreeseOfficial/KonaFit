@@ -110,6 +110,15 @@ export async function initializeDatabase(): Promise<void> {
     );
   `);
 
+  // Migration: add target_type column if it doesn't exist yet
+  try {
+    await database.execAsync(
+      `ALTER TABLE exercises ADD COLUMN target_type TEXT NOT NULL DEFAULT 'reps'`
+    );
+  } catch {
+    // Column already exists — safe to ignore
+  }
+
   await seedDefaultExercises(database);
 }
 
