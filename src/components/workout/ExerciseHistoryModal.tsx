@@ -92,7 +92,7 @@ export function ExerciseHistoryModal({ visible, exerciseId, exerciseName, onClos
               </TouchableOpacity>
             </View>
 
-            {loading ? (
+            {loading || prs === null ? (
               <ActivityIndicator color="#FF0000" style={{ marginVertical: 32 }} />
             ) : noPRs ? (
               <View className="bg-surface-2 p-6 items-center">
