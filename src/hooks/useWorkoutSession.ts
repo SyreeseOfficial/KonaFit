@@ -12,6 +12,7 @@ import {
   getGhostSets,
   updateLoggedExerciseNotes,
 } from "../db/workoutQueries";
+import { getProgramDayExercises } from "../db/programQueries";
 
 const SESSION_KEY = "@kinetic_active_session";
 let localIdCounter = 0;
@@ -275,6 +276,41 @@ export function useWorkoutSession() {
     [updateSession]
   );
 
+  const launchFromProgramDay = useCallback(async (programDayId: number) => {
+    const programExercises = await getProgramDayExercises(programDayId);
+    const workoutId = await createWorkout();
+
+    const exercises: ActiveExercise[] = await Promise.all(
+      programExercises.map(async (pe, orderIndex) => {
+        const dbId = await createLoggedExercise(
+          workoutId, pe.exerciseId, pe.exerciseName, orderIndex
+        );
+        const setCount = pe.targetSets ?? 3;
+        const sets: ActiveSet[] = [];
+        for (let i = 1; i <= setCount; i++) {
+          const setDbId = await createLoggedSet(dbId, i);
+          sets.push({ ...defaultSet(i), dbId: setDbId });
+        }
+        const ghost = await getGhostSets(pe.exerciseId, workoutId);
+        return {
+          localId: uid(),
+          dbId,
+          exerciseId: pe.exerciseId,
+          exerciseName: pe.exerciseName,
+          muscleGroup: pe.muscleGroup,
+          orderIndex,
+          notes: "",
+          sets,
+          ghostSets: ghost,
+        };
+      })
+    );
+
+    const newSession: ActiveSession = { workoutId, startedAt: Date.now(), exercises };
+    setSession(newSession);
+    await saveToStorage(newSession);
+  }, []);
+
   return {
     session,
     startWorkout,
@@ -289,5 +325,6 @@ export function useWorkoutSession() {
     toggleSetWarmup,
     updateExerciseNotes,
     removeExercise,
+    launchFromProgramDay,
   };
 }

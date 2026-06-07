@@ -1,0 +1,210 @@
+import { getDatabase } from "./database";
+import type { Program, ProgramDay, ProgramExercise, ProgramSummary } from "../types/program";
+
+// ─── Programs ─────────────────────────────────────────────────────────────────
+
+export async function getPrograms(): Promise<ProgramSummary[]> {
+  const db = await getDatabase();
+  return db.getAllAsync<ProgramSummary>(
+    `SELECT
+       p.id, p.name, p.description, p.duration_weeks as durationWeeks, p.updated_at as updatedAt,
+       COUNT(DISTINCT pd.id) as dayCount,
+       COUNT(DISTINCT pe.id) as exerciseCount
+     FROM programs p
+     LEFT JOIN program_days pd ON pd.program_id = p.id
+     LEFT JOIN program_exercises pe ON pe.program_day_id = pd.id
+     GROUP BY p.id
+     ORDER BY p.updated_at DESC`
+  );
+}
+
+export async function createProgram(
+  name: string,
+  description?: string,
+  durationWeeks?: number
+): Promise<number> {
+  const db = await getDatabase();
+  const result = await db.runAsync(
+    "INSERT INTO programs (name, description, duration_weeks) VALUES (?, ?, ?)",
+    [name.trim(), description?.trim() ?? null, durationWeeks ?? null]
+  );
+  return result.lastInsertRowId;
+}
+
+export async function updateProgram(
+  id: number,
+  patch: { name?: string; description?: string; durationWeeks?: number }
+): Promise<void> {
+  const db = await getDatabase();
+  const sets: string[] = ["updated_at = unixepoch()"];
+  const args: (string | number | null)[] = [];
+  if (patch.name !== undefined) { sets.push("name = ?"); args.push(patch.name.trim()); }
+  if (patch.description !== undefined) { sets.push("description = ?"); args.push(patch.description.trim() || null); }
+  if (patch.durationWeeks !== undefined) { sets.push("duration_weeks = ?"); args.push(patch.durationWeeks); }
+  args.push(id);
+  await db.runAsync(`UPDATE programs SET ${sets.join(", ")} WHERE id = ?`, args);
+}
+
+export async function deleteProgram(id: number): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("DELETE FROM programs WHERE id = ?", [id]);
+}
+
+export async function cloneProgram(id: number): Promise<number> {
+  const db = await getDatabase();
+  const original = await getProgramWithDays(id);
+  if (!original) throw new Error("Program not found");
+
+  const newId = await createProgram(
+    `${original.name} (Copy)`,
+    original.description ?? undefined,
+    original.durationWeeks ?? undefined
+  );
+
+  for (const day of original.days) {
+    const newDayId = await createProgramDay(newId, day.name, day.orderIndex);
+    for (const ex of day.exercises) {
+      await addProgramExercise(
+        newDayId, ex.exerciseId, ex.exerciseName, ex.muscleGroup,
+        ex.orderIndex, ex.targetSets ?? undefined,
+        ex.targetReps ?? undefined, ex.targetRpe ?? undefined
+      );
+    }
+  }
+  return newId;
+}
+
+// ─── Program with days (full detail load) ─────────────────────────────────────
+
+export async function getProgramWithDays(id: number): Promise<Program | null> {
+  const db = await getDatabase();
+
+  const prog = await db.getFirstAsync<{
+    id: number; name: string; description: string | null;
+    duration_weeks: number | null; created_at: number; updated_at: number;
+  }>("SELECT * FROM programs WHERE id = ?", [id]);
+  if (!prog) return null;
+
+  const dayRows = await db.getAllAsync<{
+    id: number; program_id: number; name: string; order_index: number;
+  }>("SELECT * FROM program_days WHERE program_id = ? ORDER BY order_index ASC", [id]);
+
+  const days: ProgramDay[] = await Promise.all(
+    dayRows.map(async (d) => {
+      const exercises = await getProgramDayExercises(d.id);
+      return {
+        id: d.id,
+        programId: d.program_id,
+        name: d.name,
+        orderIndex: d.order_index,
+        exercises,
+      };
+    })
+  );
+
+  return {
+    id: prog.id,
+    name: prog.name,
+    description: prog.description,
+    durationWeeks: prog.duration_weeks,
+    createdAt: prog.created_at,
+    updatedAt: prog.updated_at,
+    days,
+  };
+}
+
+// ─── Days ─────────────────────────────────────────────────────────────────────
+
+export async function createProgramDay(
+  programId: number,
+  name: string,
+  orderIndex: number
+): Promise<number> {
+  const db = await getDatabase();
+  const result = await db.runAsync(
+    "INSERT INTO program_days (program_id, name, order_index) VALUES (?, ?, ?)",
+    [programId, name.trim(), orderIndex]
+  );
+  await db.runAsync("UPDATE programs SET updated_at = unixepoch() WHERE id = ?", [programId]);
+  return result.lastInsertRowId;
+}
+
+export async function updateProgramDay(id: number, name: string): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("UPDATE program_days SET name = ? WHERE id = ?", [name.trim(), id]);
+}
+
+export async function deleteProgramDay(id: number): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("DELETE FROM program_days WHERE id = ?", [id]);
+}
+
+// ─── Program exercises ────────────────────────────────────────────────────────
+
+export async function getProgramDayExercises(dayId: number): Promise<ProgramExercise[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{
+    id: number; program_day_id: number; exercise_id: number;
+    exercise_name: string; muscle_group: string; order_index: number;
+    target_sets: number | null; target_reps: string | null; target_rpe: number | null;
+  }>(
+    `SELECT pe.*, e.muscle_group
+     FROM program_exercises pe
+     JOIN exercises e ON pe.exercise_id = e.id
+     WHERE pe.program_day_id = ?
+     ORDER BY pe.order_index ASC`,
+    [dayId]
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    programDayId: r.program_day_id,
+    exerciseId: r.exercise_id,
+    exerciseName: r.exercise_name,
+    muscleGroup: r.muscle_group,
+    orderIndex: r.order_index,
+    targetSets: r.target_sets,
+    targetReps: r.target_reps,
+    targetRpe: r.target_rpe,
+  }));
+}
+
+export async function addProgramExercise(
+  programDayId: number,
+  exerciseId: number,
+  exerciseName: string,
+  muscleGroup: string,
+  orderIndex: number,
+  targetSets?: number,
+  targetReps?: string,
+  targetRpe?: number
+): Promise<number> {
+  const db = await getDatabase();
+  const result = await db.runAsync(
+    `INSERT INTO program_exercises
+       (program_day_id, exercise_id, exercise_name, order_index, target_sets, target_reps, target_rpe)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [programDayId, exerciseId, exerciseName, orderIndex,
+     targetSets ?? null, targetReps ?? null, targetRpe ?? null]
+  );
+  return result.lastInsertRowId;
+}
+
+export async function updateProgramExercise(
+  id: number,
+  patch: { targetSets?: number | null; targetReps?: string | null; targetRpe?: number | null }
+): Promise<void> {
+  const db = await getDatabase();
+  const sets: string[] = [];
+  const args: (number | string | null)[] = [];
+  if ("targetSets" in patch) { sets.push("target_sets = ?"); args.push(patch.targetSets ?? null); }
+  if ("targetReps" in patch) { sets.push("target_reps = ?"); args.push(patch.targetReps ?? null); }
+  if ("targetRpe" in patch) { sets.push("target_rpe = ?"); args.push(patch.targetRpe ?? null); }
+  if (sets.length === 0) return;
+  args.push(id);
+  await db.runAsync(`UPDATE program_exercises SET ${sets.join(", ")} WHERE id = ?`, args);
+}
+
+export async function deleteProgramExercise(id: number): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("DELETE FROM program_exercises WHERE id = ?", [id]);
+}

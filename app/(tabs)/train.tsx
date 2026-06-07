@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus } from "lucide-react-native";
+import { useLocalSearchParams, router } from "expo-router";
 import { useWorkoutSession, loadCachedSession } from "../../src/hooks/useWorkoutSession";
 import { useRestTimer } from "../../src/hooks/useRestTimer";
 import { WorkspaceHeader } from "../../src/components/workout/WorkspaceHeader";
@@ -33,7 +34,11 @@ export default function TrainScreen() {
     toggleSetWarmup,
     updateExerciseNotes,
     removeExercise,
+    launchFromProgramDay,
   } = useWorkoutSession();
+
+  const { programDayId } = useLocalSearchParams<{ programDayId?: string }>();
+  const launchedDayRef = useRef<string | null>(null);
 
   const restTimer = useRestTimer();
   const [exerciseSheetOpen, setExerciseSheetOpen] = useState(false);
@@ -49,6 +54,36 @@ export default function TrainScreen() {
       }
     });
   }, []);
+
+  // Handle launch from Programs tab
+  useEffect(() => {
+    if (!programDayId || launchedDayRef.current === programDayId) return;
+    launchedDayRef.current = programDayId;
+    router.setParams({ programDayId: "" });
+
+    const doLaunch = async () => {
+      if (session) {
+        Alert.alert(
+          "Active Workout",
+          "You have a workout in progress. Starting a new one will discard it.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Discard & Launch",
+              style: "destructive",
+              onPress: async () => {
+                await discardWorkout();
+                await launchFromProgramDay(parseInt(programDayId, 10));
+              },
+            },
+          ]
+        );
+      } else {
+        await launchFromProgramDay(parseInt(programDayId, 10));
+      }
+    };
+    doLaunch();
+  }, [programDayId]);
 
   const handleSelectExercise = useCallback(
     async (exercise: Exercise) => {
