@@ -43,6 +43,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="tools" options={{ presentation: "modal" }} />
+        <Stack.Screen name="workout/[id]" />
       </Stack>
     </>
   );

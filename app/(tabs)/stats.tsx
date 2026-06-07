@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { ScrollView, View, Text, RefreshControl, TouchableOpacity } from "react-native";
+import { ScrollView, View, Text, RefreshControl, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Calculator } from "lucide-react-native";
+import { Calculator, Download } from "lucide-react-native";
 import {
   getTotalLifted,
   getWorkoutCount,
@@ -13,6 +13,8 @@ import {
   getVolumeByMuscle,
   type VolumeByMuscle,
 } from "../../src/db/statsQueries";
+import { getWorkoutHistory, getAllWorkoutDataForExport, type WorkoutSummary } from "../../src/db/historyQueries";
+import { exportCsvAndShare } from "../../src/utils/exportUtils";
 import { StatsGrid } from "../../src/components/stats/StatsGrid";
 import { HabitCalendar } from "../../src/components/stats/HabitCalendar";
 import { OneRMChart } from "../../src/components/stats/OneRMChart";
@@ -20,6 +22,7 @@ import { VolumeChart } from "../../src/components/stats/VolumeChart";
 import { MuscleHeatmap } from "../../src/components/stats/MuscleHeatmap";
 import { LifestyleLogger } from "../../src/components/stats/LifestyleLogger";
 import { SectionHeader } from "../../src/components/stats/SectionHeader";
+import { WorkoutHistoryList } from "../../src/components/stats/WorkoutHistoryList";
 
 type StatsData = {
   totalLiftedLbs: number;
@@ -28,16 +31,18 @@ type StatsData = {
   bodyweightLbs: number | null;
   workoutDays: Set<string>;
   volumeByMuscle: VolumeByMuscle[];
+  recentWorkouts: WorkoutSummary[];
 };
 
 async function loadStats(): Promise<StatsData> {
-  const [total, count, dates, bw, days, vol] = await Promise.all([
+  const [total, count, dates, bw, days, vol, recent] = await Promise.all([
     getTotalLifted(),
     getWorkoutCount(),
     getWorkoutDatesForStreak(),
     getLatestBodyweight(),
     getWorkoutDays(91),
     getVolumeByMuscle(30),
+    getWorkoutHistory(10),
   ]);
   return {
     totalLiftedLbs: total,
@@ -46,6 +51,7 @@ async function loadStats(): Promise<StatsData> {
     bodyweightLbs: bw,
     workoutDays: days,
     volumeByMuscle: vol,
+    recentWorkouts: recent,
   };
 }
 
@@ -67,6 +73,19 @@ export default function StatsScreen() {
 
   useEffect(() => {
     refresh();
+  }, []);
+
+  const handleExportCsv = useCallback(async () => {
+    try {
+      const rows = await getAllWorkoutDataForExport();
+      if (rows.length === 0) {
+        Alert.alert("No Data", "Finish at least one workout before exporting.");
+        return;
+      }
+      await exportCsvAndShare(rows);
+    } catch (e) {
+      Alert.alert("Export Failed", String(e));
+    }
   }, []);
 
   return (
@@ -93,14 +112,18 @@ export default function StatsScreen() {
               Stats
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={() => router.push({ pathname: "/tools", params: { tab: "percent" } })}
-            hitSlop={8}
-            activeOpacity={0.7}
-            className="mt-1"
-          >
-            <Calculator size={20} color="#606060" />
-          </TouchableOpacity>
+          <View className="flex-row items-center gap-4 mt-1">
+            <TouchableOpacity onPress={handleExportCsv} hitSlop={8} activeOpacity={0.7}>
+              <Download size={20} color="#606060" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: "/tools", params: { tab: "percent" } })}
+              hitSlop={8}
+              activeOpacity={0.7}
+            >
+              <Calculator size={20} color="#606060" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Stats Grid */}
@@ -137,6 +160,12 @@ export default function StatsScreen() {
           <View className="bg-surface p-4">
             <HabitCalendar workoutDays={stats?.workoutDays ?? new Set()} />
           </View>
+        </View>
+
+        {/* Workout History */}
+        <View className="px-4 mb-6">
+          <SectionHeader title="History" subtitle="Recent workouts" />
+          <WorkoutHistoryList workouts={stats?.recentWorkouts ?? []} />
         </View>
 
         {/* Lifestyle Logger */}
