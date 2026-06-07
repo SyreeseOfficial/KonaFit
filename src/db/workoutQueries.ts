@@ -156,18 +156,31 @@ export async function createCustomExercise(
   };
 }
 
-export async function searchExercises(query: string): Promise<Exercise[]> {
+export async function searchExercises(
+  query: string,
+  muscleGroup?: string,
+  equipment?: string
+): Promise<Exercise[]> {
   const db = await getDatabase();
-  if (query.trim() === "") {
-    return db.getAllAsync<Exercise>(
-      "SELECT * FROM exercises ORDER BY use_count DESC, name ASC LIMIT 30"
-    );
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
+
+  if (query.trim()) {
+    conditions.push("LOWER(name) LIKE '%' || LOWER(?) || '%'");
+    params.push(query.trim());
   }
+  if (muscleGroup) {
+    conditions.push("muscle_group = ?");
+    params.push(muscleGroup);
+  }
+  if (equipment) {
+    conditions.push("LOWER(equipment_type) = LOWER(?)");
+    params.push(equipment);
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   return db.getAllAsync<Exercise>(
-    `SELECT * FROM exercises
-     WHERE LOWER(name) LIKE '%' || LOWER(?) || '%'
-     ORDER BY use_count DESC, name ASC
-     LIMIT 30`,
-    [query.trim()]
+    `SELECT * FROM exercises ${where} ORDER BY use_count DESC, name ASC LIMIT 50`,
+    params
   );
 }

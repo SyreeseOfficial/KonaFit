@@ -12,12 +12,138 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Search, X, Plus, ChevronLeft } from "lucide-react-native";
+import { Search, X, ChevronDown, ChevronLeft } from "lucide-react-native";
 import { searchExercises, createCustomExercise } from "../../db/workoutQueries";
 import type { Exercise } from "../../types/workout";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const MUSCLE_GROUPS = ["Chest", "Back", "Shoulders", "Arms", "Legs", "Core", "Glutes", "Full Body"];
 const EQUIPMENT_TYPES = ["Barbell", "Dumbbell", "Cable", "Machine", "Bodyweight", "Kettlebell", "Bands", "Other"];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getInitials(name: string): string {
+  const words = name.trim().split(/\s+/);
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+}
+
+// ─── Filter Picker ────────────────────────────────────────────────────────────
+
+function FilterPicker({
+  label,
+  options,
+  value,
+  onSelect,
+}: {
+  label: string;
+  options: string[];
+  value: string;
+  onSelect: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const active = value !== "";
+
+  return (
+    <>
+      <TouchableOpacity
+        onPress={() => setOpen(true)}
+        className={`flex-1 flex-row items-center justify-center gap-1.5 py-2 border ${
+          active ? "border-crimson bg-surface-2" : "border-surface-3 bg-surface-2"
+        }`}
+        activeOpacity={0.7}
+      >
+        <Text
+          className={`font-montserrat-semibold text-xs tracking-wider ${
+            active ? "text-crimson" : "text-text-secondary"
+          }`}
+          numberOfLines={1}
+        >
+          {active ? value : label}
+        </Text>
+        <ChevronDown size={12} color={active ? "#FF0000" : "#A0A0A0"} />
+      </TouchableOpacity>
+
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable className="flex-1 bg-black/70 justify-center px-8" onPress={() => setOpen(false)}>
+          <Pressable>
+            <View className="bg-surface-2">
+              <View className="flex-row items-center justify-between px-4 py-3 border-b border-surface-3">
+                <Text className="font-montserrat-bold text-white text-xs tracking-widest uppercase">
+                  {label}
+                </Text>
+                <TouchableOpacity onPress={() => setOpen(false)} hitSlop={8}>
+                  <X size={16} color="#606060" />
+                </TouchableOpacity>
+              </View>
+              {/* Clear option */}
+              <TouchableOpacity
+                onPress={() => { onSelect(""); setOpen(false); }}
+                className="px-4 py-3 border-b border-surface-3"
+                activeOpacity={0.7}
+              >
+                <Text className={`font-montserrat text-sm ${value === "" ? "text-crimson" : "text-text-muted"}`}>
+                  All
+                </Text>
+              </TouchableOpacity>
+              {options.map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  onPress={() => { onSelect(opt); setOpen(false); }}
+                  className="px-4 py-3 border-b border-surface-3"
+                  activeOpacity={0.7}
+                >
+                  <Text className={`font-montserrat text-sm ${value === opt ? "text-crimson" : "text-white"}`}>
+                    {opt}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
+
+// ─── Exercise Row ─────────────────────────────────────────────────────────────
+
+function ExerciseRow({ item, onPress }: { item: Exercise; onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      className="flex-row items-center px-4 py-3 border-b border-surface-2"
+      activeOpacity={0.7}
+    >
+      {/* Initials avatar */}
+      <View className="w-12 h-12 bg-surface-3 items-center justify-center mr-3 flex-shrink-0">
+        <Text className="font-montserrat-bold text-text-secondary text-sm">
+          {getInitials(item.name)}
+        </Text>
+      </View>
+
+      {/* Name + meta */}
+      <View className="flex-1">
+        <Text className="font-montserrat-semibold text-white text-sm mb-0.5" numberOfLines={1}>
+          {item.name}
+        </Text>
+        <Text className="font-mono text-text-muted text-xs tracking-wider">
+          {item.muscle_group} · {item.equipment_type}
+        </Text>
+      </View>
+
+      {/* Use count */}
+      {item.use_count > 0 && (
+        <View className="items-end ml-3">
+          <Text className="font-mono text-text-muted text-xs">{item.use_count} times</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 type Mode = "search" | "create";
 
@@ -30,19 +156,21 @@ type Props = {
 export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
   const [mode, setMode] = useState<Mode>("search");
   const [query, setQuery] = useState("");
+  const [muscleFilter, setMuscleFilter] = useState("");
+  const [equipFilter, setEquipFilter] = useState("");
   const [results, setResults] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Create form state
+  // Create form
   const [createName, setCreateName] = useState("");
   const [createMuscle, setCreateMuscle] = useState("");
   const [createEquipment, setCreateEquipment] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const runSearch = useCallback(async (q: string) => {
+  const runSearch = useCallback(async (q: string, mg: string, eq: string) => {
     setLoading(true);
     try {
-      setResults(await searchExercises(q));
+      setResults(await searchExercises(q, mg || undefined, eq || undefined));
     } finally {
       setLoading(false);
     }
@@ -50,12 +178,14 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
 
   useEffect(() => {
     if (!visible) return;
-    runSearch(query);
-  }, [query, visible, runSearch]);
+    runSearch(query, muscleFilter, equipFilter);
+  }, [query, muscleFilter, equipFilter, visible, runSearch]);
 
   useEffect(() => {
     if (visible) {
       setQuery("");
+      setMuscleFilter("");
+      setEquipFilter("");
       setMode("search");
     }
   }, [visible]);
@@ -71,11 +201,7 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
     if (!createName.trim() || !createMuscle || !createEquipment || creating) return;
     setCreating(true);
     try {
-      const exercise = await createCustomExercise(
-        createName,
-        createMuscle,
-        createEquipment.toLowerCase()
-      );
+      const exercise = await createCustomExercise(createName, createMuscle, createEquipment.toLowerCase());
       onSelect(exercise);
       onClose();
     } finally {
@@ -84,38 +210,44 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
   };
 
   const canCreate = createName.trim().length > 0 && createMuscle !== "" && createEquipment !== "";
+  const sectionLabel = query || muscleFilter || equipFilter ? "Results" : "Recent Exercise";
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable className="flex-1 bg-black/60 justify-end" onPress={onClose}>
+      <Pressable className="flex-1 bg-black/50 justify-end" onPress={onClose}>
         <Pressable>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-            <View className="bg-surface-2 h-[75%]">
+            <View className="bg-surface" style={{ height: "85%" }}>
 
-              {/* ── Search mode ──────────────────────────────────── */}
+              {/* ══ Search mode ══════════════════════════════════════ */}
               {mode === "search" && (
-                <>
+                <View className="flex-1">
                   {/* Header */}
-                  <View className="flex-row items-center justify-between px-4 py-4 border-b border-surface-3">
-                    <Text className="font-anton text-white text-lg tracking-widest uppercase">
-                      Add Exercise
+                  <View className="flex-row items-center px-4 pt-4 pb-3">
+                    <TouchableOpacity onPress={onClose} hitSlop={10} className="w-8">
+                      <X size={20} color="#A0A0A0" />
+                    </TouchableOpacity>
+                    <Text className="flex-1 text-center font-anton text-white text-lg tracking-widest uppercase">
+                      Exercises
                     </Text>
-                    <TouchableOpacity onPress={onClose} hitSlop={8}>
-                      <X size={20} color="#606060" />
+                    <TouchableOpacity onPress={openCreate} hitSlop={10} className="w-20 items-end">
+                      <Text className="font-montserrat-semibold text-crimson text-sm">
+                        Create New
+                      </Text>
                     </TouchableOpacity>
                   </View>
 
                   {/* Search bar */}
-                  <View className="flex-row items-center gap-2 px-4 py-3 border-b border-surface-3">
+                  <View className="mx-4 mb-3 flex-row items-center bg-surface-2 border border-surface-3 px-3 py-2.5" style={{ borderRadius: 24 }}>
                     <Search size={16} color="#606060" />
                     <TextInput
-                      className="flex-1 font-mono text-white text-sm"
-                      placeholder="Search exercises..."
+                      className="flex-1 font-montserrat text-white text-sm mx-2"
+                      placeholder="Search exercise name"
                       placeholderTextColor="#606060"
                       value={query}
                       onChangeText={setQuery}
-                      autoFocus
                       autoCorrect={false}
+                      returnKeyType="search"
                     />
                     {query.length > 0 && (
                       <TouchableOpacity onPress={() => setQuery("")} hitSlop={8}>
@@ -124,42 +256,50 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
                     )}
                   </View>
 
-                  {/* Results */}
+                  {/* Filter row */}
+                  <View className="flex-row gap-2 mx-4 mb-1">
+                    <FilterPicker
+                      label="All Muscle Groups"
+                      options={MUSCLE_GROUPS}
+                      value={muscleFilter}
+                      onSelect={setMuscleFilter}
+                    />
+                    <FilterPicker
+                      label="All Equipment"
+                      options={EQUIPMENT_TYPES}
+                      value={equipFilter}
+                      onSelect={setEquipFilter}
+                    />
+                  </View>
+
+                  {/* Section label */}
+                  <View className="px-4 py-2 bg-obsidian mt-2">
+                    <Text className="font-montserrat-semibold text-text-muted text-xs tracking-widest uppercase">
+                      {sectionLabel}
+                    </Text>
+                  </View>
+
+                  {/* Exercise list */}
                   <View className="flex-1">
                     {loading ? (
-                      <ActivityIndicator color="#FF0000" className="mt-8" />
+                      <ActivityIndicator color="#FF0000" style={{ marginTop: 32 }} />
                     ) : (
                       <FlatList
                         data={results}
                         keyExtractor={(item) => String(item.id)}
                         keyboardShouldPersistTaps="handled"
                         renderItem={({ item }) => (
-                          <TouchableOpacity
+                          <ExerciseRow
+                            item={item}
                             onPress={() => { onSelect(item); onClose(); }}
-                            className="flex-row items-center justify-between px-4 py-3.5 border-b border-surface-3"
-                            activeOpacity={0.7}
-                          >
-                            <View className="flex-1">
-                              <Text className="font-montserrat-semibold text-white text-sm">
-                                {item.name}
-                              </Text>
-                              <Text className="font-mono text-text-muted text-xs tracking-wider uppercase mt-0.5">
-                                {item.muscle_group} · {item.equipment_type}
-                              </Text>
-                            </View>
-                            {item.use_count > 0 && (
-                              <View className="bg-surface-3 px-2 py-0.5 ml-2">
-                                <Text className="font-mono text-text-muted text-xs">
-                                  ×{item.use_count}
-                                </Text>
-                              </View>
-                            )}
-                          </TouchableOpacity>
+                          />
                         )}
                         ListEmptyComponent={
-                          <View className="items-center mt-10 px-6">
+                          <View style={{ alignItems: "center", marginTop: 48, paddingHorizontal: 24 }}>
                             <Text className="font-montserrat text-text-muted text-sm text-center">
-                              {query.length > 0 ? `No results for "${query}"` : "No exercises yet"}
+                              {query || muscleFilter || equipFilter
+                                ? "No exercises match your search"
+                                : "No exercises yet"}
                             </Text>
                           </View>
                         }
@@ -167,40 +307,47 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
                     )}
                   </View>
 
-                  {/* Create button — fixed at bottom, always visible */}
-                  <TouchableOpacity
-                    onPress={openCreate}
-                    className="flex-row items-center justify-center gap-2 py-4 border-t border-surface-3 bg-surface-2"
-                    activeOpacity={0.7}
-                  >
-                    <Plus size={15} color="#FF0000" />
-                    <Text className="font-montserrat-semibold text-crimson text-sm tracking-wider">
-                      {query.trim().length > 0
-                        ? `Create "${query.trim()}"`
-                        : "Create Custom Exercise"}
-                    </Text>
-                  </TouchableOpacity>
-                </>
+                  {/* Bottom bar */}
+                  <View className="flex-row border-t border-surface-2 bg-surface">
+                    <TouchableOpacity
+                      className="flex-1 py-4 items-center justify-center border-r border-surface-2"
+                      activeOpacity={0.7}
+                    >
+                      <Text className="font-montserrat-bold text-white text-sm tracking-wider">
+                        Add as Superset
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      className="flex-1 py-4 items-center justify-center bg-crimson"
+                      activeOpacity={0.8}
+                      onPress={onClose}
+                    >
+                      <Text className="font-montserrat-bold text-white text-sm tracking-wider">
+                        Done
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               )}
 
-              {/* ── Create mode ──────────────────────────────────── */}
+              {/* ══ Create mode ══════════════════════════════════════ */}
               {mode === "create" && (
-                <>
+                <View className="flex-1">
                   {/* Header */}
-                  <View className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-3">
-                    <TouchableOpacity onPress={() => setMode("search")} hitSlop={8}>
-                      <ChevronLeft size={20} color="#A0A0A0" />
+                  <View className="flex-row items-center px-4 pt-4 pb-3 border-b border-surface-2">
+                    <TouchableOpacity onPress={() => setMode("search")} hitSlop={8} className="w-8">
+                      <ChevronLeft size={22} color="#A0A0A0" />
                     </TouchableOpacity>
-                    <Text className="font-anton text-white text-lg tracking-widest uppercase flex-1">
+                    <Text className="flex-1 text-center font-anton text-white text-lg tracking-widest uppercase">
                       New Exercise
                     </Text>
                     <TouchableOpacity
                       onPress={handleCreate}
                       disabled={!canCreate || creating}
-                      className={`px-4 py-1.5 ${canCreate ? "bg-crimson" : "bg-surface-3"}`}
-                      activeOpacity={0.8}
+                      hitSlop={10}
+                      className="w-20 items-end"
                     >
-                      <Text className={`font-montserrat-bold text-xs tracking-widest uppercase ${canCreate ? "text-white" : "text-text-muted"}`}>
+                      <Text className={`font-montserrat-semibold text-sm ${canCreate ? "text-crimson" : "text-text-muted"}`}>
                         {creating ? "Saving…" : "Save"}
                       </Text>
                     </TouchableOpacity>
@@ -213,7 +360,8 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
                         Exercise Name *
                       </Text>
                       <TextInput
-                        className="bg-surface-3 px-3 py-3 font-montserrat text-white text-sm"
+                        className="bg-surface-2 px-4 py-3 font-montserrat text-white text-sm border border-surface-3"
+                        style={{ borderRadius: 8 }}
                         placeholder="e.g. Hack Squat"
                         placeholderTextColor="#606060"
                         value={createName}
@@ -233,7 +381,11 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
                           <TouchableOpacity
                             key={mg}
                             onPress={() => setCreateMuscle(mg)}
-                            className={`px-3 py-2 ${createMuscle === mg ? "bg-crimson" : "bg-surface-3"}`}
+                            className={`px-3 py-2 border ${
+                              createMuscle === mg
+                                ? "bg-crimson border-crimson"
+                                : "bg-surface-2 border-surface-3"
+                            }`}
                             activeOpacity={0.7}
                           >
                             <Text className={`font-montserrat-semibold text-xs ${createMuscle === mg ? "text-white" : "text-text-secondary"}`}>
@@ -244,7 +396,7 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
                       </View>
                     </View>
 
-                    {/* Equipment type */}
+                    {/* Equipment */}
                     <View>
                       <Text className="font-mono text-text-muted text-xs tracking-widest uppercase mb-2">
                         Equipment *
@@ -254,7 +406,11 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
                           <TouchableOpacity
                             key={eq}
                             onPress={() => setCreateEquipment(eq)}
-                            className={`px-3 py-2 ${createEquipment === eq ? "bg-crimson" : "bg-surface-3"}`}
+                            className={`px-3 py-2 border ${
+                              createEquipment === eq
+                                ? "bg-crimson border-crimson"
+                                : "bg-surface-2 border-surface-3"
+                            }`}
                             activeOpacity={0.7}
                           >
                             <Text className={`font-montserrat-semibold text-xs ${createEquipment === eq ? "text-white" : "text-text-secondary"}`}>
@@ -265,7 +421,7 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
                       </View>
                     </View>
                   </ScrollView>
-                </>
+                </View>
               )}
 
             </View>
