@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npx expo *)",
+      "Bash(adb version *)",
+      "Bash(npx create-expo-app *)",
+      "Bash(cp *)",
+      "Bash(npm install *)",
+      "Bash(pkill -f \"expo start\")",
+      "Bash(echo \"Server starting in background \\(PID: $!\\)\")",
+      "Bash(echo \"PID: $!\")",
+      "Bash(tee /tmp/expo-full.log)",
+      "Bash(curl -s http://localhost:8081)",
+      "Bash(pkill -9 -f \"expo start\")",
+      "Bash(awk '{print $2}')",
+      "Bash(xargs -r kill)",
+      "Bash(eas *)"
+    ]
+  }
+}
