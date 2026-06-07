@@ -11,6 +11,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import { Search, X, ChevronDown, ChevronLeft } from "lucide-react-native";
 import { searchExercises, createCustomExercise } from "../../db/workoutQueries";
@@ -29,7 +30,7 @@ const MUSCLE_GROUPS = [
 const EQUIPMENT_TYPES = [
   "Barbell", "Dumbbell", "Kettlebell", "Bodyweight",
   "Cable", "Machine", "Smith Machine", "Safety Bar",
-  "Weight Plates", "Resistance Bands", "Cardio",
+  "Weight Plates", "Resistance Bands", "Jump Rope", "Cardio",
   "Battle Rope", "Medicine Ball", "Suspension Trainer",
   "Gymnastic Rings", "Parallettes", "Foam Roller",
   "Boxes", "Collars", "Other",
@@ -253,13 +254,14 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
     createMuscles.length > 0 &&
     createEquipments.length > 0;
   const sectionLabel = query || muscleFilter || equipFilter ? "Results" : "Recent Exercise";
+  const { height: screenHeight } = useWindowDimensions();
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable className="flex-1 bg-black/50 justify-end" onPress={onClose}>
-        <Pressable>
+        <Pressable style={{ width: "100%" }}>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-            <View className="bg-surface" style={{ height: "85%" }}>
+            <View className="bg-surface" style={{ height: screenHeight * 0.88 }}>
 
               {/* ══ Search mode ══════════════════════════════════════ */}
               {mode === "search" && (
