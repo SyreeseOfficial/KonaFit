@@ -4,10 +4,9 @@ import { formatDuration, formatShortDate, formatVolume } from "../../utils/expor
 
 type Props = {
   workout: WorkoutDetail;
-  cardRef?: React.RefObject<View>;
 };
 
-export function WorkoutShareCard({ workout, cardRef }: Props) {
+export function WorkoutShareCard({ workout }: Props) {
   const completedSets = workout.exercises.flatMap((e) =>
     e.sets.filter((s) => s.is_completed && !s.is_warmup)
   );
@@ -15,7 +14,6 @@ export function WorkoutShareCard({ workout, cardRef }: Props) {
 
   return (
     <View
-      ref={cardRef}
       style={{
         backgroundColor: "#131313",
         padding: 24,

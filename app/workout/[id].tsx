@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,18 +6,18 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Modal,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { ChevronLeft, Share2, FileText, Image as ImageIcon } from "lucide-react-native";
-import { captureRef } from "react-native-view-shot";
+import { ChevronLeft, FileText, Camera, X } from "lucide-react-native";
 import { getWorkoutDetail, type WorkoutDetail } from "../../src/db/historyQueries";
 import {
   formatDate,
   formatDuration,
   formatVolume,
   shareWorkoutMarkdown,
-  shareImageFile,
 } from "../../src/utils/exportUtils";
 import { WorkoutShareCard } from "../../src/components/export/WorkoutShareCard";
 
@@ -26,7 +26,7 @@ export default function WorkoutDetailScreen() {
   const [workout, setWorkout] = useState<WorkoutDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [sharing, setSharing] = useState(false);
-  const cardRef = useRef<View>(null);
+  const [cardVisible, setCardVisible] = useState(false);
 
   useEffect(() => {
     getWorkoutDetail(parseInt(id, 10))
@@ -41,19 +41,6 @@ export default function WorkoutDetailScreen() {
       await shareWorkoutMarkdown(workout);
     } catch (e) {
       Alert.alert("Share failed", String(e));
-    } finally {
-      setSharing(false);
-    }
-  }, [workout]);
-
-  const handleSharePng = useCallback(async () => {
-    if (!workout || !cardRef.current) return;
-    setSharing(true);
-    try {
-      const uri = await captureRef(cardRef, { format: "png", quality: 1, result: "tmpfile" });
-      await shareImageFile(uri, `konafit_${workout.id}.png`);
-    } catch (e) {
-      Alert.alert("Capture failed", String(e));
     } finally {
       setSharing(false);
     }
@@ -97,8 +84,8 @@ export default function WorkoutDetailScreen() {
             <TouchableOpacity onPress={handleShareMarkdown} hitSlop={8} activeOpacity={0.7}>
               <FileText size={20} color="#606060" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleSharePng} hitSlop={8} activeOpacity={0.7}>
-              <ImageIcon size={20} color="#606060" />
+            <TouchableOpacity onPress={() => setCardVisible(true)} hitSlop={8} activeOpacity={0.7}>
+              <Camera size={20} color="#606060" />
             </TouchableOpacity>
           </View>
         )}
@@ -117,7 +104,6 @@ export default function WorkoutDetailScreen() {
               ) : null}
             </View>
 
-            {/* Column headers */}
             <View className="flex-row px-4 py-1.5">
               <Text className="w-8 font-mono text-text-muted text-xs tracking-widest">SET</Text>
               <Text className="flex-1 font-mono text-text-muted text-xs tracking-widest text-right">LBS</Text>
@@ -132,11 +118,7 @@ export default function WorkoutDetailScreen() {
                   !s.is_completed ? "opacity-40" : ""
                 }`}
               >
-                <Text
-                  className={`w-8 font-mono text-xs ${
-                    s.is_warmup ? "text-text-muted" : "text-text-secondary"
-                  }`}
-                >
+                <Text className={`w-8 font-mono text-xs ${s.is_warmup ? "text-text-muted" : "text-text-secondary"}`}>
                   {s.is_warmup ? "W" : s.set_number}
                 </Text>
                 <Text className="flex-1 font-mono-medium text-white text-sm text-right">
@@ -167,7 +149,7 @@ export default function WorkoutDetailScreen() {
           ))}
         </View>
 
-        {/* Share buttons */}
+        {/* Share actions */}
         <View className="mx-4 mt-4 gap-2">
           <TouchableOpacity
             onPress={handleShareMarkdown}
@@ -181,23 +163,42 @@ export default function WorkoutDetailScreen() {
             </View>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={handleSharePng}
+            onPress={() => setCardVisible(true)}
             className="bg-surface flex-row items-center gap-3 px-4 py-3.5"
             activeOpacity={0.8}
           >
-            <ImageIcon size={18} color="#A0A0A0" />
+            <Camera size={18} color="#A0A0A0" />
             <View>
-              <Text className="font-montserrat-semibold text-white text-sm">Share as Image</Text>
-              <Text className="font-mono text-text-muted text-xs">PNG card</Text>
+              <Text className="font-montserrat-semibold text-white text-sm">Share Card</Text>
+              <Text className="font-mono text-text-muted text-xs">Screenshot to share as image</Text>
             </View>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* Off-screen capturable card for PNG export */}
-      <View style={{ position: "absolute", top: -9999, left: 0 }} pointerEvents="none">
-        <WorkoutShareCard workout={workout} cardRef={cardRef} />
-      </View>
+      {/* Share card preview modal — screenshot to save */}
+      <Modal visible={cardVisible} transparent animationType="fade" onRequestClose={() => setCardVisible(false)}>
+        <Pressable
+          className="flex-1 bg-black/80 items-center justify-center px-4"
+          onPress={() => setCardVisible(false)}
+        >
+          <Pressable>
+            <WorkoutShareCard workout={workout} />
+            <View className="flex-row items-center justify-center gap-2 mt-4">
+              <Text className="font-mono text-text-muted text-xs">
+                Screenshot this card to share
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setCardVisible(false)}
+              className="mt-3 items-center"
+              activeOpacity={0.7}
+            >
+              <X size={22} color="#606060" />
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }

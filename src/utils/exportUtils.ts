@@ -1,6 +1,5 @@
 import * as FileSystem from "expo-file-system";
-import * as Sharing from "expo-sharing";
-import { Share } from "react-native";
+import { Share, Platform } from "react-native";
 import type { WorkoutDetail, CsvRow } from "../db/historyQueries";
 
 // ─── Formatting helpers ───────────────────────────────────────────────────────
@@ -51,8 +50,8 @@ export function buildWorkoutMarkdown(workout: WorkoutDetail): string {
     if (ex.muscle_group) lines.push(`*${ex.muscle_group}*`);
     lines.push("");
 
-    const workSets = ex.sets.filter((s) => !s.is_warmup);
     const warmSets = ex.sets.filter((s) => s.is_warmup);
+    const workSets = ex.sets.filter((s) => !s.is_warmup);
 
     if (warmSets.length > 0) {
       lines.push("**Warm-up:**");
@@ -75,7 +74,7 @@ export function buildWorkoutMarkdown(workout: WorkoutDetail): string {
   }
 
   lines.push("---");
-  lines.push("_Logged with [KonaFit](https://github.com/SyreeseOfficial/KonaFit)_");
+  lines.push("_Logged with KonaFit_");
   return lines.join("\n");
 }
 
@@ -85,16 +84,6 @@ export async function shareWorkoutMarkdown(workout: WorkoutDetail): Promise<void
     message: markdown,
     title: `KonaFit — ${formatShortDate(workout.started_at)}`,
   });
-}
-
-// ─── PNG export (view-shot) ───────────────────────────────────────────────────
-
-export async function shareImageFile(uri: string, filename: string): Promise<void> {
-  const dest = FileSystem.cacheDirectory + filename;
-  await FileSystem.copyAsync({ from: uri, to: dest });
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(dest, { mimeType: "image/png", dialogTitle: "Share Workout" });
-  }
 }
 
 // ─── CSV export ───────────────────────────────────────────────────────────────
@@ -128,18 +117,19 @@ export function buildCsv(rows: CsvRow[]): string {
 }
 
 export async function exportCsvAndShare(rows: CsvRow[]): Promise<void> {
-  if (rows.length === 0) {
-    throw new Error("No workout data to export");
-  }
+  if (rows.length === 0) throw new Error("No workout data to export");
+
   const csv = buildCsv(rows);
   const filename = `konafit_export_${new Date().toISOString().slice(0, 10)}.csv`;
-  const path = FileSystem.cacheDirectory + filename;
-  await FileSystem.writeAsStringAsync(path, csv, { encoding: FileSystem.EncodingType.UTF8 });
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(path, {
-      mimeType: "text/csv",
-      dialogTitle: "Export KonaFit Data",
-      UTI: "public.comma-separated-values-text",
+
+  // On iOS share the file directly; on Android share as text (no FileProvider needed)
+  if (Platform.OS === "ios") {
+    const path = (FileSystem.cacheDirectory ?? "") + filename;
+    await FileSystem.writeAsStringAsync(path, csv, {
+      encoding: FileSystem.EncodingType.UTF8,
     });
+    await Share.share({ url: path, title: "KonaFit Export" });
+  } else {
+    await Share.share({ message: csv, title: "KonaFit Export" });
   }
 }
