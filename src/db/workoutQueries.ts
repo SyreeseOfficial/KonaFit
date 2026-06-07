@@ -164,11 +164,10 @@ export async function searchExercises(query: string): Promise<Exercise[]> {
     );
   }
   return db.getAllAsync<Exercise>(
-    `SELECT e.* FROM exercises e
-     JOIN exercises_fts fts ON e.id = fts.rowid
-     WHERE exercises_fts MATCH ?
-     ORDER BY e.use_count DESC
-     LIMIT 20`,
-    [`${query.trim()}*`]
+    `SELECT * FROM exercises
+     WHERE LOWER(name) LIKE '%' || LOWER(?) || '%'
+     ORDER BY use_count DESC, name ASC
+     LIMIT 30`,
+    [query.trim()]
   );
 }

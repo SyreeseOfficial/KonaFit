@@ -147,6 +147,13 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
                                 {item.muscle_group} · {item.equipment_type}
                               </Text>
                             </View>
+                            {item.use_count > 0 && (
+                              <View className="bg-surface-3 px-2 py-0.5 ml-2">
+                                <Text className="font-mono text-text-muted text-xs">
+                                  ×{item.use_count}
+                                </Text>
+                              </View>
+                            )}
                           </TouchableOpacity>
                         )}
                         ListEmptyComponent={
