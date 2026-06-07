@@ -89,6 +89,22 @@ export async function upsertLoggedSet(set: ActiveSet & { loggedExerciseId: numbe
   }
 }
 
+export async function swapLoggedExercise(
+  loggedExerciseId: number,
+  newExerciseId: number,
+  newExerciseName: string
+): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    "UPDATE logged_exercises SET exercise_id = ?, exercise_name = ? WHERE id = ?",
+    [newExerciseId, newExerciseName, loggedExerciseId]
+  );
+  await db.runAsync(
+    "UPDATE exercises SET use_count = use_count + 1 WHERE id = ?",
+    [newExerciseId]
+  );
+}
+
 export async function deleteLoggedSet(setDbId: number): Promise<void> {
   const db = await getDatabase();
   await db.runAsync("DELETE FROM logged_sets WHERE id = ?", [setDbId]);

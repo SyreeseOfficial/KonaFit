@@ -17,6 +17,23 @@ This chronological ledger tracks major features, structural database migrations,
 
 ---
 
+### 2026-06-07 — Full App Build (Phases 1–7) + UI Redesigns & Bug Fixes
+
+* **Status:** Implemented
+* **Scope:** Entire application — all phases shipped in this session
+* **Changes Executed:**
+  * **Phase 1:** Expo project, SQLite schema (workouts, logged\_exercises, logged\_sets, programs, program\_days, program\_exercises, bodyweight\_logs, lifestyle\_logs, kv\_store), NativeWind, bottom tab navigation (Train / Stats / Programs).
+  * **Phase 2:** Train Tab workspace — useWorkoutSession hook with SQLite-backed kv\_store session persistence and crash recovery, useRestTimer (90s countdown ±30s), useWorkoutTimer (pause/resume/reset), AddExerciseSheet (FTS→LIKE search, muscle group + equipment filters, use\_count badges, Create Custom Exercise form), ExerciseBlock (reference-matched layout: index · name · ‹ header, Set/Previous/Lbs/Reps/RPE/✓ columns, ⊕ Add Set + ⇄ Swap footer), SetRow (rounded inputs, ghost previous data, circular complete toggle), RestTimerBar.
+  * **Phase 3:** Session auto-save on every state mutation (kv\_store); boot-time recovery prompt (resume / discard); finalize-on-finish with duration calculation.
+  * **Phase 4:** Stats Tab — getTotalLifted, streak calculation, 1RM history (Epley formula), volume by muscle group, habit calendar (13-week dot grid), StatsGrid (4 metrics), OneRMChart (SVG line), VolumeChart (SVG horizontal bars, 7d/30d toggle), MuscleHeatmap (SVG front/back body, crimson gradient), HabitCalendar, LifestyleLogger (bodyweight, hydration, pre-workout toggle, location).
+  * **Phase 5:** Programs Tab — Stack navigation (index / new / \[id\]), program CRUD + clone, day editor, exercise targets (sets/reps/RPE), LAUNCH WORKOUT action (navigates to Train with programDayId param, pre-populates session from template). swapExercise added to session hook.
+  * **Phase 6:** Tactical Tools modal — PlateCalculator (greedy algorithm, Olympic plate colors, SVG barbell visualization, bar selector), PercentageCalculator (50–100% table, rep ranges, smart rounding 0/2.5/5 lb, cross-links to plate calc). Accessible via calculator icon in Train and Stats headers.
+  * **Phase 7:** History & Export — WorkoutHistoryList in Stats tab, workout/\[id\] detail screen, Markdown share (RN Share API), PNG share card (modal screenshot pattern), CSV export (expo-file-system + Share, file on iOS / text on Android).
+  * **Bug fixes:** Replaced expo-sharing (needs native build) with RN Share; replaced @react-native-async-storage (needs native build) with SQLite kv\_store; replaced FTS5 search (empty index) with LIKE query; fixed Create Exercise button hidden below scroll (pinned to bottom); fixed AddExerciseSheet sheet height and filter dropdowns.
+* **Architectural Notes:** All state is local-first. Session persistence uses a kv\_store table in the same SQLite database to avoid native module dependency. Native modules that require a compiled dev build (expo-sharing, react-native-view-shot, @react-native-async-storage) were removed and replaced with built-in or already-linked alternatives. FTS5 virtual table is retained in schema for future use but search queries use LIKE for reliability.
+
+---
+
 ### 2026-06-06 — Feature Expansion & Documentation Refinement
 
 * **Status:** Specification Enhancement

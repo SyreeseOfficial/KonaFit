@@ -11,6 +11,7 @@ import {
   deleteLoggedSet,
   getGhostSets,
   updateLoggedExerciseNotes,
+  swapLoggedExercise,
 } from "../db/workoutQueries";
 import { getProgramDayExercises } from "../db/programQueries";
 
@@ -264,6 +265,24 @@ export function useWorkoutSession() {
     [updateSession]
   );
 
+  const swapExercise = useCallback(
+    async (exerciseLocalId: string, newExerciseId: number, newExerciseName: string, newMuscleGroup: string) => {
+      const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
+      if (!exercise?.dbId) return;
+      await swapLoggedExercise(exercise.dbId, newExerciseId, newExerciseName);
+      const ghost = await getGhostSets(newExerciseId, session!.workoutId);
+      updateSession((prev) => ({
+        ...prev,
+        exercises: prev.exercises.map((e) =>
+          e.localId === exerciseLocalId
+            ? { ...e, exerciseId: newExerciseId, exerciseName: newExerciseName, muscleGroup: newMuscleGroup, ghostSets: ghost }
+            : e
+        ),
+      }));
+    },
+    [session, updateSession]
+  );
+
   const removeExercise = useCallback(
     (exerciseLocalId: string) => {
       updateSession((prev) => ({
@@ -326,5 +345,6 @@ export function useWorkoutSession() {
     updateExerciseNotes,
     removeExercise,
     launchFromProgramDay,
+    swapExercise,
   };
 }

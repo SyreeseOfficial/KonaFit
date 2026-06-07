@@ -7,11 +7,12 @@ import {
   TextInput,
   Pressable,
 } from "react-native";
-import { MoreHorizontal, X, FileText } from "lucide-react-native";
+import { MoreHorizontal, X, FileText, PlusCircle, ArrowLeftRight, Timer } from "lucide-react-native";
 import { SetRow } from "./SetRow";
 import type { ActiveExercise, ActiveSet } from "../../types/workout";
 
 type Props = {
+  index: number;
   exercise: ActiveExercise;
   onAddSet: () => void;
   onRemoveSet: (setLocalId: string) => void;
@@ -20,9 +21,12 @@ type Props = {
   onToggleWarmup: (setLocalId: string) => void;
   onUpdateNotes: (notes: string) => void;
   onRemoveExercise: () => void;
+  onSwap: () => void;
+  onTimerPress: () => void;
 };
 
 export function ExerciseBlock({
+  index,
   exercise,
   onAddSet,
   onRemoveSet,
@@ -31,6 +35,8 @@ export function ExerciseBlock({
   onToggleWarmup,
   onUpdateNotes,
   onRemoveExercise,
+  onSwap,
+  onTimerPress,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -38,37 +44,42 @@ export function ExerciseBlock({
 
   return (
     <View className="mb-4 bg-surface">
-      {/* Exercise header */}
-      <View className="flex-row items-center justify-between px-3 py-2.5 border-b border-surface-2">
-        <View className="flex-1">
-          <Text className="font-montserrat-bold text-white text-sm tracking-widest uppercase">
+      {/* ── Exercise header ───────────────────────────────────── */}
+      <View className="flex-row items-center justify-between px-4 pt-4 pb-3">
+        <View className="flex-1 flex-row items-center gap-2">
+          <Text className="font-montserrat-bold text-text-muted text-base">
+            {index}
+          </Text>
+          <Text className="font-montserrat-bold text-white text-base flex-shrink" numberOfLines={1}>
             {exercise.exerciseName}
           </Text>
-          <Text className="font-mono text-text-muted text-xs tracking-wider">
-            {exercise.muscleGroup}
-          </Text>
+          <Text className="font-montserrat text-text-muted text-base">›</Text>
         </View>
-        <TouchableOpacity onPress={() => setMenuOpen(true)} hitSlop={8}>
-          <MoreHorizontal size={18} color="#606060" />
+
+        {/* Stopwatch — manually start rest timer */}
+        <TouchableOpacity
+          onPress={onTimerPress}
+          className="w-10 h-10 bg-surface-2 items-center justify-center ml-3"
+          style={{ borderRadius: 8 }}
+          activeOpacity={0.7}
+        >
+          <Timer size={18} color="#606060" />
         </TouchableOpacity>
       </View>
 
-      {/* Column headers */}
-      <View className="flex-row items-center gap-2 px-3 pt-2 pb-1">
-        <View className="w-7" />
-        <Text className="flex-1 text-center font-mono text-text-muted text-xs tracking-widest uppercase">
-          Lbs
-        </Text>
-        <Text className="flex-1 text-center font-mono text-text-muted text-xs tracking-widest uppercase">
-          Reps
-        </Text>
-        <Text className="w-12 text-center font-mono text-text-muted text-xs tracking-widest uppercase">
-          RPE
-        </Text>
-        <View className="w-9" />
+      {/* ── Column headers ────────────────────────────────────── */}
+      <View className="flex-row items-center px-3 pb-2">
+        <Text className="w-6 text-center font-mono text-text-muted text-xs">Set</Text>
+        <Text className="flex-1 mx-2 text-center font-mono text-text-muted text-xs">Previous</Text>
+        <Text className="w-14 mr-1.5 text-center font-mono text-text-muted text-xs">Lbs</Text>
+        <Text className="w-12 mr-1.5 text-center font-mono text-text-muted text-xs">Reps</Text>
+        <Text className="w-10 mr-1.5 text-center font-mono text-text-muted text-xs">RPE</Text>
+        <View className="w-8 items-center">
+          <Text className="font-mono text-text-muted text-xs">✓</Text>
+        </View>
       </View>
 
-      {/* Sets */}
+      {/* ── Sets ─────────────────────────────────────────────── */}
       {exercise.sets.map((set) => (
         <SetRow
           key={set.localId}
@@ -83,81 +94,87 @@ export function ExerciseBlock({
 
       {/* Notes preview */}
       {exercise.notes !== "" && (
-        <View className="px-3 py-1.5 flex-row items-center gap-1.5">
+        <TouchableOpacity
+          onPress={() => { setNotesText(exercise.notes); setNotesOpen(true); }}
+          className="flex-row items-center gap-1.5 px-4 py-2 border-t border-surface-2"
+          activeOpacity={0.7}
+        >
           <FileText size={11} color="#606060" />
           <Text className="font-mono text-text-muted text-xs flex-1" numberOfLines={1}>
             {exercise.notes}
           </Text>
-        </View>
+        </TouchableOpacity>
       )}
 
-      {/* Add set */}
-      <TouchableOpacity
-        onPress={onAddSet}
-        className="mx-3 mt-1 mb-3 py-2 border border-surface-3 items-center"
-        activeOpacity={0.7}
-      >
-        <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-widest uppercase">
-          + Add Set
-        </Text>
-      </TouchableOpacity>
+      {/* ── Footer row ────────────────────────────────────────── */}
+      <View className="flex-row items-center px-4 py-3 border-t border-surface-2 gap-4">
+        <TouchableOpacity
+          onPress={onAddSet}
+          className="flex-row items-center gap-1.5"
+          activeOpacity={0.7}
+        >
+          <PlusCircle size={16} color="#A0A0A0" />
+          <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-wider">
+            Add Set
+          </Text>
+        </TouchableOpacity>
 
-      {/* Context menu modal */}
+        <TouchableOpacity
+          onPress={onSwap}
+          className="flex-row items-center gap-1.5"
+          activeOpacity={0.7}
+        >
+          <ArrowLeftRight size={15} color="#A0A0A0" />
+          <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-wider">
+            Swap
+          </Text>
+        </TouchableOpacity>
+
+        {/* Spacer */}
+        <View className="flex-1" />
+
+        <TouchableOpacity onPress={() => setMenuOpen(true)} hitSlop={8} activeOpacity={0.7}>
+          <MoreHorizontal size={18} color="#606060" />
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Context menu ─────────────────────────────────────── */}
       <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
         <Pressable className="flex-1 bg-black/60 justify-end" onPress={() => setMenuOpen(false)}>
           <Pressable>
-            <View className="bg-surface-2 pb-8">
+            <View className="bg-surface-2 pb-10">
               <View className="flex-row items-center justify-between px-4 py-4 border-b border-surface-3">
-                <Text className="font-montserrat-bold text-white text-sm tracking-widest uppercase">
+                <Text className="font-montserrat-bold text-white text-xs tracking-widest uppercase flex-1" numberOfLines={1}>
                   {exercise.exerciseName}
                 </Text>
-                <TouchableOpacity onPress={() => setMenuOpen(false)}>
+                <TouchableOpacity onPress={() => setMenuOpen(false)} hitSlop={8}>
                   <X size={18} color="#606060" />
                 </TouchableOpacity>
               </View>
-              {[
-                {
-                  label: "Edit Notes",
-                  action: () => {
-                    setMenuOpen(false);
-                    setNotesText(exercise.notes);
-                    setNotesOpen(true);
-                  },
-                },
-                {
-                  label: "Remove Exercise",
-                  danger: true,
-                  action: () => {
-                    setMenuOpen(false);
-                    onRemoveExercise();
-                  },
-                },
-              ].map((item) => (
-                <TouchableOpacity
-                  key={item.label}
-                  onPress={item.action}
-                  className="px-4 py-4 border-b border-surface-3"
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    className={`font-montserrat-semibold text-sm tracking-wider ${
-                      item.danger ? "text-crimson" : "text-white"
-                    }`}
-                  >
-                    {item.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              <TouchableOpacity
+                onPress={() => { setMenuOpen(false); setNotesText(exercise.notes); setNotesOpen(true); }}
+                className="px-4 py-4 border-b border-surface-3"
+                activeOpacity={0.7}
+              >
+                <Text className="font-montserrat-semibold text-white text-sm">Edit Notes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => { setMenuOpen(false); onRemoveExercise(); }}
+                className="px-4 py-4"
+                activeOpacity={0.7}
+              >
+                <Text className="font-montserrat-semibold text-crimson text-sm">Remove Exercise</Text>
+              </TouchableOpacity>
             </View>
           </Pressable>
         </Pressable>
       </Modal>
 
-      {/* Notes modal */}
+      {/* ── Notes modal ──────────────────────────────────────── */}
       <Modal visible={notesOpen} transparent animationType="slide" onRequestClose={() => setNotesOpen(false)}>
         <Pressable className="flex-1 bg-black/60 justify-end" onPress={() => setNotesOpen(false)}>
           <Pressable>
-            <View className="bg-surface-2 pb-8 px-4 pt-4">
+            <View className="bg-surface-2 pb-10 px-4 pt-4">
               <Text className="font-montserrat-bold text-white text-xs tracking-widest uppercase mb-3">
                 Notes — {exercise.exerciseName}
               </Text>
@@ -171,10 +188,7 @@ export function ExerciseBlock({
                 autoFocus
               />
               <TouchableOpacity
-                onPress={() => {
-                  onUpdateNotes(notesText);
-                  setNotesOpen(false);
-                }}
+                onPress={() => { onUpdateNotes(notesText); setNotesOpen(false); }}
                 className="mt-3 bg-crimson py-3 items-center"
                 activeOpacity={0.8}
               >

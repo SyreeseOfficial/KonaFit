@@ -35,6 +35,7 @@ export default function TrainScreen() {
     updateExerciseNotes,
     removeExercise,
     launchFromProgramDay,
+    swapExercise,
   } = useWorkoutSession();
 
   const { programDayId } = useLocalSearchParams<{ programDayId?: string }>();
@@ -42,6 +43,7 @@ export default function TrainScreen() {
 
   const restTimer = useRestTimer();
   const [exerciseSheetOpen, setExerciseSheetOpen] = useState(false);
+  const [swappingExerciseLocalId, setSwappingExerciseLocalId] = useState<string | null>(null);
   const [recoveryVisible, setRecoveryVisible] = useState(false);
   const [cachedSession, setCachedSession] = useState<Awaited<ReturnType<typeof loadCachedSession>>>(null);
 
@@ -235,9 +237,10 @@ export default function TrainScreen() {
           </View>
         )}
 
-        {session.exercises.map((exercise) => (
+        {session.exercises.map((exercise, i) => (
           <ExerciseBlock
             key={exercise.localId}
+            index={i + 1}
             exercise={exercise}
             onAddSet={() => addSet(exercise.localId)}
             onRemoveSet={(setLocalId) => removeSet(exercise.localId, setLocalId)}
@@ -246,6 +249,8 @@ export default function TrainScreen() {
             onToggleWarmup={(setLocalId) => toggleSetWarmup(exercise.localId, setLocalId)}
             onUpdateNotes={(notes) => updateExerciseNotes(exercise.localId, notes)}
             onRemoveExercise={() => removeExercise(exercise.localId)}
+            onSwap={() => setSwappingExerciseLocalId(exercise.localId)}
+            onTimerPress={() => restTimer.start()}
           />
         ))}
 
@@ -264,10 +269,23 @@ export default function TrainScreen() {
 
       <RestTimerBar timer={restTimer} />
 
+      {/* Add exercise */}
       <AddExerciseSheet
         visible={exerciseSheetOpen}
         onClose={() => setExerciseSheetOpen(false)}
         onSelect={handleSelectExercise}
+      />
+
+      {/* Swap exercise */}
+      <AddExerciseSheet
+        visible={swappingExerciseLocalId !== null}
+        onClose={() => setSwappingExerciseLocalId(null)}
+        onSelect={(ex) => {
+          if (swappingExerciseLocalId) {
+            swapExercise(swappingExerciseLocalId, ex.id, ex.name, ex.muscle_group);
+            setSwappingExerciseLocalId(null);
+          }
+        }}
       />
     </SafeAreaView>
   );

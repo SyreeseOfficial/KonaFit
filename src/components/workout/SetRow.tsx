@@ -12,35 +12,51 @@ type Props = {
 };
 
 export function SetRow({ set, ghost, onUpdate, onToggleComplete, onToggleWarmup, onRemove }: Props) {
-  const label = set.isWarmup ? "W" : String(set.setNumber);
   const completed = set.isCompleted;
+
+  const previousText =
+    ghost?.weightLbs != null && ghost?.reps != null
+      ? `${ghost.weightLbs} lb × ${ghost.reps}`
+      : ghost?.weightLbs != null
+      ? `${ghost.weightLbs} lb`
+      : "—";
+
+  const inputBase =
+    "h-9 bg-surface-2 text-center font-mono text-white text-sm";
 
   return (
     <View
-      className={`flex-row items-center gap-2 py-1.5 px-3 ${
+      className={`flex-row items-center px-3 py-2 border-b border-surface-2 ${
         completed ? "opacity-50" : ""
       }`}
     >
-      {/* Set number / warmup badge */}
-      <TouchableOpacity onPress={onToggleWarmup} onLongPress={onRemove} hitSlop={8}>
-        <View
-          className={`w-7 h-7 items-center justify-center ${
-            set.isWarmup ? "bg-surface-3" : "bg-surface-2"
+      {/* Set number / warmup — long press to remove, tap to toggle warmup */}
+      <TouchableOpacity
+        onPress={onToggleWarmup}
+        onLongPress={onRemove}
+        hitSlop={6}
+        className="w-6 items-center"
+      >
+        <Text
+          className={`font-mono-medium text-sm ${
+            set.isWarmup ? "text-crimson" : "text-text-secondary"
           }`}
         >
-          <Text
-            className={`font-mono-medium text-xs ${
-              set.isWarmup ? "text-text-secondary" : "text-text-muted"
-            }`}
-          >
-            {label}
-          </Text>
-        </View>
+          {set.isWarmup ? "W" : set.setNumber}
+        </Text>
       </TouchableOpacity>
 
-      {/* Weight */}
+      {/* Previous (ghost) */}
+      <View className="flex-1 mx-2 items-center">
+        <Text className="font-mono text-text-muted text-xs" numberOfLines={1}>
+          {previousText}
+        </Text>
+      </View>
+
+      {/* Lbs */}
       <TextInput
-        className="flex-1 h-9 bg-surface-2 text-center font-mono text-white text-sm"
+        className={`${inputBase} w-14 mr-1.5`}
+        style={{ borderRadius: 6 }}
         placeholder={ghost?.weightLbs != null ? String(ghost.weightLbs) : "lbs"}
         placeholderTextColor="#606060"
         value={set.weightLbs}
@@ -52,7 +68,8 @@ export function SetRow({ set, ghost, onUpdate, onToggleComplete, onToggleWarmup,
 
       {/* Reps */}
       <TextInput
-        className="flex-1 h-9 bg-surface-2 text-center font-mono text-white text-sm"
+        className={`${inputBase} w-12 mr-1.5`}
+        style={{ borderRadius: 6 }}
         placeholder={ghost?.reps != null ? String(ghost.reps) : "reps"}
         placeholderTextColor="#606060"
         value={set.reps}
@@ -64,7 +81,8 @@ export function SetRow({ set, ghost, onUpdate, onToggleComplete, onToggleWarmup,
 
       {/* RPE */}
       <TextInput
-        className="w-12 h-9 bg-surface-2 text-center font-mono text-white text-sm"
+        className={`${inputBase} w-10 mr-1.5`}
+        style={{ borderRadius: 6 }}
         placeholder="rpe"
         placeholderTextColor="#606060"
         value={set.rpe}
@@ -74,15 +92,20 @@ export function SetRow({ set, ghost, onUpdate, onToggleComplete, onToggleWarmup,
         editable={!completed}
       />
 
-      {/* Complete button */}
+      {/* Complete */}
       <TouchableOpacity
         onPress={onToggleComplete}
-        className={`w-9 h-9 items-center justify-center ${
+        className={`w-8 h-8 items-center justify-center ${
           completed ? "bg-crimson" : "bg-surface-2"
         }`}
+        style={{ borderRadius: 16 }}
         activeOpacity={0.7}
       >
-        <Check size={16} color={completed ? "#FFFFFF" : "#606060"} strokeWidth={2.5} />
+        <Check
+          size={14}
+          color={completed ? "#FFFFFF" : "#606060"}
+          strokeWidth={2.5}
+        />
       </TouchableOpacity>
     </View>
   );
