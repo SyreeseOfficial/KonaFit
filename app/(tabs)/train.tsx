@@ -36,6 +36,7 @@ export default function TrainScreen() {
     removeExercise,
     launchFromProgramDay,
     swapExercise,
+    moveExercise,
   } = useWorkoutSession();
 
   const { programDayId } = useLocalSearchParams<{ programDayId?: string }>();
@@ -44,6 +45,7 @@ export default function TrainScreen() {
   const restTimer = useRestTimer();
   const [exerciseSheetOpen, setExerciseSheetOpen] = useState(false);
   const [swappingExerciseLocalId, setSwappingExerciseLocalId] = useState<string | null>(null);
+  const [reorderMode, setReorderMode] = useState(false);
   const [recoveryVisible, setRecoveryVisible] = useState(false);
   const [cachedSession, setCachedSession] = useState<Awaited<ReturnType<typeof loadCachedSession>>>(null);
 
@@ -238,6 +240,11 @@ export default function TrainScreen() {
             key={exercise.localId}
             index={i + 1}
             exercise={exercise}
+            reorderMode={reorderMode}
+            canMoveUp={i > 0}
+            canMoveDown={i < session.exercises.length - 1}
+            onMoveUp={() => moveExercise(exercise.localId, "up")}
+            onMoveDown={() => moveExercise(exercise.localId, "down")}
             onAddSet={() => addSet(exercise.localId)}
             onRemoveSet={(setLocalId) => removeSet(exercise.localId, setLocalId)}
             onUpdateSet={(setLocalId, patch) => updateSet(exercise.localId, setLocalId, patch)}
@@ -250,7 +257,7 @@ export default function TrainScreen() {
           />
         ))}
 
-        {/* Add exercise button */}
+        {/* Add Exercise */}
         <TouchableOpacity
           onPress={() => setExerciseSheetOpen(true)}
           className="mx-4 mt-2 py-3.5 border border-surface-3 flex-row items-center justify-center gap-2"
@@ -259,6 +266,35 @@ export default function TrainScreen() {
           <Plus size={16} color="#A0A0A0" />
           <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-widest uppercase">
             Add Exercise
+          </Text>
+        </TouchableOpacity>
+
+        {/* Reorder toggle */}
+        <TouchableOpacity
+          onPress={() => setReorderMode((r) => !r)}
+          className={`mx-4 mt-2 py-3.5 border flex-row items-center justify-center gap-2 ${
+            reorderMode ? "border-crimson bg-surface-2" : "border-surface-3"
+          }`}
+          activeOpacity={0.7}
+        >
+          <Text className={`font-montserrat-semibold text-xs tracking-widest uppercase ${reorderMode ? "text-crimson" : "text-text-secondary"}`}>
+            {reorderMode ? "Done Reordering" : "↕  Reorder Exercises"}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Cancel workout */}
+        <TouchableOpacity
+          onPress={() =>
+            Alert.alert("Cancel Workout", "Delete this workout and discard all sets?", [
+              { text: "Keep Going", style: "cancel" },
+              { text: "Cancel Workout", style: "destructive", onPress: discardWorkout },
+            ])
+          }
+          className="mx-4 mt-2 mb-2 py-3.5 border border-surface-3 flex-row items-center justify-center"
+          activeOpacity={0.7}
+        >
+          <Text className="font-montserrat-semibold text-crimson text-xs tracking-widest uppercase">
+            ✕  Cancel Workout
           </Text>
         </TouchableOpacity>
       </ScrollView>

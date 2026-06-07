@@ -7,7 +7,7 @@ import {
   TextInput,
   Pressable,
 } from "react-native";
-import { MoreHorizontal, X, FileText, PlusCircle, ArrowLeftRight, Timer, ChevronDown, ChevronUp, History } from "lucide-react-native";
+import { MoreHorizontal, X, FileText, PlusCircle, ArrowLeftRight, Timer, ChevronDown, ChevronUp, History, ArrowUp, ArrowDown } from "lucide-react-native";
 import { SetRow } from "./SetRow";
 import { ExerciseHistoryModal } from "./ExerciseHistoryModal";
 import type { ActiveExercise, ActiveSet } from "../../types/workout";
@@ -15,6 +15,11 @@ import type { ActiveExercise, ActiveSet } from "../../types/workout";
 type Props = {
   index: number;
   exercise: ActiveExercise;
+  reorderMode?: boolean;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   onAddSet: () => void;
   onRemoveSet: (setLocalId: string) => void;
   onUpdateSet: (setLocalId: string, patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe">>) => void;
@@ -29,6 +34,11 @@ type Props = {
 export function ExerciseBlock({
   index,
   exercise,
+  reorderMode = false,
+  canMoveUp = false,
+  canMoveDown = false,
+  onMoveUp,
+  onMoveDown,
   onAddSet,
   onRemoveSet,
   onUpdateSet,
@@ -50,28 +60,52 @@ export function ExerciseBlock({
       {/* ── Exercise header (tap name to collapse) ───────────── */}
       <View className="flex-row items-center justify-between px-4 pt-4 pb-3">
         <TouchableOpacity
-          onPress={() => setCollapsed((c) => !c)}
+          onPress={() => !reorderMode && setCollapsed((c) => !c)}
           className="flex-1 flex-row items-center gap-2"
-          activeOpacity={0.7}
+          activeOpacity={reorderMode ? 1 : 0.7}
         >
           <Text className="font-montserrat-bold text-text-muted text-base">{index}</Text>
           <Text className="font-montserrat-bold text-white text-base flex-shrink" numberOfLines={1}>
             {exercise.exerciseName}
           </Text>
-          {collapsed
-            ? <ChevronDown size={15} color="#606060" />
-            : <ChevronUp size={15} color="#606060" />
-          }
+          {!reorderMode && (
+            collapsed
+              ? <ChevronDown size={15} color="#606060" />
+              : <ChevronUp size={15} color="#606060" />
+          )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={onTimerPress}
-          className="w-10 h-10 bg-surface-2 items-center justify-center ml-3"
-          style={{ borderRadius: 8 }}
-          activeOpacity={0.7}
-        >
-          <Timer size={18} color="#606060" />
-        </TouchableOpacity>
+        {reorderMode ? (
+          <View className="flex-row gap-1 ml-2">
+            <TouchableOpacity
+              onPress={onMoveUp}
+              disabled={!canMoveUp}
+              className={`w-9 h-9 items-center justify-center bg-surface-2 ${!canMoveUp ? "opacity-30" : ""}`}
+              style={{ borderRadius: 6 }}
+              activeOpacity={0.7}
+            >
+              <ArrowUp size={16} color="#A0A0A0" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onMoveDown}
+              disabled={!canMoveDown}
+              className={`w-9 h-9 items-center justify-center bg-surface-2 ${!canMoveDown ? "opacity-30" : ""}`}
+              style={{ borderRadius: 6 }}
+              activeOpacity={0.7}
+            >
+              <ArrowDown size={16} color="#A0A0A0" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            onPress={onTimerPress}
+            className="w-10 h-10 bg-surface-2 items-center justify-center ml-3"
+            style={{ borderRadius: 8 }}
+            activeOpacity={0.7}
+          >
+            <Timer size={18} color="#606060" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── Collapsed: show set count summary only ───────────── */}

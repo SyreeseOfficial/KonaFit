@@ -168,68 +168,67 @@ export async function getAllWorkoutDataForExport(): Promise<CsvRow[]> {
 
 // ─── Exercise PRs ─────────────────────────────────────────────────────────────
 
-export type ExercisePRs = {
-  maxWeightLbs: number | null;
-  maxReps: number | null;
-  maxVolumePerSession: number | null;
+export type PRSet = {
+  weightLbs: number | null;
+  reps: number | null;
+  achievedAt: number | null; // unix ms
 };
 
-export type ExerciseSession = {
-  startedAt: number;
-  bestWeightLbs: number | null;
-  totalReps: number;
-  sets: number;
-  volume: number;
+export type ExercisePRs = {
+  maxWeight: PRSet;
+  maxReps: PRSet;
+  maxVolume: PRSet;
 };
+
+const PR_BASE = `
+  FROM logged_sets ls
+  JOIN logged_exercises le ON ls.logged_exercise_id = le.id
+  JOIN workouts w ON le.workout_id = w.id
+  WHERE le.exercise_id = ?
+    AND ls.is_completed = 1 AND ls.is_warmup = 0
+    AND ls.weight_lbs IS NOT NULL AND ls.reps IS NOT NULL
+    AND w.finished_at IS NOT NULL
+`;
 
 export async function getExercisePRs(exerciseId: number): Promise<ExercisePRs> {
   const db = await getDatabase();
 
-  const weight = await db.getFirstAsync<{ v: number | null }>(
-    `SELECT MAX(ls.weight_lbs) as v
-     FROM logged_sets ls
-     JOIN logged_exercises le ON ls.logged_exercise_id = le.id
-     JOIN workouts w ON le.workout_id = w.id
-     WHERE le.exercise_id = ? AND ls.is_completed = 1 AND ls.is_warmup = 0
-       AND w.finished_at IS NOT NULL`,
+  const maxWeightRow = await db.getFirstAsync<{ weight_lbs: number; reps: number; started_at: number }>(
+    `SELECT ls.weight_lbs, ls.reps, w.started_at ${PR_BASE}
+     ORDER BY ls.weight_lbs DESC, ls.reps DESC LIMIT 1`,
     [exerciseId]
   );
 
-  const reps = await db.getFirstAsync<{ v: number | null }>(
-    `SELECT MAX(ls.reps) as v
-     FROM logged_sets ls
-     JOIN logged_exercises le ON ls.logged_exercise_id = le.id
-     JOIN workouts w ON le.workout_id = w.id
-     WHERE le.exercise_id = ? AND ls.is_completed = 1 AND ls.is_warmup = 0
-       AND w.finished_at IS NOT NULL`,
+  const maxRepsRow = await db.getFirstAsync<{ weight_lbs: number; reps: number; started_at: number }>(
+    `SELECT ls.weight_lbs, ls.reps, w.started_at ${PR_BASE}
+     ORDER BY ls.reps DESC, ls.weight_lbs DESC LIMIT 1`,
     [exerciseId]
   );
 
-  const vol = await db.getFirstAsync<{ v: number | null }>(
-    `SELECT MAX(session_vol) as v FROM (
-       SELECT SUM(ls.weight_lbs * ls.reps) as session_vol
-       FROM logged_sets ls
-       JOIN logged_exercises le ON ls.logged_exercise_id = le.id
-       JOIN workouts w ON le.workout_id = w.id
-       WHERE le.exercise_id = ? AND ls.is_completed = 1 AND ls.is_warmup = 0
-         AND ls.weight_lbs IS NOT NULL AND ls.reps IS NOT NULL
-         AND w.finished_at IS NOT NULL
-       GROUP BY le.workout_id
-     )`,
+  const maxVolumeRow = await db.getFirstAsync<{ weight_lbs: number; reps: number; started_at: number }>(
+    `SELECT ls.weight_lbs, ls.reps, w.started_at ${PR_BASE}
+     ORDER BY (ls.weight_lbs * ls.reps) DESC LIMIT 1`,
     [exerciseId]
   );
+
+  const toSet = (row: { weight_lbs: number; reps: number; started_at: number } | null): PRSet => ({
+    weightLbs: row?.weight_lbs ?? null,
+    reps: row?.reps ?? null,
+    achievedAt: row ? row.started_at * 1000 : null,
+  });
 
   return {
-    maxWeightLbs: weight?.v ?? null,
-    maxReps: reps?.v ?? null,
-    maxVolumePerSession: vol?.v ?? null,
+    maxWeight: toSet(maxWeightRow ?? null),
+    maxReps: toSet(maxRepsRow ?? null),
+    maxVolume: toSet(maxVolumeRow ?? null),
   };
 }
 
+// kept for potential future use — not used by ExerciseHistoryModal anymore
 export async function getRecentExerciseSessions(
   exerciseId: number,
   limit = 5
-): Promise<ExerciseSession[]> {
+): Promise<{ startedAt: number; bestWeightLbs: number | null; totalReps: number; sets: number; volume: number }[]> {
   const db = await getDatabase();
   const rows = await db.getAllAsync<{
     started_at: number;

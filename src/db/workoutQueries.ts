@@ -89,6 +89,17 @@ export async function upsertLoggedSet(set: ActiveSet & { loggedExerciseId: numbe
   }
 }
 
+export async function updateLoggedExerciseOrder(
+  loggedExerciseId: number,
+  orderIndex: number
+): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    "UPDATE logged_exercises SET order_index = ? WHERE id = ?",
+    [orderIndex, loggedExerciseId]
+  );
+}
+
 export async function swapLoggedExercise(
   loggedExerciseId: number,
   newExerciseId: number,

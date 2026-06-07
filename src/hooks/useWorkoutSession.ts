@@ -12,6 +12,7 @@ import {
   getGhostSets,
   updateLoggedExerciseNotes,
   swapLoggedExercise,
+  updateLoggedExerciseOrder,
 } from "../db/workoutQueries";
 import { getProgramDayExercises } from "../db/programQueries";
 
@@ -270,6 +271,27 @@ export function useWorkoutSession() {
     [updateSession]
   );
 
+  const moveExercise = useCallback(
+    async (exerciseLocalId: string, direction: "up" | "down") => {
+      if (!session) return;
+      const idx = session.exercises.findIndex((e) => e.localId === exerciseLocalId);
+      if (idx === -1) return;
+      const newIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= session.exercises.length) return;
+
+      updateSession((prev) => {
+        const exercises = [...prev.exercises];
+        [exercises[idx], exercises[newIdx]] = [exercises[newIdx], exercises[idx]];
+        exercises[idx] = { ...exercises[idx], orderIndex: idx };
+        exercises[newIdx] = { ...exercises[newIdx], orderIndex: newIdx };
+        if (exercises[idx].dbId) updateLoggedExerciseOrder(exercises[idx].dbId!, idx).catch(console.error);
+        if (exercises[newIdx].dbId) updateLoggedExerciseOrder(exercises[newIdx].dbId!, newIdx).catch(console.error);
+        return { ...prev, exercises };
+      });
+    },
+    [session, updateSession]
+  );
+
   const swapExercise = useCallback(
     async (exerciseLocalId: string, newExerciseId: number, newExerciseName: string, newMuscleGroup: string) => {
       const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
@@ -351,5 +373,6 @@ export function useWorkoutSession() {
     removeExercise,
     launchFromProgramDay,
     swapExercise,
+    moveExercise,
   };
 }
