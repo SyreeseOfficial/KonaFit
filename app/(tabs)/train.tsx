@@ -9,7 +9,7 @@ import {
   Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Plus } from "lucide-react-native";
+import { Plus, Calculator } from "lucide-react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useWorkoutSession, loadCachedSession } from "../../src/hooks/useWorkoutSession";
 import { useRestTimer } from "../../src/hooks/useRestTimer";
@@ -176,32 +176,42 @@ export default function TrainScreen() {
   if (!session) {
     return (
       <SafeAreaView className="flex-1 bg-obsidian">
-        <View className="flex-1 px-4 pt-4">
-          <Text className="font-anton text-white text-3xl tracking-widest uppercase mb-1">
-            The Workspace
-          </Text>
-          <Text className="font-mono text-text-muted text-xs tracking-widest uppercase mb-8">
-            Train
-          </Text>
-          <View className="flex-1 items-center justify-center gap-6">
-            <View className="items-center">
-              <Text className="font-montserrat-bold text-white text-base tracking-wider uppercase mb-1">
-                Ready to train?
-              </Text>
-              <Text className="font-montserrat text-text-muted text-sm text-center">
-                Start an empty workout and add exercises as you go.
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={startWorkout}
-              className="bg-crimson px-10 py-4"
-              activeOpacity={0.8}
-            >
-              <Text className="font-montserrat-bold text-white tracking-widest uppercase text-sm">
-                Start Workout
-              </Text>
-            </TouchableOpacity>
+        <View className="flex-row items-start justify-between px-4 pt-4">
+          <View>
+            <Text className="font-anton text-white text-3xl tracking-widest uppercase mb-1">
+              The Workspace
+            </Text>
+            <Text className="font-mono text-text-muted text-xs tracking-widest uppercase mb-8">
+              Train
+            </Text>
           </View>
+          <TouchableOpacity
+            onPress={() => router.push("/tools")}
+            hitSlop={8}
+            activeOpacity={0.7}
+            className="mt-1"
+          >
+            <Calculator size={20} color="#606060" />
+          </TouchableOpacity>
+        </View>
+        <View className="flex-1 items-center justify-center gap-6">
+          <View className="items-center">
+            <Text className="font-montserrat-bold text-white text-base tracking-wider uppercase mb-1">
+              Ready to train?
+            </Text>
+            <Text className="font-montserrat text-text-muted text-sm text-center">
+              Start an empty workout and add exercises as you go.
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={startWorkout}
+            className="bg-crimson px-10 py-4"
+            activeOpacity={0.8}
+          >
+            <Text className="font-montserrat-bold text-white tracking-widest uppercase text-sm">
+              Start Workout
+            </Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -210,7 +220,7 @@ export default function TrainScreen() {
   // ─── Active workspace ──────────────────────────────────────────────
   return (
     <SafeAreaView className="flex-1 bg-obsidian" edges={["top"]}>
-      <WorkspaceHeader startedAt={session.startedAt} onFinish={handleFinish} />
+      <WorkspaceHeader startedAt={session.startedAt} onFinish={handleFinish} onTools={() => router.push("/tools")} />
 
       <ScrollView
         className="flex-1"

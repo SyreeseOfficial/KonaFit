@@ -1,12 +1,14 @@
 import { View, Text, TouchableOpacity } from "react-native";
+import { Calculator } from "lucide-react-native";
 import { useElapsedTimer } from "../../hooks/useElapsedTimer";
 
 type Props = {
   startedAt: number;
   onFinish: () => void;
+  onTools?: () => void;
 };
 
-export function WorkspaceHeader({ startedAt, onFinish }: Props) {
+export function WorkspaceHeader({ startedAt, onFinish, onTools }: Props) {
   const elapsed = useElapsedTimer(startedAt);
 
   return (
@@ -20,9 +22,16 @@ export function WorkspaceHeader({ startedAt, onFinish }: Props) {
         </Text>
       </View>
       <View className="items-end gap-2">
-        <Text className="font-mono-medium text-white text-xl tracking-wider">
-          {elapsed}
-        </Text>
+        <View className="flex-row items-center gap-3">
+          {onTools && (
+            <TouchableOpacity onPress={onTools} hitSlop={8} activeOpacity={0.7}>
+              <Calculator size={18} color="#606060" />
+            </TouchableOpacity>
+          )}
+          <Text className="font-mono-medium text-white text-xl tracking-wider">
+            {elapsed}
+          </Text>
+        </View>
         <TouchableOpacity
           onPress={onFinish}
           className="bg-crimson px-4 py-1.5"

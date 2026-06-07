@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { ScrollView, View, Text, RefreshControl } from "react-native";
+import { ScrollView, View, Text, RefreshControl, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
+import { Calculator } from "lucide-react-native";
 import {
   getTotalLifted,
   getWorkoutCount,
@@ -82,13 +84,23 @@ export default function StatsScreen() {
         }
       >
         {/* Header */}
-        <View className="px-4 pt-4 pb-5">
-          <Text className="font-anton text-white text-3xl tracking-widest uppercase mb-1">
-            Command Center
-          </Text>
-          <Text className="font-mono text-text-muted text-xs tracking-widest uppercase">
-            Stats
-          </Text>
+        <View className="flex-row items-start justify-between px-4 pt-4 pb-5">
+          <View>
+            <Text className="font-anton text-white text-3xl tracking-widest uppercase mb-1">
+              Command Center
+            </Text>
+            <Text className="font-mono text-text-muted text-xs tracking-widest uppercase">
+              Stats
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push({ pathname: "/tools", params: { tab: "percent" } })}
+            hitSlop={8}
+            activeOpacity={0.7}
+            className="mt-1"
+          >
+            <Calculator size={20} color="#606060" />
+          </TouchableOpacity>
         </View>
 
         {/* Stats Grid */}
