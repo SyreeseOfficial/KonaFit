@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { kvStore } from "../utils/kvStore";
 import type { ActiveSession, ActiveExercise, ActiveSet } from "../types/workout";
 import {
   createWorkout,
@@ -32,15 +32,15 @@ function defaultSet(setNumber: number): ActiveSet {
 
 async function saveToStorage(session: ActiveSession | null) {
   if (session) {
-    await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    await kvStore.setItem(SESSION_KEY, JSON.stringify(session));
   } else {
-    await AsyncStorage.removeItem(SESSION_KEY);
+    await kvStore.removeItem(SESSION_KEY);
   }
 }
 
 export async function loadCachedSession(): Promise<ActiveSession | null> {
   try {
-    const raw = await AsyncStorage.getItem(SESSION_KEY);
+    const raw = await kvStore.getItem(SESSION_KEY);
     return raw ? (JSON.parse(raw) as ActiveSession) : null;
   } catch {
     return null;
