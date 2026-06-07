@@ -125,52 +125,54 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
                   </View>
 
                   {/* Results */}
-                  {loading ? (
-                    <ActivityIndicator color="#FF0000" className="mt-8" />
-                  ) : (
-                    <FlatList
-                      data={results}
-                      keyExtractor={(item) => String(item.id)}
-                      keyboardShouldPersistTaps="handled"
-                      renderItem={({ item }) => (
-                        <TouchableOpacity
-                          onPress={() => { onSelect(item); onClose(); }}
-                          className="flex-row items-center justify-between px-4 py-3.5 border-b border-surface-3"
-                          activeOpacity={0.7}
-                        >
-                          <View className="flex-1">
-                            <Text className="font-montserrat-semibold text-white text-sm">
-                              {item.name}
-                            </Text>
-                            <Text className="font-mono text-text-muted text-xs tracking-wider uppercase mt-0.5">
-                              {item.muscle_group} · {item.equipment_type}
+                  <View className="flex-1">
+                    {loading ? (
+                      <ActivityIndicator color="#FF0000" className="mt-8" />
+                    ) : (
+                      <FlatList
+                        data={results}
+                        keyExtractor={(item) => String(item.id)}
+                        keyboardShouldPersistTaps="handled"
+                        renderItem={({ item }) => (
+                          <TouchableOpacity
+                            onPress={() => { onSelect(item); onClose(); }}
+                            className="flex-row items-center justify-between px-4 py-3.5 border-b border-surface-3"
+                            activeOpacity={0.7}
+                          >
+                            <View className="flex-1">
+                              <Text className="font-montserrat-semibold text-white text-sm">
+                                {item.name}
+                              </Text>
+                              <Text className="font-mono text-text-muted text-xs tracking-wider uppercase mt-0.5">
+                                {item.muscle_group} · {item.equipment_type}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                        )}
+                        ListEmptyComponent={
+                          <View className="items-center mt-10 px-6">
+                            <Text className="font-montserrat text-text-muted text-sm text-center">
+                              {query.length > 0 ? `No results for "${query}"` : "No exercises yet"}
                             </Text>
                           </View>
-                        </TouchableOpacity>
-                      )}
-                      ListEmptyComponent={
-                        <View className="items-center mt-10 px-6">
-                          <Text className="font-montserrat text-text-muted text-sm text-center mb-1">
-                            {query.length > 0 ? `No results for "${query}"` : "No exercises yet"}
-                          </Text>
-                        </View>
-                      }
-                      ListFooterComponent={
-                        <TouchableOpacity
-                          onPress={openCreate}
-                          className="flex-row items-center justify-center gap-2 py-4 border-t border-surface-3 mt-2"
-                          activeOpacity={0.7}
-                        >
-                          <Plus size={15} color="#FF0000" />
-                          <Text className="font-montserrat-semibold text-crimson text-sm tracking-wider">
-                            {query.trim().length > 0
-                              ? `Create "${query.trim()}"`
-                              : "Create Custom Exercise"}
-                          </Text>
-                        </TouchableOpacity>
-                      }
-                    />
-                  )}
+                        }
+                      />
+                    )}
+                  </View>
+
+                  {/* Create button — fixed at bottom, always visible */}
+                  <TouchableOpacity
+                    onPress={openCreate}
+                    className="flex-row items-center justify-center gap-2 py-4 border-t border-surface-3 bg-surface-2"
+                    activeOpacity={0.7}
+                  >
+                    <Plus size={15} color="#FF0000" />
+                    <Text className="font-montserrat-semibold text-crimson text-sm tracking-wider">
+                      {query.trim().length > 0
+                        ? `Create "${query.trim()}"`
+                        : "Create Custom Exercise"}
+                    </Text>
+                  </TouchableOpacity>
                 </>
               )}
 
