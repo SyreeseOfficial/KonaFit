@@ -132,6 +132,30 @@ export async function getGhostSets(
   }));
 }
 
+export async function createCustomExercise(
+  name: string,
+  muscleGroup: string,
+  equipmentType: string
+): Promise<Exercise> {
+  const db = await getDatabase();
+  const result = await db.runAsync(
+    "INSERT INTO exercises (name, muscle_group, equipment_type) VALUES (?, ?, ?)",
+    [name.trim(), muscleGroup, equipmentType]
+  );
+  // Also insert into FTS index
+  await db.runAsync(
+    "INSERT INTO exercises_fts (rowid, name) VALUES (?, ?)",
+    [result.lastInsertRowId, name.trim()]
+  );
+  return {
+    id: result.lastInsertRowId,
+    name: name.trim(),
+    muscle_group: muscleGroup,
+    equipment_type: equipmentType,
+    use_count: 0,
+  };
+}
+
 export async function searchExercises(query: string): Promise<Exercise[]> {
   const db = await getDatabase();
   if (query.trim() === "") {
