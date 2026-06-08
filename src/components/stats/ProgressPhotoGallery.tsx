@@ -10,7 +10,6 @@ import {
   Alert,
 } from "react-native";
 import { Camera, X, Trash2 } from "lucide-react-native";
-import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import { getProgressPhotos, saveProgressPhoto, deleteProgressPhoto, type ProgressPhoto } from "../../db/photoQueries";
 
@@ -47,6 +46,8 @@ export function ProgressPhotoGallery({ refreshKey }: Props) {
   }, [refreshKey, load]);
 
   const handleAdd = useCallback(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ImagePicker = require("expo-image-picker") as typeof import("expo-image-picker");
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       Alert.alert("Permission needed", "Enable photo access in Settings.");

@@ -11,7 +11,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus, Calculator, Settings } from "lucide-react-native";
 import { useLocalSearchParams, router } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import { saveProgressPhoto } from "../../src/db/photoQueries";
 import { useWorkoutSession, loadCachedSession } from "../../src/hooks/useWorkoutSession";
@@ -49,6 +48,8 @@ export default function TrainScreen() {
   const [exerciseSheetOpen, setExerciseSheetOpen] = useState(false);
 
   const handleCameraPress = useCallback(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ImagePicker = require("expo-image-picker") as typeof import("expo-image-picker");
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       Alert.alert("Permission needed", "Enable photo access in Settings to save progress photos.");
