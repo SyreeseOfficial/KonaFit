@@ -26,6 +26,7 @@ import { LifestyleLogger } from "../../src/components/stats/LifestyleLogger";
 import { SectionHeader } from "../../src/components/stats/SectionHeader";
 import { WorkoutHistoryList } from "../../src/components/stats/WorkoutHistoryList";
 import { ProgressPhotoGallery } from "../../src/components/stats/ProgressPhotoGallery";
+import { StrengthScore } from "../../src/components/stats/StrengthScore";
 
 type StatsData = {
   totalLiftedLbs: number;
@@ -149,6 +150,12 @@ export default function StatsScreen() {
             totalHours={stats?.totalHours ?? 0}
             prCount={stats?.prCount ?? 0}
           />
+        </View>
+
+        {/* Strength Score */}
+        <View className="px-4 mb-6">
+          <SectionHeader title="Strength Score" subtitle="Relative strength rating" />
+          <StrengthScore refreshKey={refreshKey} />
         </View>
 
         {/* 1RM Trajectory */}

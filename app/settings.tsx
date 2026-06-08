@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react-native";
@@ -13,14 +14,25 @@ import { kvStore } from "../src/utils/kvStore";
 import { getAllWorkoutDataForExport } from "../src/db/historyQueries";
 import { exportCsvAndShare } from "../src/utils/exportUtils";
 import { getDatabase } from "../src/db/database";
+import type { Gender } from "../src/utils/strengthScore";
 
 const REST_TIMER_KEY = "@konafit_default_rest_seconds";
+export const GENDER_KEY = "@konafit_gender";
+export const AGE_KEY = "@konafit_age";
 export const DEFAULT_REST_SECONDS = 90;
 const REST_STEP = 15;
 
 export async function getDefaultRestSeconds(): Promise<number> {
   const raw = await kvStore.getItem(REST_TIMER_KEY);
   return raw ? parseInt(raw, 10) : DEFAULT_REST_SECONDS;
+}
+
+export async function getProfileSettings(): Promise<{ gender: Gender; age: number }> {
+  const [g, a] = await Promise.all([kvStore.getItem(GENDER_KEY), kvStore.getItem(AGE_KEY)]);
+  return {
+    gender: (g as Gender) ?? "male",
+    age: a ? parseInt(a, 10) : 25,
+  };
 }
 
 function Row({
@@ -65,10 +77,31 @@ function SectionLabel({ title }: { title: string }) {
 
 export default function SettingsScreen() {
   const [restSeconds, setRestSeconds] = useState(DEFAULT_REST_SECONDS);
+  const [gender, setGender] = useState<Gender>("male");
+  const [ageText, setAgeText] = useState("25");
 
   useEffect(() => {
     getDefaultRestSeconds().then(setRestSeconds);
+    getProfileSettings().then((p) => {
+      setGender(p.gender);
+      setAgeText(String(p.age));
+    });
   }, []);
+
+  const handleGender = useCallback(async (g: Gender) => {
+    setGender(g);
+    await kvStore.setItem(GENDER_KEY, g);
+  }, []);
+
+  const handleAgeBlur = useCallback(async () => {
+    const n = parseInt(ageText, 10);
+    if (!isNaN(n) && n > 0 && n < 120) {
+      await kvStore.setItem(AGE_KEY, String(n));
+    } else {
+      setAgeText("25");
+      await kvStore.setItem(AGE_KEY, "25");
+    }
+  }, [ageText]);
 
   const adjustRest = useCallback(async (delta: number) => {
     const next = Math.max(REST_STEP, restSeconds + delta);
@@ -139,6 +172,45 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 48 }}>
+        {/* Profile — used for Strength Score */}
+        <SectionLabel title="Profile" />
+        <View className="bg-surface">
+          <View className="flex-row items-center justify-between px-4 py-4 border-b border-surface-2">
+            <View>
+              <Text className="font-montserrat-semibold text-white text-sm">Gender</Text>
+              <Text className="font-mono text-text-muted text-xs mt-0.5">Used for strength score</Text>
+            </View>
+            <View className="flex-row gap-1">
+              {(["male", "female"] as Gender[]).map((g) => (
+                <TouchableOpacity
+                  key={g}
+                  onPress={() => handleGender(g)}
+                  className={`px-4 py-2 ${gender === g ? "bg-crimson" : "bg-surface-2"}`}
+                  activeOpacity={0.7}
+                >
+                  <Text className={`font-montserrat-semibold text-xs uppercase tracking-wider ${gender === g ? "text-white" : "text-text-secondary"}`}>
+                    {g === "male" ? "Male" : "Female"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <View className="flex-row items-center justify-between px-4 py-4">
+            <View>
+              <Text className="font-montserrat-semibold text-white text-sm">Age</Text>
+              <Text className="font-mono text-text-muted text-xs mt-0.5">Age adjustment for young / masters lifters</Text>
+            </View>
+            <TextInput
+              className="font-mono-medium text-white text-sm bg-surface-2 w-16 text-center h-9"
+              value={ageText}
+              onChangeText={setAgeText}
+              onBlur={handleAgeBlur}
+              keyboardType="number-pad"
+              maxLength={3}
+            />
+          </View>
+        </View>
+
         {/* Workout */}
         <SectionLabel title="Workout" />
         <View className="bg-surface">

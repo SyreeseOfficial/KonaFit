@@ -127,6 +127,26 @@ export async function getLatestBodyweight(): Promise<number | null> {
   return row?.weight_lbs ?? null;
 }
 
+// ─── Strength Score ───────────────────────────────────────────────────────────
+
+export type ExerciseOneRM = { name: string; oneRM: number };
+
+export async function getAllExercise1RMs(): Promise<ExerciseOneRM[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{ name: string; one_rm: number }>(
+    `SELECT e.name, MAX(ls.weight_lbs * (1.0 + ls.reps / 30.0)) AS one_rm
+     FROM logged_sets ls
+     JOIN logged_exercises le ON ls.logged_exercise_id = le.id
+     JOIN workouts w ON le.workout_id = w.id
+     JOIN exercises e ON le.exercise_id = e.id
+     WHERE ls.is_completed = 1 AND ls.is_warmup = 0
+       AND ls.weight_lbs IS NOT NULL AND ls.reps IS NOT NULL AND ls.reps > 0
+       AND w.finished_at IS NOT NULL
+     GROUP BY le.exercise_id`
+  );
+  return rows.map((r) => ({ name: r.name, oneRM: r.one_rm }));
+}
+
 // ─── 1RM Trajectory ───────────────────────────────────────────────────────────
 
 export async function getOneRMHistory(exerciseId: number): Promise<OneRMDataPoint[]> {
