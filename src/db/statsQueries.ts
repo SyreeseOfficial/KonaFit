@@ -127,6 +127,55 @@ export async function getLatestBodyweight(): Promise<number | null> {
   return row?.weight_lbs ?? null;
 }
 
+// ─── Muscle Tracker ───────────────────────────────────────────────────────────
+
+export type RawMuscleSets = Record<string, number>; // muscle_group → raw set count
+
+async function fetchRawSets(
+  db: Awaited<ReturnType<typeof getDatabase>>,
+  fromSecs: number | null,
+  toSecs: number | null
+): Promise<RawMuscleSets> {
+  const conditions = [
+    "ls.is_completed = 1",
+    "ls.is_warmup = 0",
+    "w.finished_at IS NOT NULL",
+  ];
+  const params: number[] = [];
+  if (fromSecs !== null) { conditions.push("w.started_at >= ?"); params.push(fromSecs); }
+  if (toSecs !== null)   { conditions.push("w.started_at < ?");  params.push(toSecs);   }
+
+  const rows = await db.getAllAsync<{ muscle_group: string; set_count: number }>(
+    `SELECT e.muscle_group, COUNT(*) AS set_count
+     FROM logged_sets ls
+     JOIN logged_exercises le ON ls.logged_exercise_id = le.id
+     JOIN workouts w ON le.workout_id = w.id
+     JOIN exercises e ON le.exercise_id = e.id
+     WHERE ${conditions.join(" AND ")}
+     GROUP BY e.muscle_group`,
+    params
+  );
+
+  const result: RawMuscleSets = {};
+  for (const r of rows) result[r.muscle_group] = r.set_count;
+  return result;
+}
+
+export async function getMuscleSets(
+  days: number | null // null = all time
+): Promise<{ current: RawMuscleSets; previous: RawMuscleSets }> {
+  const db = await getDatabase();
+  const now = Math.floor(Date.now() / 1000);
+
+  const [current, previous] = await Promise.all([
+    fetchRawSets(db, days !== null ? now - days * 86400 : null, null),
+    days !== null
+      ? fetchRawSets(db, now - days * 2 * 86400, now - days * 86400)
+      : Promise.resolve({} as RawMuscleSets),
+  ]);
+  return { current, previous };
+}
+
 // ─── Strength Score ───────────────────────────────────────────────────────────
 
 export type ExerciseOneRM = { name: string; oneRM: number };

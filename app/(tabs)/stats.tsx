@@ -12,16 +12,13 @@ import {
   calculateStreak,
   getLatestBodyweight,
   getWorkoutDays,
-  getVolumeByMuscle,
-  type VolumeByMuscle,
 } from "../../src/db/statsQueries";
 import { getWorkoutHistory, getAllWorkoutDataForExport, type WorkoutSummary } from "../../src/db/historyQueries";
 import { exportCsvAndShare } from "../../src/utils/exportUtils";
 import { StatsGrid } from "../../src/components/stats/StatsGrid";
 import { HabitCalendar } from "../../src/components/stats/HabitCalendar";
 import { OneRMChart } from "../../src/components/stats/OneRMChart";
-import { VolumeChart } from "../../src/components/stats/VolumeChart";
-import { MuscleHeatmap } from "../../src/components/stats/MuscleHeatmap";
+import { MuscleTracker } from "../../src/components/stats/MuscleTracker";
 import { LifestyleLogger } from "../../src/components/stats/LifestyleLogger";
 import { SectionHeader } from "../../src/components/stats/SectionHeader";
 import { WorkoutHistoryList } from "../../src/components/stats/WorkoutHistoryList";
@@ -36,12 +33,11 @@ type StatsData = {
   totalHours: number;
   prCount: number;
   workoutDays: Set<string>;
-  volumeByMuscle: VolumeByMuscle[];
   recentWorkouts: WorkoutSummary[];
 };
 
 async function loadStats(): Promise<StatsData> {
-  const [total, hours, prs, count, dates, bw, days, vol, recent] = await Promise.all([
+  const [total, hours, prs, count, dates, bw, days, recent] = await Promise.all([
     getTotalLifted(),
     getTotalHours(),
     getTotalPRCount(),
@@ -49,7 +45,6 @@ async function loadStats(): Promise<StatsData> {
     getWorkoutDatesForStreak(),
     getLatestBodyweight(),
     getWorkoutDays(91),
-    getVolumeByMuscle(30),
     getWorkoutHistory(10),
   ]);
   return {
@@ -60,7 +55,6 @@ async function loadStats(): Promise<StatsData> {
     totalHours: hours,
     prCount: prs,
     workoutDays: days,
-    volumeByMuscle: vol,
     recentWorkouts: recent,
   };
 }
@@ -164,16 +158,10 @@ export default function StatsScreen() {
           <OneRMChart refreshKey={refreshKey} />
         </View>
 
-        {/* Volume Distribution */}
+        {/* Muscle Tracker */}
         <View className="px-4 mb-6">
-          <SectionHeader title="Volume Distribution" subtitle="By muscle group" />
-          <VolumeChart refreshKey={refreshKey} />
-        </View>
-
-        {/* Muscle Heatmap */}
-        <View className="px-4 mb-6">
-          <SectionHeader title="Muscle Heatmap" subtitle="30-day volume" />
-          <MuscleHeatmap data={stats?.volumeByMuscle ?? []} />
+          <SectionHeader title="Muscle Tracker" subtitle="Weighted sets by muscle" />
+          <MuscleTracker refreshKey={refreshKey} />
         </View>
 
         {/* Habit Calendar */}

@@ -11,6 +11,7 @@ export function LifestyleLogger({ onSaved }: Props) {
   const [preWorkout, setPreWorkout] = useState(false);
   const [location, setLocation] = useState("");
   const [saving, setSaving] = useState(false);
+  const [bwSaved, setBwSaved] = useState(false);
 
   const handleSaveBodyweight = async () => {
     const val = parseFloat(bodyweight);
@@ -19,6 +20,8 @@ export function LifestyleLogger({ onSaved }: Props) {
     try {
       await logBodyweight(val);
       setBodyweight("");
+      setBwSaved(true);
+      setTimeout(() => setBwSaved(false), 2000);
       onSaved();
     } finally {
       setSaving(false);
@@ -70,12 +73,12 @@ export function LifestyleLogger({ onSaved }: Props) {
           />
           <TouchableOpacity
             onPress={handleSaveBodyweight}
-            className="bg-crimson px-4 h-10 items-center justify-center"
+            className={`px-4 h-10 items-center justify-center ${bwSaved ? "bg-surface-2" : bodyweight !== "" ? "bg-crimson" : "bg-surface-3"}`}
             activeOpacity={0.8}
-            disabled={saving}
+            disabled={saving || bodyweight === ""}
           >
-            <Text className="font-montserrat-bold text-white text-xs tracking-widest uppercase">
-              Log
+            <Text className={`font-montserrat-bold text-xs tracking-widest uppercase ${bwSaved ? "text-crimson" : "text-white"}`}>
+              {bwSaved ? "Saved ✓" : "Log"}
             </Text>
           </TouchableOpacity>
         </View>
