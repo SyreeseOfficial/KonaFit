@@ -33,6 +33,43 @@ export type LifestyleLog = {
 
 // ─── Stats Grid ───────────────────────────────────────────────────────────────
 
+export async function getTotalHours(): Promise<number> {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ total: number }>(
+    "SELECT COALESCE(SUM(duration_seconds), 0) as total FROM workouts WHERE finished_at IS NOT NULL"
+  );
+  return Math.round((row?.total ?? 0) / 3600);
+}
+
+export async function getTotalPRCount(): Promise<number> {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ pr_count: number }>(
+    `WITH per_workout AS (
+       SELECT le.exercise_id, w.id AS workout_id, w.started_at,
+              MAX(ls.weight_lbs) AS max_weight
+       FROM logged_sets ls
+       JOIN logged_exercises le ON ls.logged_exercise_id = le.id
+       JOIN workouts w ON le.workout_id = w.id
+       WHERE w.finished_at IS NOT NULL
+         AND ls.is_completed = 1 AND ls.is_warmup = 0
+         AND ls.weight_lbs IS NOT NULL
+       GROUP BY le.exercise_id, w.id
+     ),
+     with_prev AS (
+       SELECT *,
+         MAX(max_weight) OVER (
+           PARTITION BY exercise_id
+           ORDER BY started_at
+           ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+         ) AS prev_best
+       FROM per_workout
+     )
+     SELECT COUNT(*) AS pr_count FROM with_prev
+     WHERE prev_best IS NULL OR max_weight > prev_best`
+  );
+  return row?.pr_count ?? 0;
+}
+
 export async function getTotalLifted(): Promise<number> {
   const db = await getDatabase();
   const row = await db.getFirstAsync<{ total: number }>(

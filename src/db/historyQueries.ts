@@ -166,6 +166,31 @@ export async function getAllWorkoutDataForExport(): Promise<CsvRow[]> {
   });
 }
 
+// ─── Edit Workout ─────────────────────────────────────────────────────────────
+
+export async function updateWorkoutName(workoutId: number, name: string): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("UPDATE workouts SET name = ? WHERE id = ?", [name.trim(), workoutId]);
+}
+
+export async function updateLoggedSetValues(
+  setId: number,
+  weightLbs: number | null,
+  reps: number | null,
+  rpe: number | null
+): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    "UPDATE logged_sets SET weight_lbs = ?, reps = ?, rpe = ? WHERE id = ?",
+    [weightLbs, reps, rpe, setId]
+  );
+}
+
+export async function deleteLoggedSetFromHistory(setId: number): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("DELETE FROM logged_sets WHERE id = ?", [setId]);
+}
+
 // ─── Exercise PRs ─────────────────────────────────────────────────────────────
 
 export type PRSet = {
@@ -189,6 +214,32 @@ const PR_BASE = `
     AND ls.weight_lbs IS NOT NULL AND ls.reps IS NOT NULL
     AND w.finished_at IS NOT NULL
 `;
+
+export type RawHistPRs = {
+  maxWeight: number | null;
+  maxReps: number | null;
+  maxVolume: number | null;
+};
+
+export async function getHistPRs(exerciseId: number, excludeWorkoutId: number): Promise<RawHistPRs> {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ mw: number | null; mr: number | null; mv: number | null }>(
+    `SELECT
+       MAX(ls.weight_lbs) AS mw,
+       MAX(ls.reps) AS mr,
+       MAX(ls.weight_lbs * ls.reps) AS mv
+     FROM logged_sets ls
+     JOIN logged_exercises le ON ls.logged_exercise_id = le.id
+     JOIN workouts w ON le.workout_id = w.id
+     WHERE le.exercise_id = ?
+       AND w.id != ?
+       AND w.finished_at IS NOT NULL
+       AND ls.is_completed = 1 AND ls.is_warmup = 0
+       AND ls.weight_lbs IS NOT NULL AND ls.reps IS NOT NULL`,
+    [exerciseId, excludeWorkoutId]
+  );
+  return { maxWeight: row?.mw ?? null, maxReps: row?.mr ?? null, maxVolume: row?.mv ?? null };
+}
 
 export async function getExercisePRs(exerciseId: number): Promise<ExercisePRs> {
   const db = await getDatabase();

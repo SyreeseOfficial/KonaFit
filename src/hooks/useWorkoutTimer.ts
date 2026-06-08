@@ -50,6 +50,21 @@ export function useWorkoutTimer(startedAt: number) {
     setIsPaused(false);
   }, [startedAt]);
 
+  // Positive deltaSecs = add time to timer (e.g. forgot to pause)
+  // Negative deltaSecs = remove time from timer
+  const adjustElapsed = useCallback(
+    (deltaSecs: number) => {
+      setOffsetMs((prev) => {
+        const newOffset = prev - deltaSecs * 1000;
+        return Math.max(-(Date.now() - startedAt), newOffset);
+      });
+      if (isPaused) {
+        setFrozenSecs((prev) => Math.max(0, prev + deltaSecs));
+      }
+    },
+    [isPaused, startedAt]
+  );
+
   return {
     elapsed,
     formattedTime: formatTime(elapsed),
@@ -57,5 +72,6 @@ export function useWorkoutTimer(startedAt: number) {
     pause,
     resume,
     reset,
+    adjustElapsed,
   };
 }

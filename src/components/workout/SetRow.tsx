@@ -1,6 +1,8 @@
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { Check } from "lucide-react-native";
-import type { ActiveSet, GhostSet } from "../../types/workout";
+import type { ActiveSet, GhostSet, PRBadge } from "../../types/workout";
+
+const PR_LABELS: Record<PRBadge, string> = { W: "WT", R: "REP", V: "VOL" };
 
 type Props = {
   set: ActiveSet;
@@ -107,6 +109,19 @@ export function SetRow({ set, ghost, onUpdate, onToggleComplete, onToggleWarmup,
           strokeWidth={2.5}
         />
       </TouchableOpacity>
+
+      {/* PR badges */}
+      {set.prBadges && set.prBadges.length > 0 && (
+        <View className="flex-row gap-0.5 ml-1.5">
+          {set.prBadges.map((badge) => (
+            <View key={badge} className="bg-crimson px-1 py-0.5">
+              <Text className="font-mono text-white" style={{ fontSize: 8, lineHeight: 10 }}>
+                {PR_LABELS[badge]}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 }

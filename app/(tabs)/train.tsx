@@ -9,8 +9,11 @@ import {
   Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Plus, Calculator } from "lucide-react-native";
+import { Plus, Calculator, Settings } from "lucide-react-native";
 import { useLocalSearchParams, router } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
+import { saveProgressPhoto } from "../../src/db/photoQueries";
 import { useWorkoutSession, loadCachedSession } from "../../src/hooks/useWorkoutSession";
 import { useRestTimer } from "../../src/hooks/useRestTimer";
 import { WorkspaceHeader } from "../../src/components/workout/WorkspaceHeader";
@@ -44,6 +47,37 @@ export default function TrainScreen() {
 
   const restTimer = useRestTimer();
   const [exerciseSheetOpen, setExerciseSheetOpen] = useState(false);
+
+  const handleCameraPress = useCallback(async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Enable photo access in Settings to save progress photos.");
+      return;
+    }
+    Alert.alert("Progress Photo", "Choose how to add your photo", [
+      {
+        text: "Camera",
+        onPress: async () => {
+          const camStatus = await ImagePicker.requestCameraPermissionsAsync();
+          if (camStatus.status !== "granted") return;
+          const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+          if (!result.canceled && result.assets[0]) {
+            await persistPhoto(result.assets[0].uri, session?.workoutId);
+          }
+        },
+      },
+      {
+        text: "Photo Library",
+        onPress: async () => {
+          const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
+          if (!result.canceled && result.assets[0]) {
+            await persistPhoto(result.assets[0].uri, session?.workoutId);
+          }
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }, [session?.workoutId]);
   const [swappingExerciseLocalId, setSwappingExerciseLocalId] = useState<string | null>(null);
   const [reorderMode, setReorderMode] = useState(false);
   const [recoveryVisible, setRecoveryVisible] = useState(false);
@@ -95,6 +129,19 @@ export default function TrainScreen() {
     },
     [addExercise]
   );
+
+  async function persistPhoto(uri: string, workoutId?: number) {
+    try {
+      const dir = `${FileSystem.documentDirectory}konafit/photos/`;
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+      const filename = `photo_${Date.now()}.jpg`;
+      const dest = `${dir}${filename}`;
+      await FileSystem.copyAsync({ from: uri, to: dest });
+      await saveProgressPhoto(dest, workoutId);
+    } catch (e) {
+      Alert.alert("Error", "Failed to save photo.");
+    }
+  }
 
   const handleSetComplete = useCallback(
     (exerciseLocalId: string, setLocalId: string) => {
@@ -185,14 +232,22 @@ export default function TrainScreen() {
               Train
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={() => router.push("/tools")}
-            hitSlop={8}
-            activeOpacity={0.7}
-            className="mt-1"
-          >
-            <Calculator size={20} color="#606060" />
-          </TouchableOpacity>
+          <View className="flex-row items-center gap-4 mt-1">
+            <TouchableOpacity
+              onPress={() => router.push("/tools")}
+              hitSlop={8}
+              activeOpacity={0.7}
+            >
+              <Calculator size={20} color="#606060" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push("/settings")}
+              hitSlop={8}
+              activeOpacity={0.7}
+            >
+              <Settings size={20} color="#606060" />
+            </TouchableOpacity>
+          </View>
         </View>
         <View className="flex-1 items-center justify-center gap-6">
           <View className="items-center">
@@ -220,7 +275,12 @@ export default function TrainScreen() {
   // ─── Active workspace ──────────────────────────────────────────────
   return (
     <SafeAreaView className="flex-1 bg-obsidian" edges={["top"]}>
-      <WorkspaceHeader startedAt={session.startedAt} onFinish={handleFinish} onTools={() => router.push("/tools")} />
+      <WorkspaceHeader
+        startedAt={session.startedAt}
+        onFinish={handleFinish}
+        onTools={() => router.push("/tools")}
+        onCamera={handleCameraPress}
+      />
 
       <ScrollView
         className="flex-1"

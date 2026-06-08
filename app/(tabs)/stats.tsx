@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { ScrollView, View, Text, RefreshControl, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Calculator, Download } from "lucide-react-native";
+import { Calculator, Download, Settings } from "lucide-react-native";
 import {
   getTotalLifted,
+  getTotalHours,
+  getTotalPRCount,
   getWorkoutCount,
   getWorkoutDatesForStreak,
   calculateStreak,
@@ -23,20 +25,25 @@ import { MuscleHeatmap } from "../../src/components/stats/MuscleHeatmap";
 import { LifestyleLogger } from "../../src/components/stats/LifestyleLogger";
 import { SectionHeader } from "../../src/components/stats/SectionHeader";
 import { WorkoutHistoryList } from "../../src/components/stats/WorkoutHistoryList";
+import { ProgressPhotoGallery } from "../../src/components/stats/ProgressPhotoGallery";
 
 type StatsData = {
   totalLiftedLbs: number;
   workoutCount: number;
   streak: number;
   bodyweightLbs: number | null;
+  totalHours: number;
+  prCount: number;
   workoutDays: Set<string>;
   volumeByMuscle: VolumeByMuscle[];
   recentWorkouts: WorkoutSummary[];
 };
 
 async function loadStats(): Promise<StatsData> {
-  const [total, count, dates, bw, days, vol, recent] = await Promise.all([
+  const [total, hours, prs, count, dates, bw, days, vol, recent] = await Promise.all([
     getTotalLifted(),
+    getTotalHours(),
+    getTotalPRCount(),
     getWorkoutCount(),
     getWorkoutDatesForStreak(),
     getLatestBodyweight(),
@@ -49,6 +56,8 @@ async function loadStats(): Promise<StatsData> {
     workoutCount: count,
     streak: calculateStreak(dates),
     bodyweightLbs: bw,
+    totalHours: hours,
+    prCount: prs,
     workoutDays: days,
     volumeByMuscle: vol,
     recentWorkouts: recent,
@@ -120,6 +129,13 @@ export default function StatsScreen() {
             >
               <Calculator size={20} color="#606060" />
             </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push("/settings")}
+              hitSlop={8}
+              activeOpacity={0.7}
+            >
+              <Settings size={20} color="#606060" />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -130,6 +146,8 @@ export default function StatsScreen() {
             workoutCount={stats?.workoutCount ?? 0}
             streak={stats?.streak ?? 0}
             bodyweightLbs={stats?.bodyweightLbs ?? null}
+            totalHours={stats?.totalHours ?? 0}
+            prCount={stats?.prCount ?? 0}
           />
         </View>
 
@@ -163,6 +181,11 @@ export default function StatsScreen() {
         <View className="px-4 mb-6">
           <SectionHeader title="History" subtitle="Recent workouts" />
           <WorkoutHistoryList workouts={stats?.recentWorkouts ?? []} />
+        </View>
+
+        {/* Progress Photos */}
+        <View className="px-4 mb-6">
+          <ProgressPhotoGallery refreshKey={refreshKey} />
         </View>
 
         {/* Lifestyle Logger */}

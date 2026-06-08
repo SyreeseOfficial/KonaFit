@@ -15,10 +15,44 @@ import {
   updateLoggedExerciseOrder,
 } from "../db/workoutQueries";
 import { getProgramDayExercises } from "../db/programQueries";
+import { getHistPRs } from "../db/historyQueries";
+import type { PRBadge, HistPRs } from "../types/workout";
 
 const SESSION_KEY = "@kinetic_active_session";
 let localIdCounter = 0;
 const uid = () => `local_${++localIdCounter}_${Date.now()}`;
+
+function computePRBadges(
+  exercise: ActiveExercise,
+  excludeSetLocalId: string,
+  weight: number,
+  reps: number,
+  hist: HistPRs
+): PRBadge[] {
+  const otherCompleted = exercise.sets.filter(
+    (s) => s.localId !== excludeSetLocalId && s.isCompleted && !s.isWarmup &&
+    s.weightLbs !== "" && s.reps !== ""
+  );
+  const sessionMaxWeight = otherCompleted.length > 0
+    ? Math.max(...otherCompleted.map((s) => parseFloat(s.weightLbs)))
+    : null;
+  const sessionMaxReps = otherCompleted.length > 0
+    ? Math.max(...otherCompleted.map((s) => parseInt(s.reps, 10)))
+    : null;
+  const sessionMaxVolume = otherCompleted.length > 0
+    ? Math.max(...otherCompleted.map((s) => parseFloat(s.weightLbs) * parseInt(s.reps, 10)))
+    : null;
+
+  const allTimeWeight = Math.max(hist.maxWeight ?? 0, sessionMaxWeight ?? 0);
+  const allTimeReps = Math.max(hist.maxReps ?? 0, sessionMaxReps ?? 0);
+  const allTimeVolume = Math.max(hist.maxVolume ?? 0, sessionMaxVolume ?? 0);
+
+  const badges: PRBadge[] = [];
+  if (weight > allTimeWeight) badges.push("W");
+  if (reps > allTimeReps) badges.push("R");
+  if (weight * reps > allTimeVolume) badges.push("V");
+  return badges;
+}
 
 function defaultSet(setNumber: number): ActiveSet {
   return {
@@ -78,7 +112,16 @@ export function useWorkoutSession() {
   }, []);
 
   const resumeSession = useCallback((cached: ActiveSession) => {
-    setSession(cached);
+    // Ensure histPRs exists on all exercises (may be missing if cached before this field was added)
+    const defaultPRs = { maxWeight: null, maxReps: null, maxVolume: null };
+    const normalized: ActiveSession = {
+      ...cached,
+      exercises: cached.exercises.map((e) => ({
+        ...e,
+        histPRs: e.histPRs ?? defaultPRs,
+      })),
+    };
+    setSession(normalized);
   }, []);
 
   const finishWorkout = useCallback(async () => {
@@ -108,6 +151,7 @@ export function useWorkoutSession() {
       const firstSetDbId = await createLoggedSet(dbId, 1);
       const ghost = await getGhostSets(exerciseId, session.workoutId);
 
+      const histPRs = await getHistPRs(exerciseId, session.workoutId);
       const newExercise: ActiveExercise = {
         localId: uid(),
         dbId,
@@ -118,6 +162,7 @@ export function useWorkoutSession() {
         notes: "",
         sets: [{ ...defaultSet(1), dbId: firstSetDbId }],
         ghostSets: ghost,
+        histPRs,
       };
 
       updateSession((prev) => ({
@@ -216,11 +261,17 @@ export function useWorkoutSession() {
             sets: e.sets.map((s) => {
               if (s.localId !== setLocalId) return s;
               nowComplete = !s.isCompleted;
-              const updated = { ...s, isCompleted: nowComplete };
+              const weight = s.weightLbs === "" ? null : parseFloat(s.weightLbs);
+              const reps = s.reps === "" ? null : parseInt(s.reps, 10);
+
+              let prBadges: PRBadge[] | undefined;
+              if (nowComplete && !s.isWarmup && weight != null && reps != null) {
+                prBadges = computePRBadges(e, s.localId, weight, reps, e.histPRs);
+              }
+
+              const updated = { ...s, isCompleted: nowComplete, prBadges: nowComplete ? prBadges : undefined };
               if (e.dbId) {
-                upsertLoggedSet({ ...updated, loggedExerciseId: e.dbId }).catch(
-                  console.error
-                );
+                upsertLoggedSet({ ...updated, loggedExerciseId: e.dbId }).catch(console.error);
               }
               return updated;
             }),
@@ -297,12 +348,15 @@ export function useWorkoutSession() {
       const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
       if (!exercise?.dbId) return;
       await swapLoggedExercise(exercise.dbId, newExerciseId, newExerciseName);
-      const ghost = await getGhostSets(newExerciseId, session!.workoutId);
+      const [ghost, histPRs] = await Promise.all([
+        getGhostSets(newExerciseId, session!.workoutId),
+        getHistPRs(newExerciseId, session!.workoutId),
+      ]);
       updateSession((prev) => ({
         ...prev,
         exercises: prev.exercises.map((e) =>
           e.localId === exerciseLocalId
-            ? { ...e, exerciseId: newExerciseId, exerciseName: newExerciseName, muscleGroup: newMuscleGroup, ghostSets: ghost }
+            ? { ...e, exerciseId: newExerciseId, exerciseName: newExerciseName, muscleGroup: newMuscleGroup, ghostSets: ghost, histPRs }
             : e
         ),
       }));
@@ -337,7 +391,10 @@ export function useWorkoutSession() {
           const setDbId = await createLoggedSet(dbId, i);
           sets.push({ ...defaultSet(i), dbId: setDbId });
         }
-        const ghost = await getGhostSets(pe.exerciseId, workoutId);
+        const [ghost, histPRs] = await Promise.all([
+          getGhostSets(pe.exerciseId, workoutId),
+          getHistPRs(pe.exerciseId, workoutId),
+        ]);
         return {
           localId: uid(),
           dbId,
@@ -348,6 +405,7 @@ export function useWorkoutSession() {
           notes: "",
           sets,
           ghostSets: ghost,
+          histPRs,
         };
       })
     );

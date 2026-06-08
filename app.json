@@ -27,7 +27,14 @@
     "plugins": [
       "expo-router",
       "expo-sqlite",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "KonaFit needs access to your photos to save progress photos.",
+          "cameraPermission": "KonaFit needs camera access to take progress photos."
+        }
+      ]
     ],
     "extra": {
       "router": {},

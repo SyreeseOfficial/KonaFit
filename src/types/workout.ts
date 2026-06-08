@@ -4,6 +4,8 @@ export type GhostSet = {
   reps: number | null;
 };
 
+export type PRBadge = "W" | "R" | "V"; // Weight, Reps, Volume
+
 export type ActiveSet = {
   localId: string;
   dbId?: number;
@@ -13,6 +15,13 @@ export type ActiveSet = {
   rpe: string;
   isWarmup: boolean;
   isCompleted: boolean;
+  prBadges?: PRBadge[];
+};
+
+export type HistPRs = {
+  maxWeight: number | null;
+  maxReps: number | null;
+  maxVolume: number | null;
 };
 
 export type ActiveExercise = {
@@ -26,6 +35,7 @@ export type ActiveExercise = {
   notes: string;
   sets: ActiveSet[];
   ghostSets: GhostSet[];
+  histPRs: HistPRs;
 };
 
 export type ActiveSession = {

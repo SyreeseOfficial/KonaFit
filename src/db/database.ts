@@ -108,6 +108,13 @@ export async function initializeDatabase(): Promise<void> {
       pre_workout INTEGER NOT NULL DEFAULT 0,
       location TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS progress_photos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      workout_id INTEGER REFERENCES workouts(id) ON DELETE SET NULL,
+      photo_uri TEXT NOT NULL,
+      taken_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
   `);
 
   // Migration: add target_type column if it doesn't exist yet
