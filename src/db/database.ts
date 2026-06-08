@@ -115,15 +115,22 @@ export async function initializeDatabase(): Promise<void> {
       photo_uri TEXT NOT NULL,
       taken_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
+
+    CREATE TABLE IF NOT EXISTS locations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      use_count INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
   `);
 
-  // Migration: add target_type column if it doesn't exist yet
-  try {
-    await database.execAsync(
-      `ALTER TABLE exercises ADD COLUMN target_type TEXT NOT NULL DEFAULT 'reps'`
-    );
-  } catch {
-    // Column already exists — safe to ignore
+  // Migrations — each wrapped in try/catch so re-runs are safe
+  const migrations = [
+    `ALTER TABLE exercises ADD COLUMN target_type TEXT NOT NULL DEFAULT 'reps'`,
+    `ALTER TABLE lifestyle_logs ADD COLUMN caffeine_mg INTEGER NOT NULL DEFAULT 0`,
+  ];
+  for (const m of migrations) {
+    try { await database.execAsync(m); } catch { /* already applied */ }
   }
 
   await seedDefaultExercises(database);

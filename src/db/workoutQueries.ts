@@ -9,14 +9,15 @@ export async function createWorkout(): Promise<number> {
   return result.lastInsertRowId;
 }
 
-export async function finalizeWorkout(workoutId: number): Promise<void> {
+export async function finalizeWorkout(workoutId: number, location?: string): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
     `UPDATE workouts
      SET finished_at = unixepoch(),
-         duration_seconds = unixepoch() - started_at
+         duration_seconds = unixepoch() - started_at,
+         location = COALESCE(?, location)
      WHERE id = ?`,
-    [workoutId]
+    [location ?? null, workoutId]
   );
 }
 

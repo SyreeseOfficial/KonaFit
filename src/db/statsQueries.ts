@@ -279,15 +279,12 @@ export async function logBodyweight(weightLbs: number): Promise<void> {
 }
 
 export async function logLifestyle(data: {
-  hydrationOz?: number;
-  preWorkout?: boolean;
-  location?: string;
+  caffeineM?: number;
 }): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
-    `INSERT INTO lifestyle_logs (hydration_oz, pre_workout, location)
-     VALUES (?, ?, ?)`,
-    [data.hydrationOz ?? null, data.preWorkout ? 1 : 0, data.location ?? null]
+    `INSERT INTO lifestyle_logs (caffeine_mg) VALUES (?)`,
+    [data.caffeineM ?? 0]
   );
 }
 

@@ -124,9 +124,9 @@ export function useWorkoutSession() {
     setSession(normalized);
   }, []);
 
-  const finishWorkout = useCallback(async () => {
+  const finishWorkout = useCallback(async (location?: string) => {
     if (!session) return;
-    await finalizeWorkout(session.workoutId);
+    await finalizeWorkout(session.workoutId, location);
     await saveToStorage(null);
     setSession(null);
   }, [session]);

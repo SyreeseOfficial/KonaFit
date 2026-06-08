@@ -19,6 +19,8 @@ import { WorkspaceHeader } from "../../src/components/workout/WorkspaceHeader";
 import { ExerciseBlock } from "../../src/components/workout/ExerciseBlock";
 import { AddExerciseSheet } from "../../src/components/workout/AddExerciseSheet";
 import { RestTimerBar } from "../../src/components/workout/RestTimerBar";
+import { LocationSheet } from "../../src/components/workout/LocationSheet";
+import { saveWorkoutLocation } from "../../src/db/locationQueries";
 import type { Exercise } from "../../src/types/workout";
 
 export default function TrainScreen() {
@@ -46,6 +48,8 @@ export default function TrainScreen() {
 
   const restTimer = useRestTimer();
   const [exerciseSheetOpen, setExerciseSheetOpen] = useState(false);
+  const [locationSheetOpen, setLocationSheetOpen] = useState(false);
+  const pendingWorkoutIdRef = useRef<number | null>(null);
 
   const handleCameraPress = useCallback(async () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -152,23 +156,37 @@ export default function TrainScreen() {
   );
 
   const handleFinish = useCallback(() => {
+    if (!session) return;
     Alert.alert(
       "Finish Workout",
       "Save this workout to your history?",
       [
         { text: "Cancel", style: "cancel" },
-        {
-          text: "Discard",
-          style: "destructive",
-          onPress: discardWorkout,
-        },
+        { text: "Discard", style: "destructive", onPress: discardWorkout },
         {
           text: "Save",
-          onPress: finishWorkout,
+          onPress: () => {
+            // Store workoutId so LocationSheet can reference it after session clears
+            pendingWorkoutIdRef.current = session.workoutId;
+            setLocationSheetOpen(true);
+          },
         },
       ]
     );
-  }, [finishWorkout, discardWorkout]);
+  }, [session, discardWorkout]);
+
+  const handleLocationDone = useCallback(
+    async (location: string | null) => {
+      setLocationSheetOpen(false);
+      const wid = pendingWorkoutIdRef.current;
+      pendingWorkoutIdRef.current = null;
+      if (location && wid !== null) {
+        await saveWorkoutLocation(wid, location);
+      }
+      await finishWorkout();
+    },
+    [finishWorkout]
+  );
 
   // ─── Recovery prompt ───────────────────────────────────────────────
   if (recoveryVisible && cachedSession) {
@@ -379,6 +397,12 @@ export default function TrainScreen() {
             setSwappingExerciseLocalId(null);
           }
         }}
+      />
+
+      {/* Location picker — shown after Save is tapped */}
+      <LocationSheet
+        visible={locationSheetOpen}
+        onSelect={handleLocationDone}
       />
     </SafeAreaView>
   );

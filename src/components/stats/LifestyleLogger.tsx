@@ -1,17 +1,18 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
-import { Droplets, Zap, MapPin, Scale } from "lucide-react-native";
+import { View, Text, TextInput, TouchableOpacity } from "react-native";
+import { Scale, Zap } from "lucide-react-native";
 import { logBodyweight, logLifestyle } from "../../db/statsQueries";
 
 type Props = { onSaved: () => void };
 
+const CAFFEINE_PRESETS = [100, 150, 200, 300];
+
 export function LifestyleLogger({ onSaved }: Props) {
   const [bodyweight, setBodyweight] = useState("");
-  const [hydration, setHydration] = useState("");
-  const [preWorkout, setPreWorkout] = useState(false);
-  const [location, setLocation] = useState("");
+  const [caffeineMg, setCaffeineMg] = useState("");
   const [saving, setSaving] = useState(false);
   const [bwSaved, setBwSaved] = useState(false);
+  const [caffSaved, setCaffSaved] = useState(false);
 
   const handleSaveBodyweight = async () => {
     const val = parseFloat(bodyweight);
@@ -28,27 +29,22 @@ export function LifestyleLogger({ onSaved }: Props) {
     }
   };
 
-  const handleSaveLifestyle = async () => {
-    const hydOz = hydration !== "" ? parseFloat(hydration) : undefined;
+  const handleSaveCaffeine = async () => {
+    const mg = caffeineMg === "" ? 0 : parseInt(caffeineMg, 10);
+    if (isNaN(mg) || mg < 0) return;
     setSaving(true);
     try {
-      await logLifestyle({
-        hydrationOz: isNaN(hydOz!) ? undefined : hydOz,
-        preWorkout,
-        location: location.trim() || undefined,
-      });
-      setHydration("");
-      setLocation("");
-      setPreWorkout(false);
+      await logLifestyle({ caffeineM: mg });
+      setCaffeineMg("");
+      setCaffSaved(true);
+      setTimeout(() => setCaffSaved(false), 2000);
       onSaved();
-      Alert.alert("Logged", "Lifestyle data saved.");
     } finally {
       setSaving(false);
     }
   };
 
-  const inputClass =
-    "flex-1 h-10 bg-surface-2 px-3 font-mono text-white text-sm";
+  const inputClass = "flex-1 h-10 bg-surface-2 px-3 font-mono text-white text-sm";
 
   return (
     <View className="gap-3">
@@ -73,9 +69,11 @@ export function LifestyleLogger({ onSaved }: Props) {
           />
           <TouchableOpacity
             onPress={handleSaveBodyweight}
-            className={`px-4 h-10 items-center justify-center ${bwSaved ? "bg-surface-2" : bodyweight !== "" ? "bg-crimson" : "bg-surface-3"}`}
-            activeOpacity={0.8}
             disabled={saving || bodyweight === ""}
+            className={`px-4 h-10 items-center justify-center ${
+              bwSaved ? "bg-surface-2" : bodyweight !== "" ? "bg-crimson" : "bg-surface-3"
+            }`}
+            activeOpacity={0.8}
           >
             <Text className={`font-montserrat-bold text-xs tracking-widest uppercase ${bwSaved ? "text-crimson" : "text-white"}`}>
               {bwSaved ? "Saved ✓" : "Log"}
@@ -84,79 +82,56 @@ export function LifestyleLogger({ onSaved }: Props) {
         </View>
       </View>
 
-      {/* Daily lifestyle */}
+      {/* Pre-workout / Caffeine */}
       <View className="bg-surface p-4">
-        <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-widest uppercase mb-3">
-          Daily Log
-        </Text>
-
-        {/* Hydration */}
-        <View className="flex-row items-center gap-2 mb-2.5">
-          <Droplets size={14} color="#606060" />
-          <Text className="font-mono text-text-muted text-xs w-20 tracking-wider">
-            Hydration
+        <View className="flex-row items-center gap-2 mb-3">
+          <Zap size={14} color="#606060" />
+          <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-widest uppercase">
+            Pre-Workout
           </Text>
-          <TextInput
-            className={inputClass}
-            placeholder="oz"
-            placeholderTextColor="#606060"
-            value={hydration}
-            onChangeText={setHydration}
-            keyboardType="decimal-pad"
-          />
+          <Text className="font-mono text-text-muted text-xs ml-1">caffeine mg</Text>
         </View>
 
-        {/* Pre-workout */}
-        <TouchableOpacity
-          onPress={() => setPreWorkout((p) => !p)}
-          className="flex-row items-center gap-2 mb-2.5"
-          activeOpacity={0.7}
-        >
-          <Zap size={14} color={preWorkout ? "#FF0000" : "#606060"} />
-          <Text className="font-mono text-text-muted text-xs w-20 tracking-wider">
-            Pre-workout
-          </Text>
-          <View
-            className={`flex-1 h-10 items-center justify-center ${
-              preWorkout ? "bg-crimson" : "bg-surface-2"
-            }`}
-          >
-            <Text
-              className={`font-montserrat-bold text-xs tracking-widest uppercase ${
-                preWorkout ? "text-white" : "text-text-muted"
-              }`}
+        {/* Quick presets */}
+        <View className="flex-row gap-2 mb-3">
+          {CAFFEINE_PRESETS.map((mg) => (
+            <TouchableOpacity
+              key={mg}
+              onPress={() => setCaffeineMg(String(mg))}
+              className={`flex-1 py-2 items-center ${caffeineMg === String(mg) ? "bg-crimson" : "bg-surface-2"}`}
+              activeOpacity={0.7}
             >
-              {preWorkout ? "Yes" : "No"}
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* Location */}
-        <View className="flex-row items-center gap-2 mb-4">
-          <MapPin size={14} color="#606060" />
-          <Text className="font-mono text-text-muted text-xs w-20 tracking-wider">
-            Location
-          </Text>
-          <TextInput
-            className={inputClass}
-            placeholder="gym, home, etc."
-            placeholderTextColor="#606060"
-            value={location}
-            onChangeText={setLocation}
-            autoCorrect={false}
-          />
+              <Text className={`font-mono text-xs ${caffeineMg === String(mg) ? "text-white" : "text-text-muted"}`}>
+                {mg}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        <TouchableOpacity
-          onPress={handleSaveLifestyle}
-          className="bg-surface-2 py-2.5 items-center"
-          activeOpacity={0.8}
-          disabled={saving}
-        >
-          <Text className="font-montserrat-bold text-text-secondary text-xs tracking-widest uppercase">
-            Save Daily Log
-          </Text>
-        </TouchableOpacity>
+        <View className="flex-row items-center gap-2">
+          <TextInput
+            className={inputClass}
+            placeholder="0 mg (skip)"
+            placeholderTextColor="#606060"
+            value={caffeineMg}
+            onChangeText={setCaffeineMg}
+            keyboardType="number-pad"
+            returnKeyType="done"
+            onSubmitEditing={handleSaveCaffeine}
+          />
+          <TouchableOpacity
+            onPress={handleSaveCaffeine}
+            disabled={saving}
+            className={`px-4 h-10 items-center justify-center ${
+              caffSaved ? "bg-surface-2" : "bg-surface-3"
+            }`}
+            activeOpacity={0.8}
+          >
+            <Text className={`font-montserrat-bold text-xs tracking-widest uppercase ${caffSaved ? "text-crimson" : "text-text-secondary"}`}>
+              {caffSaved ? "Saved ✓" : "Log"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
