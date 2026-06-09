@@ -26,6 +26,7 @@ import { ProgressPhotoGallery } from "../../src/components/stats/ProgressPhotoGa
 import { StrengthScore } from "../../src/components/stats/StrengthScore";
 import { TrainingTrends } from "../../src/components/stats/TrainingTrends";
 import { CaffeineChart } from "../../src/components/stats/CaffeineChart";
+import { ExerciseAnalytics } from "../../src/components/stats/ExerciseAnalytics";
 
 type StatsData = {
   totalLiftedLbs: number;
@@ -158,6 +159,12 @@ export default function StatsScreen() {
         <View className="px-4 mb-6">
           <SectionHeader title="1RM Trajectory" subtitle="Epley formula" />
           <OneRMChart refreshKey={refreshKey} />
+        </View>
+
+        {/* Exercise Analytics */}
+        <View className="px-4 mb-6">
+          <SectionHeader title="Exercise Analytics" subtitle="Brzycki · RPE · volume per lift" />
+          <ExerciseAnalytics refreshKey={refreshKey} />
         </View>
 
         {/* Muscle Tracker */}

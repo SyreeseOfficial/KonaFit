@@ -303,6 +303,99 @@ export async function getBodyweightHistory(limit = 30): Promise<BodyweightLog[]>
   );
 }
 
+// ─── Exercise Analytics ───────────────────────────────────────────────────────
+
+export type AnalyticsExercise = {
+  id: number;
+  name: string;
+  use_count: number;
+  muscle_group: string;
+};
+
+export async function getAllExercisesForAnalytics(): Promise<AnalyticsExercise[]> {
+  const db = await getDatabase();
+  return db.getAllAsync<AnalyticsExercise>(
+    "SELECT id, name, use_count, muscle_group FROM exercises ORDER BY use_count DESC, name ASC"
+  );
+}
+
+function exerciseAnalyticsBase(days: number | null): { cond: string; params: number[] } {
+  return days !== null
+    ? { cond: "AND w.started_at >= unixepoch() - ? * 86400", params: [days] }
+    : { cond: "", params: [] };
+}
+
+export async function getExerciseBrzyckiHistory(
+  exerciseId: number,
+  days: number | null
+): Promise<TrendPoint[]> {
+  const db = await getDatabase();
+  const { cond, params } = exerciseAnalyticsBase(days);
+  const rows = await db.getAllAsync<{ ts: number; val: number }>(
+    `SELECT w.started_at * 1000 AS ts,
+            MAX(ls.weight_lbs * 36.0 / (37.0 - ls.reps)) AS val
+     FROM logged_sets ls
+     JOIN logged_exercises le ON ls.logged_exercise_id = le.id
+     JOIN workouts w ON le.workout_id = w.id
+     WHERE le.exercise_id = ?
+       AND ls.is_completed = 1 AND ls.is_warmup = 0
+       AND ls.weight_lbs IS NOT NULL
+       AND ls.reps > 0 AND ls.reps < 37
+       AND w.finished_at IS NOT NULL ${cond}
+     GROUP BY w.id
+     ORDER BY w.started_at ASC`,
+    [exerciseId, ...params]
+  );
+  return rows.map((r) => ({ x: r.ts, y: Math.round(r.val) }));
+}
+
+export async function getExerciseRPE1RMHistory(
+  exerciseId: number,
+  days: number | null
+): Promise<TrendPoint[]> {
+  const db = await getDatabase();
+  const { cond, params } = exerciseAnalyticsBase(days);
+  const rows = await db.getAllAsync<{ ts: number; val: number }>(
+    `SELECT w.started_at * 1000 AS ts,
+            MAX(ls.weight_lbs * (1.0 + (10.0 - ls.rpe) / 30.0)) AS val
+     FROM logged_sets ls
+     JOIN logged_exercises le ON ls.logged_exercise_id = le.id
+     JOIN workouts w ON le.workout_id = w.id
+     WHERE le.exercise_id = ?
+       AND ls.is_completed = 1 AND ls.is_warmup = 0
+       AND ls.weight_lbs IS NOT NULL
+       AND ls.rpe IS NOT NULL AND ls.rpe > 0 AND ls.rpe <= 10
+       AND w.finished_at IS NOT NULL ${cond}
+     GROUP BY w.id
+     ORDER BY w.started_at ASC`,
+    [exerciseId, ...params]
+  );
+  return rows.map((r) => ({ x: r.ts, y: Math.round(r.val) }));
+}
+
+export async function getExerciseVolumeForAnalytics(
+  exerciseId: number,
+  days: number | null
+): Promise<TrendPoint[]> {
+  const db = await getDatabase();
+  const { cond, params } = exerciseAnalyticsBase(days);
+  const rows = await db.getAllAsync<{ ts: number; val: number }>(
+    `SELECT w.started_at * 1000 AS ts,
+            COALESCE(SUM(ls.weight_lbs * ls.reps), 0) AS val
+     FROM logged_sets ls
+     JOIN logged_exercises le ON ls.logged_exercise_id = le.id
+     JOIN workouts w ON le.workout_id = w.id
+     WHERE le.exercise_id = ?
+       AND ls.is_completed = 1 AND ls.is_warmup = 0
+       AND ls.weight_lbs IS NOT NULL AND ls.reps IS NOT NULL
+       AND w.finished_at IS NOT NULL ${cond}
+     GROUP BY w.id
+     ORDER BY w.started_at ASC`,
+    [exerciseId, ...params]
+  );
+  return rows.map((r) => ({ x: r.ts, y: r.val }));
+}
+
 // ─── Training Trends ──────────────────────────────────────────────────────────
 
 export type TrendPoint = { x: number; y: number }; // x = ms timestamp
