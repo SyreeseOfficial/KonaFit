@@ -132,7 +132,7 @@ export default function WorkoutDetailScreen() {
   return (
     <SafeAreaView className="flex-1 bg-obsidian">
       {/* Header */}
-      <View className="flex-row items-center gap-3 px-4 pt-4 pb-4 border-b border-surface-2">
+      <View className="flex-row items-center gap-3 px-4 pt-5 pb-5 border-b border-surface-2">
         <TouchableOpacity onPress={() => router.back()} hitSlop={8} activeOpacity={0.7}>
           <ChevronLeft size={22} color="#A0A0A0" />
         </TouchableOpacity>
@@ -195,11 +195,11 @@ export default function WorkoutDetailScreen() {
         )}
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 56 }}>
         {/* Exercise list */}
         {workout.exercises.map((ex) => (
-          <View key={ex.id} className="mx-4 mt-4 bg-surface">
-            <View className="px-4 py-3 border-b border-surface-2">
+          <View key={ex.id} className="mx-4 mt-5 bg-surface">
+            <View className="px-4 py-4 border-b border-surface-2">
               <Text className="font-montserrat-bold text-white text-sm tracking-widest uppercase">
                 {ex.exercise_name}
               </Text>
@@ -208,7 +208,7 @@ export default function WorkoutDetailScreen() {
               ) : null}
             </View>
 
-            <View className="flex-row px-4 py-1.5">
+            <View className="flex-row px-4 py-2.5">
               <Text className="w-8 font-mono text-text-muted text-xs tracking-widest">SET</Text>
               <Text className="flex-1 font-mono text-text-muted text-xs tracking-widest text-right">LBS</Text>
               <Text className="w-16 font-mono text-text-muted text-xs tracking-widest text-right">REPS</Text>
@@ -221,7 +221,7 @@ export default function WorkoutDetailScreen() {
               return (
                 <View
                   key={s.id}
-                  className={`flex-row items-center px-4 py-2 border-t border-surface-2 ${
+                  className={`flex-row items-center px-4 py-3 border-t border-surface-2 ${
                     !s.is_completed && !editMode ? "opacity-40" : ""
                   }`}
                 >

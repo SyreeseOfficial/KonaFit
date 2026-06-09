@@ -23,7 +23,7 @@ export function WorkoutHistoryList({ workouts }: Props) {
         <TouchableOpacity
           key={w.id}
           onPress={() => router.push(`/workout/${w.id}` as never)}
-          className={`flex-row items-center px-4 py-3.5 ${i > 0 ? "border-t border-surface-2" : ""}`}
+          className={`flex-row items-center px-4 py-5 ${i > 0 ? "border-t border-surface-2" : ""}`}
           activeOpacity={0.7}
         >
           <View className="flex-1">
@@ -55,7 +55,7 @@ export function WorkoutHistoryList({ workouts }: Props) {
       {/* View All */}
       <TouchableOpacity
         onPress={() => router.push("/history" as never)}
-        className="flex-row items-center justify-center gap-1.5 py-3 border-t border-surface-2"
+        className="flex-row items-center justify-center gap-1.5 py-4 border-t border-surface-2"
         activeOpacity={0.7}
       >
         <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-widest uppercase">

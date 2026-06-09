@@ -23,7 +23,7 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-obsidian">
-      <View className="flex-row items-center gap-3 px-4 pt-4 pb-4 border-b border-surface-2">
+      <View className="flex-row items-center gap-3 px-4 pt-5 pb-5 border-b border-surface-2">
         <TouchableOpacity onPress={() => router.back()} hitSlop={8} activeOpacity={0.7}>
           <ChevronLeft size={22} color="#A0A0A0" />
         </TouchableOpacity>
@@ -61,7 +61,7 @@ export default function HistoryScreen() {
         renderItem={({ item: w, index }) => (
           <TouchableOpacity
             onPress={() => router.push(`/workout/${w.id}` as never)}
-            className={`flex-row items-center px-4 py-3.5 bg-surface ${index > 0 ? "border-t border-surface-2" : ""}`}
+            className={`flex-row items-center px-4 py-5 bg-surface ${index > 0 ? "border-t border-surface-2" : ""}`}
             activeOpacity={0.7}
           >
             <View className="flex-1">

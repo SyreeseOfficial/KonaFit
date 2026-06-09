@@ -56,9 +56,9 @@ export function ExerciseBlock({
   const [notesText, setNotesText] = useState(exercise.notes);
 
   return (
-    <View className="mb-4 bg-surface">
+    <View className="mb-5 bg-surface">
       {/* ── Exercise header (tap name to collapse) ───────────── */}
-      <View className="flex-row items-center justify-between px-4 pt-4 pb-3">
+      <View className="flex-row items-center justify-between px-4 pt-5 pb-4">
         <TouchableOpacity
           onPress={() => !reorderMode && setCollapsed((c) => !c)}
           className="flex-1 flex-row items-center gap-2"
@@ -126,7 +126,7 @@ export function ExerciseBlock({
       {!collapsed && (
         <>
           {/* Column headers */}
-          <View className="flex-row items-center px-3 pb-2">
+          <View className="flex-row items-center px-3 pt-1 pb-3">
             <Text className="w-6 text-center font-mono text-text-muted text-xs">Set</Text>
             <Text className="flex-1 mx-2 text-center font-mono text-text-muted text-xs">Previous</Text>
             <Text className="w-14 mr-1.5 text-center font-mono text-text-muted text-xs">Lbs</Text>
@@ -165,7 +165,7 @@ export function ExerciseBlock({
           )}
 
           {/* Footer */}
-          <View className="flex-row items-center px-4 py-3 border-t border-surface-2 gap-4">
+          <View className="flex-row items-center px-4 py-4 border-t border-surface-2 gap-4">
             <TouchableOpacity onPress={onAddSet} className="flex-row items-center gap-1.5" activeOpacity={0.7}>
               <PlusCircle size={16} color="#A0A0A0" />
               <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-wider">Add Set</Text>

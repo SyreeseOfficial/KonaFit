@@ -73,7 +73,7 @@ function Row({
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-row items-center justify-between px-4 py-4 border-b border-surface-2"
+      className="flex-row items-center justify-between px-4 py-5 border-b border-surface-2"
       activeOpacity={onPress && !disabled ? 0.7 : 1}
     >
       <View className="flex-1">
@@ -95,7 +95,7 @@ function Row({
 
 function SectionLabel({ title }: { title: string }) {
   return (
-    <Text className="font-mono text-text-muted text-xs tracking-widest uppercase px-4 pt-6 pb-2">
+    <Text className="font-mono text-text-muted text-xs tracking-widest uppercase px-4 pt-8 pb-3">
       {title}
     </Text>
   );
@@ -236,7 +236,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-obsidian">
-      <View className="flex-row items-center gap-3 px-4 pt-4 pb-4 border-b border-surface-2">
+      <View className="flex-row items-center gap-3 px-4 pt-5 pb-5 border-b border-surface-2">
         <TouchableOpacity onPress={() => router.back()} hitSlop={8} activeOpacity={0.7}>
           <ChevronLeft size={22} color="#A0A0A0" />
         </TouchableOpacity>

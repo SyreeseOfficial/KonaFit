@@ -60,7 +60,7 @@ export default function ArchivedProgramsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-obsidian">
-      <View className="flex-row items-center gap-3 px-4 pt-4 pb-4 border-b border-surface-2">
+      <View className="flex-row items-center gap-3 px-4 pt-5 pb-5 border-b border-surface-2">
         <TouchableOpacity onPress={() => router.back()} hitSlop={8} activeOpacity={0.7}>
           <ChevronLeft size={22} color="#A0A0A0" />
         </TouchableOpacity>
@@ -77,7 +77,7 @@ export default function ArchivedProgramsScreen() {
         }
         contentContainerStyle={{ paddingBottom: 40 }}
         renderItem={({ item }) => (
-          <View className="mx-4 mt-3 bg-surface flex-row items-center px-4 py-4">
+          <View className="mx-4 mt-4 bg-surface flex-row items-center px-4 py-5">
             <View className="flex-1">
               <View className="flex-row items-center gap-2 mb-0.5">
                 <Text className="font-montserrat-bold text-text-secondary text-sm tracking-wider uppercase">

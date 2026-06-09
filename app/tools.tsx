@@ -27,7 +27,7 @@ export default function ToolsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-obsidian" edges={["top"]}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 pt-3 pb-4 border-b border-surface-2">
+      <View className="flex-row items-center justify-between px-4 pt-5 pb-5 border-b border-surface-2">
         <Text className="font-anton text-white text-2xl tracking-widest uppercase">
           Tactical Tools
         </Text>
@@ -45,7 +45,7 @@ export default function ToolsScreen() {
           <TouchableOpacity
             key={key}
             onPress={() => setActiveTab(key)}
-            className={`flex-1 py-3 items-center border-b-2 ${
+            className={`flex-1 py-4 items-center border-b-2 ${
               activeTab === key ? "border-crimson" : "border-transparent"
             }`}
             activeOpacity={0.7}
@@ -63,7 +63,7 @@ export default function ToolsScreen() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 64 }}
         keyboardShouldPersistTaps="handled"
       >
         {activeTab === "plates" ? (

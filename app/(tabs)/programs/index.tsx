@@ -73,7 +73,7 @@ export default function ProgramsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-obsidian">
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 pt-4 pb-5">
+      <View className="flex-row items-center justify-between px-4 pt-6 pb-7">
         <Text className="font-anton text-white text-3xl tracking-widest uppercase">
           Programs
         </Text>
@@ -94,11 +94,11 @@ export default function ProgramsScreen() {
         }
         contentContainerStyle={{ paddingBottom: 32 }}
         renderItem={({ item }) => (
-          <View className="mx-4 mb-3 bg-surface">
+          <View className="mx-4 mb-4 bg-surface">
             <TouchableOpacity
               onPress={() => router.push(`/programs/${item.id}` as never)}
               activeOpacity={0.8}
-              className="flex-row items-center px-4 py-4"
+              className="flex-row items-center px-4 py-5"
             >
               <View className="flex-1">
                 <View className="flex-row items-center gap-2 mb-0.5">

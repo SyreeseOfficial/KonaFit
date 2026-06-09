@@ -25,8 +25,8 @@ function StatCell({
   unit?: string;
 }) {
   return (
-    <View className="flex-1 bg-surface p-4">
-      <Text className="font-mono text-text-muted text-xs tracking-widest uppercase mb-2">
+    <View className="flex-1 bg-surface p-5">
+      <Text className="font-mono text-text-muted text-xs tracking-widest uppercase mb-3">
         {label}
       </Text>
       <View className="flex-row items-end gap-1">
@@ -44,7 +44,7 @@ function StatCell({
 export function StatsGrid({ totalLiftedLbs, workoutCount, streak, bodyweightLbs, totalHours, prCount }: Props) {
   return (
     <View>
-      <View className="px-4 mb-2">
+      <View className="px-4 mb-3">
         <Text className="font-mono text-text-muted text-xs tracking-widest uppercase">
           Lifetime Stats
         </Text>

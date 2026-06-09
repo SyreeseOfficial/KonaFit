@@ -61,7 +61,7 @@ function GoalCard({
       style={{ borderLeftWidth: 3, borderLeftColor: borderColor }}
       className={`bg-surface mb-2 ${isAchieved ? "opacity-50" : ""}`}
     >
-      <View className="px-4 py-3 flex-row items-start">
+      <View className="px-4 py-4 flex-row items-start">
         <View className="flex-1 mr-3">
           <Text className={`font-montserrat-bold text-sm ${isAchieved ? "text-text-muted line-through" : "text-white"}`}>
             {goal.title}
@@ -404,9 +404,9 @@ export function GoalsSection() {
   };
 
   return (
-    <View className="px-4 mt-8 mb-4">
+    <View className="px-4 mt-2 mb-4">
       {/* Section header */}
-      <View className="flex-row items-center justify-between mb-3">
+      <View className="flex-row items-center justify-between mb-4">
         <Text className="font-anton text-white text-xl tracking-widest uppercase">Goals</Text>
         <TouchableOpacity
           onPress={() => setAddOpen(true)}

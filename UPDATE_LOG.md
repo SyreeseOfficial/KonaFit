@@ -6,6 +6,24 @@ This chronological ledger tracks major features, structural database migrations,
 
 ---
 
+### 2026-06-08 — Feature Expansion: Plate Config, Program Builder, Goals, Settings Overhaul + UI Spacing Pass
+
+* **Status:** Implemented
+* **Scope:** Tactical Tools / Programs Tab / Train Tab / Settings / Global UI
+* **Changes Executed:**
+  * **Plate Calculator:** Per-plate enable/disable toggles (ON/OFF per plate type), custom plate creation with weight input and color picker. Settings persisted to `kv_store` so state survives app restarts.
+  * **Program Builder overhaul (`new.tsx`):** Program type selector (Single Workout / Weekly / Multi-Week) with radio-button cards. Advanced settings panel (collapsible, with dot indicator when filled): workout duration picker (10–240 min in 10-min increments via bottom-sheet modal), training focus multi-select chips (9 options), equipment single-select chips, difficulty single-select row (Beginner → Elite).
+  * **Programs list:** Replaced inline Clone/Delete icons with a 3-dot context menu per card (Duplicate, Archive, Delete Permanently). Program type badge and difficulty shown on each card.
+  * **Archive programs:** New `archived` column on `programs` table (migration). Archive from the 3-dot menu; restore or permanently delete from Settings → Archived Programs screen (`app/archived-programs.tsx`).
+  * **Goals Section (`src/components/train/GoalsSection.tsx`):** Three goal types — Lift PR (selects exercise, target weight, auto-calculates current best Epley 1RM from logged sets), Body Weight (target weight vs. latest bodyweight log), Custom (title + notes). Progress bars, mark-achieved toggle, delete. Lives on the Train idle screen below the Start Workout button; screen converted to ScrollView.
+  * **Custom exercises management (`app/custom-exercises.tsx`):** Inline edit (name + muscle group) and delete for any exercise with `is_custom = 1`. Accessible from Settings → Custom Exercises. `createCustomExercise` updated to stamp `is_custom = 1` on insert.
+  * **Settings overhaul:** New Units section (weight lbs/kg, distance mi/km chip toggles, persisted to `kv_store` with exported helpers `getWeightUnit` / `getDistanceUnit`). Library section with nav rows to Custom Exercises and Archived Programs. Danger Zone updated to also wipe `goals` table. About card expanded with full story and shoutout to Syreese Delos Santos.
+  * **DB migrations:** `programs.archived INTEGER DEFAULT 0`, `exercises.is_custom INTEGER DEFAULT 0`, both added via safe try/catch migration loop.
+  * **UI spacing pass:** Increased vertical breathing room throughout — screen headers, section gaps, card padding, row heights, set rows, modal sheets. SectionHeader mb increased. Stats sections spacing increased. ExerciseBlock header/footer paddings. SetRow row height raised.
+* **Architectural Notes:** `getWeightUnit` / `getDistanceUnit` are exported from `settings.tsx` for future consumption by display components. Unit preference is stored but not yet applied to all display strings — wiring is a follow-up task. Goals progress for `lift_pr` type uses the same Epley formula as the rest of the stats pipeline (via `getGoalProgress` in `goalQueries.ts`). Archive is a soft-delete pattern (flag on row) rather than a separate table, keeping queries simple and restore trivial.
+
+---
+
 ### [YYYY-MM-DD] — TEMPLATE ENTRY (Example)
 
 * **Status:** [Implemented / Refactored / Migrated]

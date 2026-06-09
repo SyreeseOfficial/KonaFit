@@ -25,7 +25,7 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
 
   return (
     <>
-      <View className="flex-row items-start justify-between px-4 pt-2 pb-3 border-b border-surface-2">
+      <View className="flex-row items-start justify-between px-4 pt-4 pb-4 border-b border-surface-2">
         <View>
           <Text className="font-anton text-white text-3xl tracking-widest uppercase">
             Train

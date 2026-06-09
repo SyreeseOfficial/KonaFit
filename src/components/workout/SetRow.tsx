@@ -24,11 +24,11 @@ export function SetRow({ set, ghost, onUpdate, onToggleComplete, onToggleWarmup,
       : "—";
 
   const inputBase =
-    "h-9 bg-surface-2 text-center font-mono text-white text-sm";
+    "h-10 bg-surface-2 text-center font-mono text-white text-sm";
 
   return (
     <View
-      className={`flex-row items-center px-3 py-2 border-b border-surface-2 ${
+      className={`flex-row items-center px-3 py-2.5 border-b border-surface-2 ${
         completed ? "opacity-50" : ""
       }`}
     >

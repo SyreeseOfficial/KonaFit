@@ -246,7 +246,7 @@ export default function TrainScreen() {
   if (!session) {
     return (
       <SafeAreaView className="flex-1 bg-obsidian">
-        <View className="flex-row items-start justify-between px-4 pt-4">
+        <View className="flex-row items-start justify-between px-4 pt-6">
           <Text className="font-anton text-white text-3xl tracking-widest uppercase">
             Train
           </Text>
@@ -272,7 +272,7 @@ export default function TrainScreen() {
           contentContainerStyle={{ paddingBottom: 48 }}
           showsVerticalScrollIndicator={false}
         >
-          <View className="items-center py-12 px-4" style={{ gap: 20 }}>
+          <View className="items-center py-16 px-4" style={{ gap: 24 }}>
             <View className="items-center">
               <Text className="font-montserrat-bold text-white text-base tracking-wider uppercase mb-1">
                 Ready to train?
@@ -309,7 +309,7 @@ export default function TrainScreen() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingTop: 12, paddingBottom: 24 }}
+        contentContainerStyle={{ paddingTop: 16, paddingBottom: 32 }}
         keyboardShouldPersistTaps="handled"
       >
         {session.exercises.length === 0 && (

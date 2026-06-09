@@ -183,12 +183,12 @@ export default function ProgramDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 56 }}>
         {/* Days */}
         {program.days.map((day) => (
-          <View key={day.id} className="mt-4 mx-4 bg-surface">
+          <View key={day.id} className="mt-5 mx-4 bg-surface">
             {/* Day header */}
-            <View className="flex-row items-center justify-between px-4 py-3 border-b border-surface-2">
+            <View className="flex-row items-center justify-between px-4 py-4 border-b border-surface-2">
               <Text className="font-montserrat-bold text-white text-sm tracking-widest uppercase">
                 {day.name}
               </Text>
@@ -224,7 +224,7 @@ export default function ProgramDetailScreen() {
               day.exercises.map((ex) => (
                 <View
                   key={ex.id}
-                  className="flex-row items-center px-4 py-3 border-b border-surface-2"
+                  className="flex-row items-center px-4 py-4 border-b border-surface-2"
                 >
                   <View className="flex-1">
                     <Text className="font-montserrat-semibold text-white text-xs tracking-wider">
@@ -264,7 +264,7 @@ export default function ProgramDetailScreen() {
             {/* Add exercise to day */}
             <TouchableOpacity
               onPress={() => setAddExerciseDayId(day.id)}
-              className="flex-row items-center justify-center gap-2 py-2.5"
+              className="flex-row items-center justify-center gap-2 py-4"
               activeOpacity={0.7}
             >
               <Plus size={14} color="#606060" />
@@ -278,7 +278,7 @@ export default function ProgramDetailScreen() {
         {/* Add day */}
         <TouchableOpacity
           onPress={handleAddDay}
-          className="mx-4 mt-4 py-3.5 border border-surface-3 flex-row items-center justify-center gap-2"
+          className="mx-4 mt-5 py-5 border border-surface-3 flex-row items-center justify-center gap-2"
           activeOpacity={0.7}
         >
           <Plus size={15} color="#A0A0A0" />
