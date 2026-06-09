@@ -6,6 +6,19 @@ This chronological ledger tracks major features, structural database migrations,
 
 ---
 
+### 2026-06-08 — Expanded Default Exercise Library (262 exercises)
+
+* **Status:** Implemented
+* **Scope:** Database / Exercise Library
+* **Changes Executed:**
+  * Replaced the original 20 default exercises with a comprehensive `ALL_EXERCISES` array of 262 exercises spanning every muscle group supported by the exercise picker filters.
+  * Muscle groups now match `AddExerciseSheet` filter options exactly (e.g. "Quads", "Hamstrings", "Lats", "Upper Back", "Mid Delts", "Rear Delts", "Biceps", "Triceps", etc.) so filters surface the right exercises.
+  * Coverage by group: Chest (23), Lats (23), Upper Back (9), Lower Back (9), Rear Delts (6), Mid Delts (17), Front Delts (5), Biceps (21), Triceps (21), Forearms (10), Quads (22), Hamstrings (11), Glutes (13), Calves (7), Abs (26), Neck (8), Olympic (17), Full Body (15).
+  * Added `seedExpandedExercises` function — runs once on existing installs via a `@konafit_exercises_v2` kv_store flag. Uses `INSERT … WHERE NOT EXISTS (SELECT 1 … WHERE LOWER(name) = LOWER(?))` to add only missing exercises without touching existing ones. Fresh installs seed all 262 at once and set the flag immediately so the expansion is skipped.
+* **Architectural Notes:** Two-phase seeding: `seedDefaultExercises` for count=0 fresh installs (seeds everything, sets v2 flag), `seedExpandedExercises` for existing installs (idempotent, name-deduped, single-run). Both reference the same `ALL_EXERCISES` constant. The `is_custom = 0` default marks all seeded exercises as system exercises. "Reverse Curl" appears in both Biceps and Forearms intentionally — it trains both.
+
+---
+
 ### 2026-06-08 — Android Nav Bar Fix, Stats Spacing Fix, Multi-Select Exercise Picker, Filter Scroll Fix
 
 * **Status:** Implemented

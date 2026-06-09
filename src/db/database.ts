@@ -154,7 +154,313 @@ export async function initializeDatabase(): Promise<void> {
   }
 
   await seedDefaultExercises(database);
+  await seedExpandedExercises(database);
 }
+
+// ─── Master exercise list ─────────────────────────────────────────────────────
+// [name, muscle_group, equipment_type]
+// muscle_group matches AddExerciseSheet filter options for proper filtering.
+// All default to target_type = 'reps' via column default.
+
+const ALL_EXERCISES: [string, string, string][] = [
+  // ── CHEST ──────────────────────────────────────────────────────────────────
+  ["Barbell Bench Press",           "Chest", "barbell"],
+  ["Incline Barbell Bench Press",   "Chest", "barbell"],
+  ["Decline Barbell Bench Press",   "Chest", "barbell"],
+  ["Incline Dumbbell Press",        "Chest", "dumbbell"],
+  ["Flat Dumbbell Press",           "Chest", "dumbbell"],
+  ["Decline Dumbbell Press",        "Chest", "dumbbell"],
+  ["Dumbbell Fly",                  "Chest", "dumbbell"],
+  ["Cable Fly",                     "Chest", "cable"],
+  ["Incline Cable Fly",             "Chest", "cable"],
+  ["Decline Cable Fly",             "Chest", "cable"],
+  ["Low Cable Fly",                 "Chest", "cable"],
+  ["Cable Crossover",               "Chest", "cable"],
+  ["Pec Deck Machine",              "Chest", "machine"],
+  ["Machine Chest Press",           "Chest", "machine"],
+  ["Smith Machine Bench Press",     "Chest", "machine"],
+  ["Dip",                           "Chest", "bodyweight"],
+  ["Push-Up",                       "Chest", "bodyweight"],
+  ["Wide Push-Up",                  "Chest", "bodyweight"],
+  ["Archer Push-Up",                "Chest", "bodyweight"],
+  ["Ring Push-Up",                  "Chest", "bodyweight"],
+  ["Weighted Push-Up",              "Chest", "bodyweight"],
+  ["Landmine Press",                "Chest", "barbell"],
+  ["Svend Press",                   "Chest", "weight plates"],
+
+  // ── LATS ───────────────────────────────────────────────────────────────────
+  ["Pull-Up",                       "Lats", "bodyweight"],
+  ["Chin-Up",                       "Lats", "bodyweight"],
+  ["Neutral-Grip Pull-Up",          "Lats", "bodyweight"],
+  ["Inverted Row",                  "Lats", "bodyweight"],
+  ["Weighted Pull-Up",              "Lats", "bodyweight"],
+  ["Lat Pulldown",                  "Lats", "cable"],
+  ["Close-Grip Lat Pulldown",       "Lats", "cable"],
+  ["Single-Arm Cable Row",          "Lats", "cable"],
+  ["Wide-Grip Seated Cable Row",    "Lats", "cable"],
+  ["Straight-Arm Pulldown",         "Lats", "cable"],
+  ["Cable Row",                     "Lats", "cable"],
+  ["Barbell Row",                   "Lats", "barbell"],
+  ["Pendlay Row",                   "Lats", "barbell"],
+  ["T-Bar Row",                     "Lats", "barbell"],
+  ["Meadows Row",                   "Lats", "barbell"],
+  ["Seal Row",                      "Lats", "barbell"],
+  ["Single-Arm Dumbbell Row",       "Lats", "dumbbell"],
+  ["Chest-Supported Dumbbell Row",  "Lats", "dumbbell"],
+  ["Renegade Row",                  "Lats", "dumbbell"],
+  ["Machine Row",                   "Lats", "machine"],
+  ["Rack Pull",                     "Lats", "barbell"],
+  ["Snatch-Grip Deadlift",          "Lats", "barbell"],
+  ["Jefferson Curl",                "Lats", "barbell"],
+
+  // ── UPPER BACK ─────────────────────────────────────────────────────────────
+  ["Barbell Shrug",                 "Upper Back", "barbell"],
+  ["Dumbbell Shrug",                "Upper Back", "dumbbell"],
+  ["Trap Bar Shrug",                "Upper Back", "barbell"],
+  ["Behind-the-Neck Pulldown",      "Upper Back", "cable"],
+  ["Prone Y Raise",                 "Upper Back", "dumbbell"],
+  ["Prone T Raise",                 "Upper Back", "dumbbell"],
+  ["Prone W Raise",                 "Upper Back", "dumbbell"],
+  ["Band Pull-Apart",               "Upper Back", "resistance bands"],
+  ["Banded Pull-Apart",             "Upper Back", "resistance bands"],
+
+  // ── LOWER BACK ─────────────────────────────────────────────────────────────
+  ["Deadlift",                      "Lower Back", "barbell"],
+  ["Sumo Deadlift",                 "Lower Back", "barbell"],
+  ["Trap Bar Deadlift",             "Lower Back", "barbell"],
+  ["Stiff-Leg Deadlift",            "Lower Back", "barbell"],
+  ["Hyperextension",                "Lower Back", "bodyweight"],
+  ["Back Extension",                "Lower Back", "bodyweight"],
+  ["45-Degree Back Extension",      "Lower Back", "machine"],
+  ["Reverse Hyperextension",        "Lower Back", "machine"],
+  ["Good Morning",                  "Lower Back", "barbell"],
+
+  // ── REAR DELTS ─────────────────────────────────────────────────────────────
+  ["Face Pull",                     "Rear Delts", "cable"],
+  ["Dumbbell Rear Delt Fly",        "Rear Delts", "dumbbell"],
+  ["Cable Rear Delt Fly",           "Rear Delts", "cable"],
+  ["Reverse Pec Deck",              "Rear Delts", "machine"],
+  ["Dumbbell Rear Delt Row",        "Rear Delts", "dumbbell"],
+  ["Wide-Grip Cable Pull",          "Rear Delts", "cable"],
+
+  // ── MID DELTS ──────────────────────────────────────────────────────────────
+  ["Overhead Press",                "Mid Delts", "barbell"],
+  ["Dumbbell Shoulder Press",       "Mid Delts", "dumbbell"],
+  ["Arnold Press",                  "Mid Delts", "dumbbell"],
+  ["Lateral Raise",                 "Mid Delts", "dumbbell"],
+  ["Cable Lateral Raise",           "Mid Delts", "cable"],
+  ["Machine Lateral Raise",         "Mid Delts", "machine"],
+  ["Machine Shoulder Press",        "Mid Delts", "machine"],
+  ["Smith Machine Overhead Press",  "Mid Delts", "machine"],
+  ["Push Press",                    "Mid Delts", "barbell"],
+  ["Behind-the-Neck Press",         "Mid Delts", "barbell"],
+  ["Bradford Press",                "Mid Delts", "barbell"],
+  ["Z-Press",                       "Mid Delts", "barbell"],
+  ["Upright Row",                   "Mid Delts", "barbell"],
+  ["Log Press",                     "Mid Delts", "other"],
+  ["Viking Press",                  "Mid Delts", "other"],
+  ["Klokov Press",                  "Mid Delts", "barbell"],
+  ["Plate Raise",                   "Mid Delts", "weight plates"],
+
+  // ── FRONT DELTS ────────────────────────────────────────────────────────────
+  ["Front Raise",                   "Front Delts", "dumbbell"],
+  ["Cable Front Raise",             "Front Delts", "cable"],
+  ["Plate Front Raise",             "Front Delts", "weight plates"],
+  ["Barbell Front Raise",           "Front Delts", "barbell"],
+  ["Landmine Lateral Raise",        "Front Delts", "barbell"],
+
+  // ── BICEPS ─────────────────────────────────────────────────────────────────
+  ["Dumbbell Curl",                 "Biceps", "dumbbell"],
+  ["Barbell Curl",                  "Biceps", "barbell"],
+  ["EZ-Bar Curl",                   "Biceps", "barbell"],
+  ["Hammer Curl",                   "Biceps", "dumbbell"],
+  ["Incline Dumbbell Curl",         "Biceps", "dumbbell"],
+  ["Spider Curl",                   "Biceps", "dumbbell"],
+  ["Prone Incline Curl",            "Biceps", "dumbbell"],
+  ["Concentration Curl",            "Biceps", "dumbbell"],
+  ["Cross-Body Hammer Curl",        "Biceps", "dumbbell"],
+  ["Zottman Curl",                  "Biceps", "dumbbell"],
+  ["Dumbbell Scott Curl",           "Biceps", "dumbbell"],
+  ["Cable Curl",                    "Biceps", "cable"],
+  ["Cable Hammer Curl",             "Biceps", "cable"],
+  ["Bayesian Curl",                 "Biceps", "cable"],
+  ["Preacher Curl",                 "Biceps", "barbell"],
+  ["Reverse Curl",                  "Biceps", "barbell"],
+  ["Drag Curl",                     "Biceps", "barbell"],
+  ["21s",                           "Biceps", "barbell"],
+  ["Cheat Curl",                    "Biceps", "barbell"],
+  ["Machine Curl",                  "Biceps", "machine"],
+  ["TRX Curl",                      "Biceps", "bodyweight"],
+
+  // ── TRICEPS ────────────────────────────────────────────────────────────────
+  ["Tricep Pushdown",               "Triceps", "cable"],
+  ["Rope Pushdown",                 "Triceps", "cable"],
+  ["Single-Arm Cable Pushdown",     "Triceps", "cable"],
+  ["Overhead Cable Tricep Extension","Triceps", "cable"],
+  ["Reverse-Grip Pushdown",         "Triceps", "cable"],
+  ["Skullcrusher",                  "Triceps", "barbell"],
+  ["Close-Grip Bench Press",        "Triceps", "barbell"],
+  ["Lying Tricep Extension",        "Triceps", "barbell"],
+  ["JM Press",                      "Triceps", "barbell"],
+  ["California Press",              "Triceps", "barbell"],
+  ["Board Press",                   "Triceps", "barbell"],
+  ["Pin Press",                     "Triceps", "barbell"],
+  ["Overhead Tricep Extension",     "Triceps", "dumbbell"],
+  ["Tate Press",                    "Triceps", "dumbbell"],
+  ["Tricep Kickback",               "Triceps", "dumbbell"],
+  ["Incline Tricep Extension",      "Triceps", "dumbbell"],
+  ["Machine Dip",                   "Triceps", "machine"],
+  ["Weighted Dip",                  "Triceps", "bodyweight"],
+  ["Diamond Push-Up",               "Triceps", "bodyweight"],
+  ["Narrow-Grip Push-Up",           "Triceps", "bodyweight"],
+  ["Bodyweight Tricep Extension",   "Triceps", "bodyweight"],
+
+  // ── FOREARMS ───────────────────────────────────────────────────────────────
+  ["Wrist Curl",                    "Forearms", "barbell"],
+  ["Reverse Wrist Curl",            "Forearms", "barbell"],
+  ["Behind-the-Back Wrist Curl",    "Forearms", "barbell"],
+  ["Reverse Curl",                  "Forearms", "barbell"],
+  ["Dead Hang",                     "Forearms", "bodyweight"],
+  ["Towel Pull-Up",                 "Forearms", "bodyweight"],
+  ["Farmer's Carry",                "Forearms", "dumbbell"],
+  ["Plate Pinch",                   "Forearms", "weight plates"],
+  ["Wrist Roller",                  "Forearms", "other"],
+  ["Rice Bucket",                   "Forearms", "other"],
+
+  // ── QUADS ──────────────────────────────────────────────────────────────────
+  ["Barbell Back Squat",            "Quads", "barbell"],
+  ["Front Squat",                   "Quads", "barbell"],
+  ["Box Squat",                     "Quads", "barbell"],
+  ["Pause Squat",                   "Quads", "barbell"],
+  ["Safety Bar Squat",              "Quads", "barbell"],
+  ["Cyclist Squat",                 "Quads", "barbell"],
+  ["Leg Press",                     "Quads", "machine"],
+  ["Hack Squat",                    "Quads", "machine"],
+  ["Pendulum Squat",                "Quads", "machine"],
+  ["Belt Squat",                    "Quads", "machine"],
+  ["Leg Extension",                 "Quads", "machine"],
+  ["Terminal Knee Extension",       "Quads", "resistance bands"],
+  ["Spanish Squat",                 "Quads", "resistance bands"],
+  ["Bulgarian Split Squat",         "Quads", "dumbbell"],
+  ["Goblet Squat",                  "Quads", "dumbbell"],
+  ["Walking Lunge",                 "Quads", "dumbbell"],
+  ["Reverse Lunge",                 "Quads", "dumbbell"],
+  ["Step-Up",                       "Quads", "dumbbell"],
+  ["Pistol Squat",                  "Quads", "bodyweight"],
+  ["Sissy Squat",                   "Quads", "bodyweight"],
+  ["Skater Squat",                  "Quads", "bodyweight"],
+  ["Box Jump",                      "Quads", "bodyweight"],
+
+  // ── HAMSTRINGS ─────────────────────────────────────────────────────────────
+  ["Romanian Deadlift",             "Hamstrings", "barbell"],
+  ["Trap Bar Romanian Deadlift",    "Hamstrings", "barbell"],
+  ["Stiff-Leg Deadlift",            "Hamstrings", "barbell"],
+  ["Good Morning",                  "Hamstrings", "barbell"],
+  ["Lying Leg Curl",                "Hamstrings", "machine"],
+  ["Seated Leg Curl",               "Hamstrings", "machine"],
+  ["Nordic Hamstring Curl",         "Hamstrings", "bodyweight"],
+  ["Glute-Ham Raise",               "Hamstrings", "bodyweight"],
+  ["Sliding Leg Curl",              "Hamstrings", "bodyweight"],
+  ["Swiss Ball Leg Curl",           "Hamstrings", "other"],
+  ["Single-Leg Romanian Deadlift",  "Hamstrings", "dumbbell"],
+
+  // ── GLUTES ─────────────────────────────────────────────────────────────────
+  ["Hip Thrust",                    "Glutes", "barbell"],
+  ["Banded Hip Thrust",             "Glutes", "resistance bands"],
+  ["Glute Bridge",                  "Glutes", "barbell"],
+  ["Single-Leg Hip Thrust",         "Glutes", "bodyweight"],
+  ["Frog Pump",                     "Glutes", "bodyweight"],
+  ["Donkey Kick",                   "Glutes", "bodyweight"],
+  ["Clamshell",                     "Glutes", "resistance bands"],
+  ["Lateral Band Walk",             "Glutes", "resistance bands"],
+  ["Cable Kickback",                "Glutes", "cable"],
+  ["Abduction Machine",             "Glutes", "machine"],
+  ["Reverse Hyper",                 "Glutes", "machine"],
+  ["Sumo Squat",                    "Glutes", "dumbbell"],
+  ["Kettlebell Swing",              "Glutes", "kettlebell"],
+
+  // ── CALVES ─────────────────────────────────────────────────────────────────
+  ["Calf Raise",                    "Calves", "machine"],
+  ["Seated Calf Raise",             "Calves", "machine"],
+  ["Donkey Calf Raise",             "Calves", "machine"],
+  ["Leg Press Calf Raise",          "Calves", "machine"],
+  ["Smith Machine Calf Raise",      "Calves", "machine"],
+  ["Single-Leg Calf Raise",         "Calves", "bodyweight"],
+  ["Tibialis Raise",                "Calves", "bodyweight"],
+
+  // ── ABS ────────────────────────────────────────────────────────────────────
+  ["Crunch",                        "Abs", "bodyweight"],
+  ["Bicycle Crunch",                "Abs", "bodyweight"],
+  ["Plank",                         "Abs", "bodyweight"],
+  ["Side Plank",                    "Abs", "bodyweight"],
+  ["Copenhagen Plank",              "Abs", "bodyweight"],
+  ["Hollow Body Hold",              "Abs", "bodyweight"],
+  ["Dead Bug",                      "Abs", "bodyweight"],
+  ["V-Up",                          "Abs", "bodyweight"],
+  ["Leg Raise",                     "Abs", "bodyweight"],
+  ["Flutter Kick",                  "Abs", "bodyweight"],
+  ["Hanging Leg Raise",             "Abs", "bodyweight"],
+  ["Hanging Knee Raise",            "Abs", "bodyweight"],
+  ["Toes-to-Bar",                   "Abs", "bodyweight"],
+  ["L-Sit",                         "Abs", "bodyweight"],
+  ["Dragon Flag",                   "Abs", "bodyweight"],
+  ["Decline Sit-Up",                "Abs", "bodyweight"],
+  ["Russian Twist",                 "Abs", "bodyweight"],
+  ["Windshield Wiper",              "Abs", "bodyweight"],
+  ["Weighted Crunch",               "Abs", "bodyweight"],
+  ["Cable Crunch",                  "Abs", "cable"],
+  ["Pallof Press",                  "Abs", "cable"],
+  ["Cable Side Bend",               "Abs", "cable"],
+  ["Landmine Rotation",             "Abs", "barbell"],
+  ["Ab Wheel Rollout",              "Abs", "other"],
+  ["GHD Sit-Up",                    "Abs", "machine"],
+
+  // ── NECK ───────────────────────────────────────────────────────────────────
+  ["Neck Curl",                     "Neck", "bodyweight"],
+  ["Neck Extension",                "Neck", "bodyweight"],
+  ["Lateral Neck Flexion",          "Neck", "bodyweight"],
+  ["Wrestler's Bridge",             "Neck", "bodyweight"],
+  ["Plate Neck Curl",               "Neck", "weight plates"],
+  ["Band Neck Flexion",             "Neck", "resistance bands"],
+  ["Harness Neck Extension",        "Neck", "other"],
+  ["Iron Neck",                     "Neck", "other"],
+
+  // ── OLYMPIC ────────────────────────────────────────────────────────────────
+  ["Clean and Jerk",                "Olympic", "barbell"],
+  ["Snatch",                        "Olympic", "barbell"],
+  ["Power Clean",                   "Olympic", "barbell"],
+  ["Hang Clean",                    "Olympic", "barbell"],
+  ["Block Clean",                   "Olympic", "barbell"],
+  ["Muscle Clean",                  "Olympic", "barbell"],
+  ["Clean Pull",                    "Olympic", "barbell"],
+  ["Clean High Pull",               "Olympic", "barbell"],
+  ["Power Snatch",                  "Olympic", "barbell"],
+  ["Hang Snatch",                   "Olympic", "barbell"],
+  ["Block Snatch",                  "Olympic", "barbell"],
+  ["Muscle Snatch",                 "Olympic", "barbell"],
+  ["Snatch Pull",                   "Olympic", "barbell"],
+  ["Snatch High Pull",              "Olympic", "barbell"],
+  ["Overhead Squat",                "Olympic", "barbell"],
+  ["Split Jerk",                    "Olympic", "barbell"],
+  ["Power Jerk",                    "Olympic", "barbell"],
+
+  // ── FULL BODY ──────────────────────────────────────────────────────────────
+  ["Turkish Get-Up",                "Full Body", "kettlebell"],
+  ["Man Maker",                     "Full Body", "dumbbell"],
+  ["Thruster",                      "Full Body", "barbell"],
+  ["Clean and Press",               "Full Body", "barbell"],
+  ["Devil Press",                   "Full Body", "dumbbell"],
+  ["Burpee",                        "Full Body", "bodyweight"],
+  ["Broad Jump",                    "Full Body", "bodyweight"],
+  ["Sled Push",                     "Full Body", "other"],
+  ["Sled Pull",                     "Full Body", "other"],
+  ["Prowler Push",                  "Full Body", "other"],
+  ["Tire Flip",                     "Full Body", "other"],
+  ["Sandbag Carry",                 "Full Body", "other"],
+  ["Battle Ropes",                  "Full Body", "other"],
+  ["Wall Ball",                     "Full Body", "other"],
+  ["Assault Bike",                  "Full Body", "other"],
+];
 
 async function seedDefaultExercises(
   database: SQLite.SQLiteDatabase
@@ -164,33 +470,39 @@ async function seedDefaultExercises(
   );
   if (existing && existing.count > 0) return;
 
-  const defaults = [
-    ["Barbell Back Squat", "Legs", "barbell"],
-    ["Barbell Bench Press", "Chest", "barbell"],
-    ["Deadlift", "Back", "barbell"],
-    ["Overhead Press", "Shoulders", "barbell"],
-    ["Barbell Row", "Back", "barbell"],
-    ["Pull-Up", "Back", "bodyweight"],
-    ["Dip", "Chest", "bodyweight"],
-    ["Incline Dumbbell Press", "Chest", "dumbbell"],
-    ["Dumbbell Curl", "Arms", "dumbbell"],
-    ["Tricep Pushdown", "Arms", "cable"],
-    ["Leg Press", "Legs", "machine"],
-    ["Leg Curl", "Legs", "machine"],
-    ["Calf Raise", "Legs", "machine"],
-    ["Lat Pulldown", "Back", "cable"],
-    ["Cable Row", "Back", "cable"],
-    ["Romanian Deadlift", "Legs", "barbell"],
-    ["Dumbbell Shoulder Press", "Shoulders", "dumbbell"],
-    ["Lateral Raise", "Shoulders", "dumbbell"],
-    ["Face Pull", "Shoulders", "cable"],
-    ["Hip Thrust", "Legs", "barbell"],
-  ];
-
-  for (const [name, muscle_group, equipment_type] of defaults) {
+  for (const [name, muscle_group, equipment_type] of ALL_EXERCISES) {
     await database.runAsync(
       "INSERT INTO exercises (name, muscle_group, equipment_type) VALUES (?, ?, ?)",
       [name, muscle_group, equipment_type]
     );
   }
+
+  // Mark expansion as done so seedExpandedExercises skips for fresh installs
+  await database.runAsync(
+    "INSERT OR REPLACE INTO kv_store (key, value) VALUES ('@konafit_exercises_v2', '1')"
+  );
+}
+
+// Runs once on existing installs to add all new exercises without duplicates
+async function seedExpandedExercises(
+  database: SQLite.SQLiteDatabase
+): Promise<void> {
+  const flag = await database.getFirstAsync<{ value: string }>(
+    "SELECT value FROM kv_store WHERE key = '@konafit_exercises_v2'"
+  );
+  if (flag) return;
+
+  for (const [name, muscle_group, equipment_type] of ALL_EXERCISES) {
+    await database.runAsync(
+      `INSERT INTO exercises (name, muscle_group, equipment_type)
+       SELECT ?, ?, ? WHERE NOT EXISTS (
+         SELECT 1 FROM exercises WHERE LOWER(name) = LOWER(?)
+       )`,
+      [name, muscle_group, equipment_type, name]
+    );
+  }
+
+  await database.runAsync(
+    "INSERT OR REPLACE INTO kv_store (key, value) VALUES ('@konafit_exercises_v2', '1')"
+  );
 }
