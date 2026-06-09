@@ -24,6 +24,8 @@ import { SectionHeader } from "../../src/components/stats/SectionHeader";
 import { WorkoutHistoryList } from "../../src/components/stats/WorkoutHistoryList";
 import { ProgressPhotoGallery } from "../../src/components/stats/ProgressPhotoGallery";
 import { StrengthScore } from "../../src/components/stats/StrengthScore";
+import { TrainingTrends } from "../../src/components/stats/TrainingTrends";
+import { CaffeineChart } from "../../src/components/stats/CaffeineChart";
 
 type StatsData = {
   totalLiftedLbs: number;
@@ -45,7 +47,7 @@ async function loadStats(): Promise<StatsData> {
     getWorkoutDatesForStreak(),
     getLatestBodyweight(),
     getWorkoutDays(91),
-    getWorkoutHistory(10),
+    getWorkoutHistory(5),
   ]);
   return {
     totalLiftedLbs: total,
@@ -164,6 +166,12 @@ export default function StatsScreen() {
           <MuscleTracker refreshKey={refreshKey} />
         </View>
 
+        {/* Training Trends */}
+        <View className="px-4 mb-6">
+          <SectionHeader title="Training Trends" subtitle="Volume · frequency · bodyweight" />
+          <TrainingTrends refreshKey={refreshKey} />
+        </View>
+
         {/* Habit Calendar */}
         <View className="px-4 mb-6">
           <SectionHeader title="Training Calendar" subtitle="Last 13 weeks" />
@@ -174,7 +182,7 @@ export default function StatsScreen() {
 
         {/* Workout History */}
         <View className="px-4 mb-6">
-          <SectionHeader title="History" subtitle="Recent workouts" />
+          <SectionHeader title="History" subtitle="Last 5 workouts" />
           <WorkoutHistoryList workouts={stats?.recentWorkouts ?? []} />
         </View>
 
@@ -184,9 +192,15 @@ export default function StatsScreen() {
         </View>
 
         {/* Lifestyle Logger */}
-        <View className="px-4">
+        <View className="px-4 mb-6">
           <SectionHeader title="Lifestyle" subtitle="Daily tracking" />
           <LifestyleLogger onSaved={() => refresh()} />
+        </View>
+
+        {/* Caffeine */}
+        <View className="px-4">
+          <SectionHeader title="Caffeine" subtitle="Pre-workout mg over time" />
+          <CaffeineChart refreshKey={refreshKey} />
         </View>
       </ScrollView>
     </SafeAreaView>

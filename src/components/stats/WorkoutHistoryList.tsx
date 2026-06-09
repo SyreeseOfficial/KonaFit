@@ -1,12 +1,10 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
-import { ChevronRight } from "lucide-react-native";
+import { ChevronRight, MapPin } from "lucide-react-native";
 import { formatDuration, formatShortDate, formatVolume } from "../../utils/exportUtils";
 import type { WorkoutSummary } from "../../db/historyQueries";
 
-type Props = {
-  workouts: WorkoutSummary[];
-};
+type Props = { workouts: WorkoutSummary[] };
 
 export function WorkoutHistoryList({ workouts }: Props) {
   if (workouts.length === 0) {
@@ -43,10 +41,28 @@ export function WorkoutHistoryList({ workouts }: Props) {
                 {formatVolume(w.total_volume)}
               </Text>
             </View>
+            {w.location ? (
+              <View className="flex-row items-center gap-1 mt-1">
+                <MapPin size={10} color="#606060" />
+                <Text className="font-mono text-text-muted text-xs">{w.location}</Text>
+              </View>
+            ) : null}
           </View>
           <ChevronRight size={16} color="#606060" />
         </TouchableOpacity>
       ))}
+
+      {/* View All */}
+      <TouchableOpacity
+        onPress={() => router.push("/history" as never)}
+        className="flex-row items-center justify-center gap-1.5 py-3 border-t border-surface-2"
+        activeOpacity={0.7}
+      >
+        <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-widest uppercase">
+          View All
+        </Text>
+        <ChevronRight size={12} color="#606060" />
+      </TouchableOpacity>
     </View>
   );
 }

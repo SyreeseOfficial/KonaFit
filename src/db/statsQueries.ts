@@ -302,3 +302,62 @@ export async function getBodyweightHistory(limit = 30): Promise<BodyweightLog[]>
     [limit]
   );
 }
+
+// ─── Training Trends ──────────────────────────────────────────────────────────
+
+export type TrendPoint = { x: number; y: number }; // x = ms timestamp
+
+export async function getVolumeTrend(days: number | null): Promise<TrendPoint[]> {
+  const db = await getDatabase();
+  const cond = days !== null ? "AND w.started_at >= unixepoch() - ? * 86400" : "";
+  const params = days !== null ? [days] : [];
+  const rows = await db.getAllAsync<{ ts: number; volume: number }>(
+    `SELECT w.started_at * 1000 AS ts,
+            COALESCE(SUM(CASE WHEN ls.is_completed = 1 THEN ls.weight_lbs * ls.reps ELSE 0 END), 0) AS volume
+     FROM workouts w
+     LEFT JOIN logged_exercises le ON le.workout_id = w.id
+     LEFT JOIN logged_sets ls ON ls.logged_exercise_id = le.id
+     WHERE w.finished_at IS NOT NULL ${cond}
+     GROUP BY w.id
+     ORDER BY w.started_at ASC`,
+    params
+  );
+  return rows.map((r) => ({ x: r.ts, y: r.volume }));
+}
+
+export async function getFrequencyTrend(days: number | null): Promise<TrendPoint[]> {
+  const db = await getDatabase();
+  const cond = days !== null ? "WHERE finished_at IS NOT NULL AND started_at >= unixepoch() - ? * 86400" : "WHERE finished_at IS NOT NULL";
+  const params = days !== null ? [days] : [];
+  const rows = await db.getAllAsync<{ ts: number }>(
+    `SELECT started_at * 1000 AS ts FROM workouts ${cond} ORDER BY started_at ASC`,
+    params
+  );
+  return rows.map((r) => ({ x: r.ts, y: 1 }));
+}
+
+export async function getBodyweightTrend(days: number | null): Promise<TrendPoint[]> {
+  const db = await getDatabase();
+  const cond = days !== null ? "WHERE logged_at >= unixepoch() - ? * 86400" : "";
+  const params = days !== null ? [days] : [];
+  const rows = await db.getAllAsync<{ ts: number; weight: number }>(
+    `SELECT logged_at * 1000 AS ts, weight_lbs AS weight
+     FROM bodyweight_logs ${cond} ORDER BY logged_at ASC`,
+    params
+  );
+  return rows.map((r) => ({ x: r.ts, y: r.weight }));
+}
+
+export async function getCaffeineTrend(days: number | null): Promise<TrendPoint[]> {
+  const db = await getDatabase();
+  const cond = days !== null ? "AND logged_at >= unixepoch() - ? * 86400" : "";
+  const params = days !== null ? [days] : [];
+  const rows = await db.getAllAsync<{ ts: number; mg: number }>(
+    `SELECT logged_at * 1000 AS ts, caffeine_mg AS mg
+     FROM lifestyle_logs
+     WHERE caffeine_mg >= 0 ${cond}
+     ORDER BY logged_at ASC`,
+    params
+  );
+  return rows.map((r) => ({ x: r.ts, y: r.mg }));
+}

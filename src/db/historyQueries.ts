@@ -9,6 +9,7 @@ export type WorkoutSummary = {
   exercise_count: number;
   set_count: number;
   total_volume: number;
+  location: string | null;
 };
 
 export type SetRecord = {
@@ -43,7 +44,7 @@ export async function getWorkoutHistory(limit = 20): Promise<WorkoutSummary[]> {
   const db = await getDatabase();
   return db.getAllAsync<WorkoutSummary>(
     `SELECT
-       w.id, w.name, w.started_at, w.finished_at,
+       w.id, w.name, w.started_at, w.finished_at, w.location,
        COALESCE(w.duration_seconds, 0) as duration_seconds,
        COUNT(DISTINCT le.id) as exercise_count,
        COUNT(DISTINCT ls.id) as set_count,
