@@ -5,9 +5,18 @@ import type { Program, ProgramDay, ProgramExercise, ProgramSummary } from "../ty
 
 export async function getPrograms(): Promise<ProgramSummary[]> {
   const db = await getDatabase();
-  return db.getAllAsync<ProgramSummary>(
+  const rows = await db.getAllAsync<{
+    id: number; name: string; description: string | null;
+    durationWeeks: number | null; programType: string; difficulty: string | null;
+    focusTags: string | null; dayCount: number; exerciseCount: number; updatedAt: number;
+  }>(
     `SELECT
-       p.id, p.name, p.description, p.duration_weeks as durationWeeks, p.updated_at as updatedAt,
+       p.id, p.name, p.description,
+       p.duration_weeks as durationWeeks,
+       COALESCE(p.program_type, 'weekly') as programType,
+       p.difficulty,
+       p.focus_tags as focusTags,
+       p.updated_at as updatedAt,
        COUNT(DISTINCT pd.id) as dayCount,
        COUNT(DISTINCT pe.id) as exerciseCount
      FROM programs p
@@ -16,17 +25,40 @@ export async function getPrograms(): Promise<ProgramSummary[]> {
      GROUP BY p.id
      ORDER BY p.updated_at DESC`
   );
+  return rows.map((r) => ({
+    ...r,
+    programType: (r.programType || "weekly") as import("../types/program").ProgramType,
+    focusTags: r.focusTags ? JSON.parse(r.focusTags) : [],
+  }));
 }
 
 export async function createProgram(
   name: string,
-  description?: string,
-  durationWeeks?: number
+  opts?: {
+    description?: string;
+    durationWeeks?: number;
+    programType?: string;
+    workoutDurationMin?: number;
+    focusTags?: string[];
+    equipment?: string;
+    difficulty?: string;
+  }
 ): Promise<number> {
   const db = await getDatabase();
   const result = await db.runAsync(
-    "INSERT INTO programs (name, description, duration_weeks) VALUES (?, ?, ?)",
-    [name.trim(), description?.trim() ?? null, durationWeeks ?? null]
+    `INSERT INTO programs
+       (name, description, duration_weeks, program_type, workout_duration_min, focus_tags, equipment, difficulty)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      name.trim(),
+      opts?.description?.trim() ?? null,
+      opts?.durationWeeks ?? null,
+      opts?.programType ?? "weekly",
+      opts?.workoutDurationMin ?? null,
+      opts?.focusTags?.length ? JSON.stringify(opts.focusTags) : null,
+      opts?.equipment ?? null,
+      opts?.difficulty ?? null,
+    ]
   );
   return result.lastInsertRowId;
 }
@@ -55,11 +87,15 @@ export async function cloneProgram(id: number): Promise<number> {
   const original = await getProgramWithDays(id);
   if (!original) throw new Error("Program not found");
 
-  const newId = await createProgram(
-    `${original.name} (Copy)`,
-    original.description ?? undefined,
-    original.durationWeeks ?? undefined
-  );
+  const newId = await createProgram(`${original.name} (Copy)`, {
+    description: original.description ?? undefined,
+    durationWeeks: original.durationWeeks ?? undefined,
+    programType: original.programType,
+    workoutDurationMin: original.workoutDurationMin ?? undefined,
+    focusTags: original.focusTags,
+    equipment: original.equipment ?? undefined,
+    difficulty: original.difficulty ?? undefined,
+  });
 
   for (const day of original.days) {
     const newDayId = await createProgramDay(newId, day.name, day.orderIndex);
@@ -82,6 +118,11 @@ export async function getProgramWithDays(id: number): Promise<Program | null> {
   const prog = await db.getFirstAsync<{
     id: number; name: string; description: string | null;
     duration_weeks: number | null; created_at: number; updated_at: number;
+    program_type: string | null;
+    workout_duration_min: number | null;
+    focus_tags: string | null;
+    equipment: string | null;
+    difficulty: string | null;
   }>("SELECT * FROM programs WHERE id = ?", [id]);
   if (!prog) return null;
 
@@ -107,6 +148,11 @@ export async function getProgramWithDays(id: number): Promise<Program | null> {
     name: prog.name,
     description: prog.description,
     durationWeeks: prog.duration_weeks,
+    programType: (prog.program_type ?? "weekly") as import("../types/program").ProgramType,
+    workoutDurationMin: prog.workout_duration_min,
+    focusTags: prog.focus_tags ? JSON.parse(prog.focus_tags) : [],
+    equipment: prog.equipment,
+    difficulty: prog.difficulty,
     createdAt: prog.created_at,
     updatedAt: prog.updated_at,
     days,

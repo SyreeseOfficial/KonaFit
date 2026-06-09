@@ -122,12 +122,30 @@ export async function initializeDatabase(): Promise<void> {
       use_count INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
+
+    CREATE TABLE IF NOT EXISTS goals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      exercise_id INTEGER REFERENCES exercises(id) ON DELETE SET NULL,
+      exercise_name TEXT,
+      target_value REAL,
+      notes TEXT,
+      is_achieved INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      achieved_at INTEGER
+    );
   `);
 
   // Migrations — each wrapped in try/catch so re-runs are safe
   const migrations = [
     `ALTER TABLE exercises ADD COLUMN target_type TEXT NOT NULL DEFAULT 'reps'`,
     `ALTER TABLE lifestyle_logs ADD COLUMN caffeine_mg INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE programs ADD COLUMN program_type TEXT NOT NULL DEFAULT 'weekly'`,
+    `ALTER TABLE programs ADD COLUMN workout_duration_min INTEGER`,
+    `ALTER TABLE programs ADD COLUMN focus_tags TEXT`,
+    `ALTER TABLE programs ADD COLUMN equipment TEXT`,
+    `ALTER TABLE programs ADD COLUMN difficulty TEXT`,
   ];
   for (const m of migrations) {
     try { await database.execAsync(m); } catch { /* already applied */ }

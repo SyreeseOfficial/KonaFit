@@ -8,6 +8,7 @@ import {
   Modal,
   Pressable,
 } from "react-native";
+import { GoalsSection } from "../../src/components/train/GoalsSection";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus, Calculator, Settings } from "lucide-react-native";
 import { useLocalSearchParams, router } from "expo-router";
@@ -246,11 +247,9 @@ export default function TrainScreen() {
     return (
       <SafeAreaView className="flex-1 bg-obsidian">
         <View className="flex-row items-start justify-between px-4 pt-4">
-          <View>
-            <Text className="font-anton text-white text-3xl tracking-widest uppercase mb-8">
-              Train
-            </Text>
-          </View>
+          <Text className="font-anton text-white text-3xl tracking-widest uppercase">
+            Train
+          </Text>
           <View className="flex-row items-center gap-4 mt-1">
             <TouchableOpacity
               onPress={() => router.push("/tools")}
@@ -268,25 +267,32 @@ export default function TrainScreen() {
             </TouchableOpacity>
           </View>
         </View>
-        <View className="flex-1 items-center justify-center gap-6">
-          <View className="items-center">
-            <Text className="font-montserrat-bold text-white text-base tracking-wider uppercase mb-1">
-              Ready to train?
-            </Text>
-            <Text className="font-montserrat text-text-muted text-sm text-center">
-              Start an empty workout and add exercises as you go.
-            </Text>
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 48 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="items-center py-12 px-4" style={{ gap: 20 }}>
+            <View className="items-center">
+              <Text className="font-montserrat-bold text-white text-base tracking-wider uppercase mb-1">
+                Ready to train?
+              </Text>
+              <Text className="font-montserrat text-text-muted text-sm text-center">
+                Start an empty workout and add exercises as you go.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={startWorkout}
+              className="bg-crimson px-10 py-4"
+              activeOpacity={0.8}
+            >
+              <Text className="font-montserrat-bold text-white tracking-widest uppercase text-sm">
+                Start Workout
+              </Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            onPress={startWorkout}
-            className="bg-crimson px-10 py-4"
-            activeOpacity={0.8}
-          >
-            <Text className="font-montserrat-bold text-white tracking-widest uppercase text-sm">
-              Start Workout
-            </Text>
-          </TouchableOpacity>
-        </View>
+          <GoalsSection />
+        </ScrollView>
       </SafeAreaView>
     );
   }

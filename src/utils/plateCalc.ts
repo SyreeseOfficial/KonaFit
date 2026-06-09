@@ -18,15 +18,21 @@ export const PLATES: PlateConfig[] = [
 
 export type PlateResult = { plate: PlateConfig; count: number };
 
-export function calculatePlates(targetLbs: number, barLbs = 45): PlateResult[] | null {
+export function calculatePlates(
+  targetLbs: number,
+  barLbs = 45,
+  activePlates: PlateConfig[] = PLATES
+): PlateResult[] | null {
   const perSide = (targetLbs - barLbs) / 2;
   if (perSide < 0) return null;
   if (perSide === 0) return [];
 
+  // Sort by weight descending for greedy algorithm
+  const sorted = [...activePlates].sort((a, b) => b.weight - a.weight);
   const results: PlateResult[] = [];
   let remaining = Math.round(perSide * 10) / 10;
 
-  for (const plate of PLATES) {
+  for (const plate of sorted) {
     const count = Math.floor(remaining / plate.weight + 0.0001);
     if (count > 0) {
       results.push({ plate, count });
@@ -36,6 +42,16 @@ export function calculatePlates(targetLbs: number, barLbs = 45): PlateResult[] |
 
   return results;
 }
+
+// Preset colors for custom plates
+export const CUSTOM_PLATE_COLORS = [
+  { hex: "#7B1FA2", label: "Purple" },
+  { hex: "#00838F", label: "Teal" },
+  { hex: "#F57F17", label: "Amber" },
+  { hex: "#263238", label: "Steel" },
+  { hex: "#880E4F", label: "Pink" },
+  { hex: "#1B5E20", label: "Forest" },
+] as const;
 
 export function roundWeight(weight: number, nearest: 0 | 2.5 | 5): number {
   if (nearest === 0) return weight;

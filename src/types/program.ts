@@ -18,11 +18,18 @@ export type ProgramDay = {
   exercises: ProgramExercise[];
 };
 
+export type ProgramType = "single" | "weekly" | "multi_week";
+
 export type Program = {
   id: number;
   name: string;
   description: string | null;
   durationWeeks: number | null;
+  programType: ProgramType;
+  workoutDurationMin: number | null;
+  focusTags: string[];
+  equipment: string | null;
+  difficulty: string | null;
   createdAt: number;
   updatedAt: number;
   days: ProgramDay[];
@@ -33,6 +40,9 @@ export type ProgramSummary = {
   name: string;
   description: string | null;
   durationWeeks: number | null;
+  programType: ProgramType;
+  difficulty: string | null;
+  focusTags: string[];
   dayCount: number;
   exerciseCount: number;
   updatedAt: number;
