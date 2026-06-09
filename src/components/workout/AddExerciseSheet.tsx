@@ -13,6 +13,7 @@ import {
   Platform,
   useWindowDimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Search, X, ChevronDown, ChevronLeft, Check } from "lucide-react-native";
 import { searchExercises, createCustomExercise } from "../../db/workoutQueries";
 import type { Exercise } from "../../types/workout";
@@ -66,6 +67,7 @@ function FilterPicker({
   onSelect: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const { height: screenHeight } = useWindowDimensions();
   const active = value !== "";
 
   return (
@@ -89,10 +91,11 @@ function FilterPicker({
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable className="flex-1 bg-black/70 justify-center px-8" onPress={() => setOpen(false)}>
+        <Pressable className="flex-1 bg-black/70 justify-center px-6" onPress={() => setOpen(false)}>
           <Pressable>
-            <View className="bg-surface-2">
-              <View className="flex-row items-center justify-between px-4 py-3 border-b border-surface-3">
+            <View className="bg-surface-2" style={{ borderRadius: 4 }}>
+              {/* Header */}
+              <View className="flex-row items-center justify-between px-4 py-3.5 border-b border-surface-3">
                 <Text className="font-montserrat-bold text-white text-xs tracking-widest uppercase">
                   {label}
                 </Text>
@@ -100,27 +103,35 @@ function FilterPicker({
                   <X size={16} color="#606060" />
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                onPress={() => { onSelect(""); setOpen(false); }}
-                className="px-4 py-3 border-b border-surface-3"
-                activeOpacity={0.7}
+              {/* Scrollable options */}
+              <ScrollView
+                style={{ maxHeight: screenHeight * 0.55 }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={true}
+                bounces={false}
               >
-                <Text className={`font-montserrat text-sm ${value === "" ? "text-crimson" : "text-text-muted"}`}>
-                  All
-                </Text>
-              </TouchableOpacity>
-              {options.map((opt) => (
                 <TouchableOpacity
-                  key={opt}
-                  onPress={() => { onSelect(opt); setOpen(false); }}
-                  className="px-4 py-3 border-b border-surface-3"
+                  onPress={() => { onSelect(""); setOpen(false); }}
+                  className="px-4 py-3.5 border-b border-surface-3"
                   activeOpacity={0.7}
                 >
-                  <Text className={`font-montserrat text-sm ${value === opt ? "text-crimson" : "text-white"}`}>
-                    {opt}
+                  <Text className={`font-montserrat text-sm ${value === "" ? "text-crimson" : "text-text-muted"}`}>
+                    All
                   </Text>
                 </TouchableOpacity>
-              ))}
+                {options.map((opt) => (
+                  <TouchableOpacity
+                    key={opt}
+                    onPress={() => { onSelect(opt); setOpen(false); }}
+                    className="px-4 py-3.5 border-b border-surface-3"
+                    activeOpacity={0.7}
+                  >
+                    <Text className={`font-montserrat text-sm ${value === opt ? "text-crimson" : "text-white"}`}>
+                      {opt}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
           </Pressable>
         </Pressable>
@@ -214,6 +225,7 @@ type Props = {
 };
 
 export function AddExerciseSheet({ visible, onClose, onSelect, multiSelect = false }: Props) {
+  const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>("search");
   const [query, setQuery] = useState("");
   const [muscleFilter, setMuscleFilter] = useState("");
@@ -426,8 +438,11 @@ export function AddExerciseSheet({ visible, onClose, onSelect, multiSelect = fal
                     )}
                   </View>
 
-                  {/* Bottom bar */}
-                  <View className="border-t border-surface-2 bg-surface">
+                  {/* Bottom bar — paddingBottom accounts for Android system nav bar */}
+                  <View
+                    className="border-t border-surface-2 bg-surface"
+                    style={{ paddingBottom: insets.bottom }}
+                  >
                     {multiSelect ? (
                       <TouchableOpacity
                         onPress={pending.length > 0 ? handleAddAll : onClose}

@@ -6,6 +6,20 @@ This chronological ledger tracks major features, structural database migrations,
 
 ---
 
+### 2026-06-08 — Android Nav Bar Fix, Stats Spacing Fix, Multi-Select Exercise Picker, Filter Scroll Fix
+
+* **Status:** Implemented
+* **Scope:** Android Layout / Stats Tab / Exercise Picker
+* **Changes Executed:**
+  * **Android nav bar overlap fix (tabs):** Added explicit `SafeAreaProvider` at `app/_layout.tsx` root. Tab layout now uses `useSafeAreaInsets()` to add `insets.bottom` to tab bar `height` and `paddingBottom`, so the tab icons clear the Android 3-button nav bar on Vivo Origin OS and similar OEM builds.
+  * **Stats section spacing root cause fixed:** Previous `mb-X` approach only added space *after* sections; section titles had no top padding. Replaced all section wrappers with `style={{ paddingTop: 72 }}` (explicit px) so every section title has 72px of breathing room directly above it, independent of NativeWind class resolution.
+  * **Multi-select exercise picker:** `AddExerciseSheet` gains `multiSelect` prop (default `false`, backwards-compatible). When enabled: tapping toggles a checkmark on the row avatar; bottom bar shows "Add X Exercises" crimson button; creating a new exercise in multi-select mode queues it and returns to search. Enabled on Train "Add Exercise" and Programs "Add Exercise to Day"; swap exercise and GoalsSection picker remain single-select.
+  * **Filter picker scroll fix:** Muscle group and equipment filter modals now wrap options in a `ScrollView` with `maxHeight: screenHeight * 0.55`, making all 21+ options reachable.
+  * **AddExerciseSheet bottom bar inset:** Added `useSafeAreaInsets()` and `paddingBottom: insets.bottom` to the bottom action bar so "Add X Exercises" button is never hidden behind the Android system navigation bar.
+* **Architectural Notes:** Nav bar auto-hide (immersive mode) is a system-level setting — apps cannot force it without a native build and `expo-navigation-bar`. The correct user fix is to switch to gesture navigation in Android Settings → Navigation style. The inset-based padding ensures the button is always reachable regardless of nav bar mode.
+
+---
+
 ### 2026-06-08 — Feature Expansion: Plate Config, Program Builder, Goals, Settings Overhaul + UI Spacing Pass
 
 * **Status:** Implemented
