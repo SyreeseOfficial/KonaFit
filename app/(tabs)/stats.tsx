@@ -110,7 +110,7 @@ export default function StatsScreen() {
         }
       >
         {/* Header */}
-        <View className="flex-row items-start justify-between px-4 pt-8 pb-10">
+        <View className="flex-row items-start justify-between px-4 pt-8 pb-6">
           <View>
             <Text className="font-anton text-white text-3xl tracking-widest uppercase">
               Stats
@@ -138,49 +138,47 @@ export default function StatsScreen() {
         </View>
 
         {/* Stats Grid */}
-        <View className="mb-14">
-          <StatsGrid
-            totalLiftedLbs={stats?.totalLiftedLbs ?? 0}
-            workoutCount={stats?.workoutCount ?? 0}
-            streak={stats?.streak ?? 0}
-            bodyweightLbs={stats?.bodyweightLbs ?? null}
-            totalHours={stats?.totalHours ?? 0}
-            prCount={stats?.prCount ?? 0}
-          />
-        </View>
+        <StatsGrid
+          totalLiftedLbs={stats?.totalLiftedLbs ?? 0}
+          workoutCount={stats?.workoutCount ?? 0}
+          streak={stats?.streak ?? 0}
+          bodyweightLbs={stats?.bodyweightLbs ?? null}
+          totalHours={stats?.totalHours ?? 0}
+          prCount={stats?.prCount ?? 0}
+        />
 
         {/* Strength Score */}
-        <View className="px-4 mb-16">
+        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
           <SectionHeader title="Strength Score" subtitle="Relative strength rating" />
           <StrengthScore refreshKey={refreshKey} />
         </View>
 
         {/* 1RM Trajectory */}
-        <View className="px-4 mb-16">
+        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
           <SectionHeader title="1RM Trajectory" subtitle="Epley formula" />
           <OneRMChart refreshKey={refreshKey} />
         </View>
 
         {/* Exercise Analytics */}
-        <View className="px-4 mb-16">
+        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
           <SectionHeader title="Exercise Analytics" subtitle="Brzycki · RPE · volume per lift" />
           <ExerciseAnalytics refreshKey={refreshKey} />
         </View>
 
         {/* Muscle Tracker */}
-        <View className="px-4 mb-16">
+        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
           <SectionHeader title="Muscle Tracker" subtitle="Weighted sets by muscle" />
           <MuscleTracker refreshKey={refreshKey} />
         </View>
 
         {/* Training Trends */}
-        <View className="px-4 mb-16">
+        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
           <SectionHeader title="Training Trends" subtitle="Volume · frequency · bodyweight" />
           <TrainingTrends refreshKey={refreshKey} />
         </View>
 
         {/* Habit Calendar */}
-        <View className="px-4 mb-16">
+        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
           <SectionHeader title="Training Calendar" subtitle="Last 13 weeks" />
           <View className="bg-surface p-4">
             <HabitCalendar workoutDays={stats?.workoutDays ?? new Set()} />
@@ -188,24 +186,24 @@ export default function StatsScreen() {
         </View>
 
         {/* Workout History */}
-        <View className="px-4 mb-16">
+        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
           <SectionHeader title="History" subtitle="Last 5 workouts" />
           <WorkoutHistoryList workouts={stats?.recentWorkouts ?? []} />
         </View>
 
         {/* Progress Photos */}
-        <View className="px-4 mb-16">
+        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
           <ProgressPhotoGallery refreshKey={refreshKey} />
         </View>
 
         {/* Lifestyle Logger */}
-        <View className="px-4 mb-16">
+        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
           <SectionHeader title="Lifestyle" subtitle="Daily tracking" />
           <LifestyleLogger onSaved={() => refresh()} />
         </View>
 
         {/* Caffeine */}
-        <View className="px-4">
+        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
           <SectionHeader title="Caffeine" subtitle="Pre-workout mg over time" />
           <CaffeineChart refreshKey={refreshKey} />
         </View>

@@ -324,6 +324,7 @@ export default function ProgramDetailScreen() {
         visible={addExerciseDayId !== null}
         onClose={() => setAddExerciseDayId(null)}
         onSelect={handleSelectExercise}
+        multiSelect
       />
 
       {/* Edit exercise target modal */}

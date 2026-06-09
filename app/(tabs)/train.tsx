@@ -399,6 +399,7 @@ export default function TrainScreen() {
         visible={exerciseSheetOpen}
         onClose={() => setExerciseSheetOpen(false)}
         onSelect={handleSelectExercise}
+        multiSelect
       />
 
       {/* Swap exercise */}

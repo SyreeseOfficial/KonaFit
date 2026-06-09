@@ -13,7 +13,7 @@ import {
   Platform,
   useWindowDimensions,
 } from "react-native";
-import { Search, X, ChevronDown, ChevronLeft } from "lucide-react-native";
+import { Search, X, ChevronDown, ChevronLeft, Check } from "lucide-react-native";
 import { searchExercises, createCustomExercise } from "../../db/workoutQueries";
 import type { Exercise } from "../../types/workout";
 
@@ -100,7 +100,6 @@ function FilterPicker({
                   <X size={16} color="#606060" />
                 </TouchableOpacity>
               </View>
-              {/* Clear option */}
               <TouchableOpacity
                 onPress={() => { onSelect(""); setOpen(false); }}
                 className="px-4 py-3 border-b border-surface-3"
@@ -132,23 +131,45 @@ function FilterPicker({
 
 // ─── Exercise Row ─────────────────────────────────────────────────────────────
 
-function ExerciseRow({ item, onPress }: { item: Exercise; onPress: () => void }) {
+function ExerciseRow({
+  item,
+  onPress,
+  multiSelect,
+  selected,
+}: {
+  item: Exercise;
+  onPress: () => void;
+  multiSelect?: boolean;
+  selected?: boolean;
+}) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-row items-center px-4 py-3 border-b border-surface-2"
+      className={`flex-row items-center px-4 py-3 border-b border-surface-2 ${
+        selected ? "bg-surface-2" : ""
+      }`}
       activeOpacity={0.7}
     >
       {/* Initials avatar */}
-      <View className="w-12 h-12 bg-surface-3 items-center justify-center mr-3 flex-shrink-0">
-        <Text className="font-montserrat-bold text-text-secondary text-sm">
-          {getInitials(item.name)}
-        </Text>
+      <View
+        className="w-12 h-12 items-center justify-center mr-3 flex-shrink-0"
+        style={{ backgroundColor: selected ? "#CC2200" : "#2A2A2A" }}
+      >
+        {selected ? (
+          <Check size={18} color="#FFFFFF" strokeWidth={2.5} />
+        ) : (
+          <Text className="font-montserrat-bold text-text-secondary text-sm">
+            {getInitials(item.name)}
+          </Text>
+        )}
       </View>
 
       {/* Name + meta */}
       <View className="flex-1">
-        <Text className="font-montserrat-semibold text-white text-sm mb-0.5" numberOfLines={1}>
+        <Text
+          className={`font-montserrat-semibold text-sm mb-0.5 ${selected ? "text-white" : "text-white"}`}
+          numberOfLines={1}
+        >
           {item.name}
         </Text>
         <Text className="font-mono text-text-muted text-xs tracking-wider">
@@ -156,11 +177,26 @@ function ExerciseRow({ item, onPress }: { item: Exercise; onPress: () => void })
         </Text>
       </View>
 
-      {/* Use count */}
-      {item.use_count > 0 && (
-        <View className="items-end ml-3">
-          <Text className="font-mono text-text-muted text-xs">{item.use_count} times</Text>
+      {/* Right side */}
+      {multiSelect ? (
+        <View
+          style={{
+            width: 22, height: 22, borderRadius: 11,
+            borderWidth: 2,
+            borderColor: selected ? "#CC2200" : "#404040",
+            backgroundColor: selected ? "#CC2200" : "transparent",
+            alignItems: "center", justifyContent: "center",
+            marginLeft: 12,
+          }}
+        >
+          {selected && <Check size={12} color="#FFFFFF" strokeWidth={3} />}
         </View>
+      ) : (
+        item.use_count > 0 && (
+          <View className="items-end ml-3">
+            <Text className="font-mono text-text-muted text-xs">{item.use_count} times</Text>
+          </View>
+        )
       )}
     </TouchableOpacity>
   );
@@ -174,15 +210,17 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   onSelect: (exercise: Exercise) => void;
+  multiSelect?: boolean;
 };
 
-export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
+export function AddExerciseSheet({ visible, onClose, onSelect, multiSelect = false }: Props) {
   const [mode, setMode] = useState<Mode>("search");
   const [query, setQuery] = useState("");
   const [muscleFilter, setMuscleFilter] = useState("");
   const [equipFilter, setEquipFilter] = useState("");
   const [results, setResults] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pending, setPending] = useState<Exercise[]>([]);
 
   // Create form
   const [createName, setCreateName] = useState("");
@@ -211,6 +249,7 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
       setMuscleFilter("");
       setEquipFilter("");
       setMode("search");
+      setPending([]);
     }
   }, [visible]);
 
@@ -232,6 +271,28 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
       prev.includes(eq) ? prev.filter((e) => e !== eq) : [...prev, eq]
     );
 
+  const handleRowPress = useCallback((item: Exercise) => {
+    if (!multiSelect) {
+      onSelect(item);
+      onClose();
+      return;
+    }
+    setPending((prev) =>
+      prev.some((e) => e.id === item.id)
+        ? prev.filter((e) => e.id !== item.id)
+        : [...prev, item]
+    );
+  }, [multiSelect, onSelect, onClose]);
+
+  const handleAddAll = useCallback(async () => {
+    const toAdd = [...pending];
+    setPending([]);
+    for (const ex of toAdd) {
+      await Promise.resolve(onSelect(ex));
+    }
+    onClose();
+  }, [pending, onSelect, onClose]);
+
   const handleCreate = async () => {
     if (!createName.trim() || createMuscles.length === 0 || createEquipments.length === 0 || creating) return;
     setCreating(true);
@@ -242,8 +303,13 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
         createEquipments,
         createTargetType
       );
-      onSelect(exercise);
-      onClose();
+      if (multiSelect) {
+        setPending((prev) => [...prev, exercise]);
+        setMode("search");
+      } else {
+        onSelect(exercise);
+        onClose();
+      }
     } finally {
       setCreating(false);
     }
@@ -253,7 +319,7 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
     createName.trim().length > 0 &&
     createMuscles.length > 0 &&
     createEquipments.length > 0;
-  const sectionLabel = query || muscleFilter || equipFilter ? "Results" : "Recent Exercise";
+  const sectionLabel = query || muscleFilter || equipFilter ? "Results" : "All Exercises";
   const { height: screenHeight } = useWindowDimensions();
 
   return (
@@ -272,7 +338,7 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
                       <X size={20} color="#A0A0A0" />
                     </TouchableOpacity>
                     <Text className="flex-1 text-center font-anton text-white text-lg tracking-widest uppercase">
-                      Exercises
+                      {multiSelect ? "Select Exercises" : "Exercises"}
                     </Text>
                     <TouchableOpacity onPress={openCreate} hitSlop={10} className="w-20 items-end">
                       <Text className="font-montserrat-semibold text-crimson text-sm">
@@ -317,10 +383,17 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
                   </View>
 
                   {/* Section label */}
-                  <View className="px-4 py-2 bg-obsidian mt-2">
+                  <View className="px-4 py-2 bg-obsidian mt-2 flex-row items-center justify-between">
                     <Text className="font-montserrat-semibold text-text-muted text-xs tracking-widest uppercase">
                       {sectionLabel}
                     </Text>
+                    {multiSelect && pending.length > 0 && (
+                      <TouchableOpacity onPress={() => setPending([])} hitSlop={8}>
+                        <Text className="font-mono text-text-muted text-xs">
+                          {pending.length} selected · Clear
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
 
                   {/* Exercise list */}
@@ -335,7 +408,9 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
                         renderItem={({ item }) => (
                           <ExerciseRow
                             item={item}
-                            onPress={() => { onSelect(item); onClose(); }}
+                            onPress={() => handleRowPress(item)}
+                            multiSelect={multiSelect}
+                            selected={pending.some((e) => e.id === item.id)}
                           />
                         )}
                         ListEmptyComponent={
@@ -352,24 +427,46 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
                   </View>
 
                   {/* Bottom bar */}
-                  <View className="flex-row border-t border-surface-2 bg-surface">
-                    <TouchableOpacity
-                      className="flex-1 py-4 items-center justify-center border-r border-surface-2"
-                      activeOpacity={0.7}
-                    >
-                      <Text className="font-montserrat-bold text-white text-sm tracking-wider">
-                        Add as Superset
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      className="flex-1 py-4 items-center justify-center bg-crimson"
-                      activeOpacity={0.8}
-                      onPress={onClose}
-                    >
-                      <Text className="font-montserrat-bold text-white text-sm tracking-wider">
-                        Done
-                      </Text>
-                    </TouchableOpacity>
+                  <View className="border-t border-surface-2 bg-surface">
+                    {multiSelect ? (
+                      <TouchableOpacity
+                        onPress={pending.length > 0 ? handleAddAll : onClose}
+                        className={`py-4 items-center justify-center ${
+                          pending.length > 0 ? "bg-crimson" : ""
+                        }`}
+                        activeOpacity={0.8}
+                      >
+                        <Text
+                          className={`font-montserrat-bold text-sm tracking-wider ${
+                            pending.length > 0 ? "text-white" : "text-text-muted"
+                          }`}
+                        >
+                          {pending.length > 0
+                            ? `Add ${pending.length} Exercise${pending.length !== 1 ? "s" : ""}`
+                            : "Tap exercises to select"}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View className="flex-row">
+                        <TouchableOpacity
+                          className="flex-1 py-4 items-center justify-center border-r border-surface-2"
+                          activeOpacity={0.7}
+                        >
+                          <Text className="font-montserrat-bold text-white text-sm tracking-wider">
+                            Add as Superset
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          className="flex-1 py-4 items-center justify-center bg-crimson"
+                          activeOpacity={0.8}
+                          onPress={onClose}
+                        >
+                          <Text className="font-montserrat-bold text-white text-sm tracking-wider">
+                            Done
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
                 </View>
               )}
@@ -392,7 +489,7 @@ export function AddExerciseSheet({ visible, onClose, onSelect }: Props) {
                       className="w-20 items-end"
                     >
                       <Text className={`font-montserrat-semibold text-sm ${canCreate ? "text-crimson" : "text-text-muted"}`}>
-                        {creating ? "Saving…" : "Save"}
+                        {creating ? "Saving…" : multiSelect ? "Add & Back" : "Save"}
                       </Text>
                     </TouchableOpacity>
                   </View>
