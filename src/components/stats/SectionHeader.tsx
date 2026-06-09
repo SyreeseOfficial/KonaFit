@@ -7,12 +7,12 @@ type Props = {
 
 export function SectionHeader({ title, subtitle }: Props) {
   return (
-    <View className="mb-5">
+    <View className="mb-6">
       <Text className="font-anton text-white text-xl tracking-widest uppercase">
         {title}
       </Text>
       {subtitle && (
-        <Text className="font-mono text-text-muted text-xs tracking-widest uppercase mt-1">
+        <Text className="font-mono text-text-muted text-xs tracking-widest uppercase mt-1.5">
           {subtitle}
         </Text>
       )}

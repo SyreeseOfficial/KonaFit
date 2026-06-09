@@ -1,5 +1,6 @@
 import { Tabs } from "expo-router";
 import { Dumbbell, BarChart2, ClipboardList } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const TAB_BAR_BG = "#131313";
 const ACTIVE = "#FF0000";
@@ -7,6 +8,8 @@ const INACTIVE = "#606060";
 const BORDER = "#1C1C1C";
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
@@ -15,8 +18,8 @@ export default function TabLayout() {
           backgroundColor: TAB_BAR_BG,
           borderTopColor: BORDER,
           borderTopWidth: 1,
-          height: 64,
-          paddingBottom: 10,
+          height: 64 + insets.bottom,
+          paddingBottom: 10 + insets.bottom,
           paddingTop: 8,
         },
         tabBarActiveTintColor: ACTIVE,

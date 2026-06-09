@@ -246,7 +246,7 @@ export default function TrainScreen() {
   if (!session) {
     return (
       <SafeAreaView className="flex-1 bg-obsidian">
-        <View className="flex-row items-start justify-between px-4 pt-6">
+        <View className="flex-row items-start justify-between px-4 pt-8 pb-2">
           <Text className="font-anton text-white text-3xl tracking-widest uppercase">
             Train
           </Text>
@@ -269,12 +269,13 @@ export default function TrainScreen() {
         </View>
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ paddingBottom: 48 }}
+          contentContainerStyle={{ paddingBottom: 64 }}
           showsVerticalScrollIndicator={false}
         >
-          <View className="items-center py-16 px-4" style={{ gap: 24 }}>
-            <View className="items-center">
-              <Text className="font-montserrat-bold text-white text-base tracking-wider uppercase mb-1">
+          {/* Start workout zone */}
+          <View className="items-center px-4" style={{ paddingTop: 56, paddingBottom: 56, gap: 28 }}>
+            <View className="items-center" style={{ gap: 10 }}>
+              <Text className="font-montserrat-bold text-white text-base tracking-wider uppercase">
                 Ready to train?
               </Text>
               <Text className="font-montserrat text-text-muted text-sm text-center">
@@ -291,7 +292,14 @@ export default function TrainScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-          <GoalsSection />
+
+          {/* Divider */}
+          <View style={{ height: 1, backgroundColor: "#1C1C1C", marginHorizontal: 16 }} />
+
+          {/* Goals zone */}
+          <View style={{ paddingTop: 40 }}>
+            <GoalsSection />
+          </View>
         </ScrollView>
       </SafeAreaView>
     );

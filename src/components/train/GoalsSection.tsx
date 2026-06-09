@@ -404,7 +404,7 @@ export function GoalsSection() {
   };
 
   return (
-    <View className="px-4 mt-2 mb-4">
+    <View className="px-4 mb-4">
       {/* Section header */}
       <View className="flex-row items-center justify-between mb-4">
         <Text className="font-anton text-white text-xl tracking-widest uppercase">Goals</Text>

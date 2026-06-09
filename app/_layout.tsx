@@ -16,6 +16,7 @@ import {
 } from "@expo-google-fonts/jetbrains-mono";
 import { initializeDatabase } from "../src/db/database";
 import { View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -33,11 +34,15 @@ export default function RootLayout() {
   }, []);
 
   if (!fontsLoaded) {
-    return <View className="flex-1 bg-obsidian" />;
+    return (
+      <SafeAreaProvider>
+        <View className="flex-1 bg-obsidian" />
+      </SafeAreaProvider>
+    );
   }
 
   return (
-    <>
+    <SafeAreaProvider>
       <StatusBar style="light" backgroundColor="#0A0A0A" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
@@ -45,6 +50,6 @@ export default function RootLayout() {
         <Stack.Screen name="tools" options={{ presentation: "modal" }} />
         <Stack.Screen name="workout/[id]" />
       </Stack>
-    </>
+    </SafeAreaProvider>
   );
 }
