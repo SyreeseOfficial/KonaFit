@@ -170,7 +170,7 @@ export async function createCustomExercise(
   const muscle_group = muscleGroups.join(", ");
   const equipment_type = equipmentTypes.join(", ");
   const result = await db.runAsync(
-    "INSERT INTO exercises (name, muscle_group, equipment_type, target_type) VALUES (?, ?, ?, ?)",
+    "INSERT INTO exercises (name, muscle_group, equipment_type, target_type, is_custom) VALUES (?, ?, ?, ?, 1)",
     [name.trim(), muscle_group, equipment_type, targetType]
   );
   try {
@@ -186,6 +186,7 @@ export async function createCustomExercise(
     equipment_type,
     target_type: targetType,
     use_count: 0,
+    is_custom: 1,
   };
 }
 
@@ -216,4 +217,31 @@ export async function searchExercises(
     `SELECT * FROM exercises ${where} ORDER BY use_count DESC, name ASC LIMIT 50`,
     params
   );
+}
+
+export async function getCustomExercises(): Promise<Exercise[]> {
+  const db = await getDatabase();
+  return db.getAllAsync<Exercise>(
+    "SELECT * FROM exercises WHERE is_custom = 1 ORDER BY name ASC"
+  );
+}
+
+export async function updateExercise(
+  id: number,
+  patch: { name?: string; muscleGroup?: string; equipmentType?: string }
+): Promise<void> {
+  const db = await getDatabase();
+  const sets: string[] = [];
+  const args: (string | number)[] = [];
+  if (patch.name !== undefined) { sets.push("name = ?"); args.push(patch.name.trim()); }
+  if (patch.muscleGroup !== undefined) { sets.push("muscle_group = ?"); args.push(patch.muscleGroup.trim()); }
+  if (patch.equipmentType !== undefined) { sets.push("equipment_type = ?"); args.push(patch.equipmentType.trim()); }
+  if (sets.length === 0) return;
+  args.push(id);
+  await db.runAsync(`UPDATE exercises SET ${sets.join(", ")} WHERE id = ?`, args);
+}
+
+export async function deleteExercise(id: number): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("DELETE FROM exercises WHERE id = ?", [id]);
 }

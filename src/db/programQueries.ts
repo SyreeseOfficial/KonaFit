@@ -22,6 +22,7 @@ export async function getPrograms(): Promise<ProgramSummary[]> {
      FROM programs p
      LEFT JOIN program_days pd ON pd.program_id = p.id
      LEFT JOIN program_exercises pe ON pe.program_day_id = pd.id
+     WHERE (p.archived = 0 OR p.archived IS NULL)
      GROUP BY p.id
      ORDER BY p.updated_at DESC`
   );
@@ -80,6 +81,46 @@ export async function updateProgram(
 export async function deleteProgram(id: number): Promise<void> {
   const db = await getDatabase();
   await db.runAsync("DELETE FROM programs WHERE id = ?", [id]);
+}
+
+export async function archiveProgram(id: number): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("UPDATE programs SET archived = 1 WHERE id = ?", [id]);
+}
+
+export async function unarchiveProgram(id: number): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("UPDATE programs SET archived = 0 WHERE id = ?", [id]);
+}
+
+export async function getArchivedPrograms(): Promise<ProgramSummary[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{
+    id: number; name: string; description: string | null;
+    durationWeeks: number | null; programType: string; difficulty: string | null;
+    focusTags: string | null; dayCount: number; exerciseCount: number; updatedAt: number;
+  }>(
+    `SELECT
+       p.id, p.name, p.description,
+       p.duration_weeks as durationWeeks,
+       COALESCE(p.program_type, 'weekly') as programType,
+       p.difficulty,
+       p.focus_tags as focusTags,
+       p.updated_at as updatedAt,
+       COUNT(DISTINCT pd.id) as dayCount,
+       COUNT(DISTINCT pe.id) as exerciseCount
+     FROM programs p
+     LEFT JOIN program_days pd ON pd.program_id = p.id
+     LEFT JOIN program_exercises pe ON pe.program_day_id = pd.id
+     WHERE p.archived = 1
+     GROUP BY p.id
+     ORDER BY p.updated_at DESC`
+  );
+  return rows.map((r) => ({
+    ...r,
+    programType: (r.programType || "weekly") as import("../types/program").ProgramType,
+    focusTags: r.focusTags ? JSON.parse(r.focusTags) : [],
+  }));
 }
 
 export async function cloneProgram(id: number): Promise<number> {
