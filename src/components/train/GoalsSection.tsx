@@ -8,6 +8,8 @@ import {
   TextInput,
   ScrollView,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Plus, X, Check, ChevronRight } from "lucide-react-native";
 import {
@@ -52,9 +54,13 @@ function GoalCard({
     goal.type === "lift_pr" ? "#CC2200" :
     goal.type === "bodyweight" ? "#1565C0" : "#3A3A3A";
 
+  const hasRepTarget = goal.type === "lift_pr" && goal.target_reps != null;
   const progressLabel =
+    hasRepTarget ? "Best reps" :
     goal.type === "lift_pr" ? "Best 1RM" :
     goal.type === "bodyweight" ? "Current" : null;
+  const progressUnit = hasRepTarget ? "reps" : "lbs";
+  const progressTarget = hasRepTarget ? (goal.target_reps ?? 0) : (goal.target_value ?? 0);
 
   return (
     <View
@@ -73,11 +79,11 @@ function GoalCard({
             <View className="flex-row items-baseline mt-1" style={{ gap: 6 }}>
               {progress !== null && progressLabel && (
                 <Text className="font-mono text-text-secondary text-xs">
-                  {progressLabel}: {progress.toFixed(1)} lbs →
+                  {progressLabel}: {hasRepTarget ? Math.round(progress) : progress.toFixed(1)} {progressUnit} →
                 </Text>
               )}
               <Text className="font-mono text-text-muted text-xs">
-                Target: {goal.target_value} lbs
+                Target: {goal.target_value} lbs{goal.target_reps != null ? ` × ${goal.target_reps} reps` : ""}
               </Text>
             </View>
           )}
@@ -86,8 +92,8 @@ function GoalCard({
               {goal.notes}
             </Text>
           ) : null}
-          {goal.target_value !== null && progress !== null && !isAchieved && (
-            <ProgressBar current={progress} target={goal.target_value} />
+          {progressTarget > 0 && progress !== null && !isAchieved && (
+            <ProgressBar current={progress} target={progressTarget} />
           )}
         </View>
         <View className="flex-row items-center" style={{ gap: 12 }}>
@@ -121,6 +127,7 @@ type GoalFormState = {
   exerciseId: number | null;
   exerciseName: string | null;
   targetValue: string;
+  targetReps: string;
   title: string;
   notes: string;
 };
@@ -130,6 +137,7 @@ const DEFAULT_FORM: GoalFormState = {
   exerciseId: null,
   exerciseName: null,
   targetValue: "",
+  targetReps: "",
   title: "",
   notes: "",
 };
@@ -169,6 +177,10 @@ function AddGoalModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
       <Pressable className="flex-1 bg-black/70 justify-end" onPress={onClose}>
         <Pressable>
           <View className="bg-surface-2 pb-10">
@@ -194,6 +206,7 @@ function AddGoalModal({
                             exerciseId: null,
                             exerciseName: null,
                             targetValue: "",
+                            targetReps: "",
                             title: "",
                             notes: "",
                           })
@@ -236,16 +249,29 @@ function AddGoalModal({
                         <ChevronRight size={16} color="#606060" />
                       </TouchableOpacity>
                     </View>
-                    <View>
-                      <Text className={labelClass}>Target Weight (lbs)</Text>
-                      <TextInput
-                        className={inputClass}
-                        placeholder="e.g. 315"
-                        placeholderTextColor="#606060"
-                        value={form.targetValue}
-                        onChangeText={(v) => onFormChange({ targetValue: v })}
-                        keyboardType="decimal-pad"
-                      />
+                    <View className="flex-row gap-3">
+                      <View className="flex-1">
+                        <Text className={labelClass}>Target Weight (lbs)</Text>
+                        <TextInput
+                          className={inputClass}
+                          placeholder="e.g. 315"
+                          placeholderTextColor="#606060"
+                          value={form.targetValue}
+                          onChangeText={(v) => onFormChange({ targetValue: v })}
+                          keyboardType="decimal-pad"
+                        />
+                      </View>
+                      <View style={{ width: 110 }}>
+                        <Text className={labelClass}>Target Reps</Text>
+                        <TextInput
+                          className={inputClass}
+                          placeholder="e.g. 10"
+                          placeholderTextColor="#606060"
+                          value={form.targetReps}
+                          onChangeText={(v) => onFormChange({ targetReps: v })}
+                          keyboardType="number-pad"
+                        />
+                      </View>
                     </View>
                   </>
                 )}
@@ -311,6 +337,7 @@ function AddGoalModal({
           </View>
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -376,9 +403,12 @@ export function GoalsSection() {
     if (saving) return;
     setSaving(true);
     try {
+      const parsedReps = form.targetReps ? parseInt(form.targetReps, 10) : null;
       const title =
         form.type === "lift_pr"
-          ? `${form.exerciseName} PR`
+          ? parsedReps
+            ? `${form.exerciseName} ${form.targetValue} × ${parsedReps}`
+            : `${form.exerciseName} PR`
           : form.type === "bodyweight"
           ? "Bodyweight Goal"
           : form.title.trim();
@@ -388,6 +418,7 @@ export function GoalsSection() {
         exerciseId: form.exerciseId,
         exerciseName: form.exerciseName,
         targetValue: form.targetValue ? parseFloat(form.targetValue) : null,
+        targetReps: parsedReps,
         notes: form.notes || null,
       });
       setAddOpen(false);

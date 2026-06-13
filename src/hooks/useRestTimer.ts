@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 const DEFAULT_SECONDS = 90;
-const STEP = 30;
+const STEP = 15;
 
 export function useRestTimer() {
   const [remaining, setRemaining] = useState(0);

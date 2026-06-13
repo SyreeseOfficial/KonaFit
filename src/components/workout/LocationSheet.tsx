@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { MapPin, Plus, X } from "lucide-react-native";
 import { getLocations, type Location } from "../../db/locationQueries";
@@ -50,6 +52,10 @@ export function LocationSheet({ visible, onSelect }: Props) {
       animationType="slide"
       onRequestClose={() => onSelect(null)}
     >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
       <Pressable
         className="flex-1 bg-black/60 justify-end"
         onPress={() => onSelect(null)}
@@ -151,6 +157,7 @@ export function LocationSheet({ visible, onSelect }: Props) {
           </View>
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

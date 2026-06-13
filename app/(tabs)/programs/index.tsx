@@ -152,15 +152,6 @@ export default function ProgramsScreen() {
             <Text className="font-montserrat text-text-muted text-sm text-center mb-6">
               Build reusable workout templates and launch them directly into the workspace.
             </Text>
-            <TouchableOpacity
-              onPress={() => router.push("/programs/new" as never)}
-              className="bg-crimson px-8 py-3"
-              activeOpacity={0.8}
-            >
-              <Text className="font-montserrat-bold text-white text-xs tracking-widest uppercase">
-                Create Program
-              </Text>
-            </TouchableOpacity>
           </View>
         }
       />

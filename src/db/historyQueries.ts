@@ -192,6 +192,39 @@ export async function deleteLoggedSetFromHistory(setId: number): Promise<void> {
   await db.runAsync("DELETE FROM logged_sets WHERE id = ?", [setId]);
 }
 
+export async function updateWorkoutDateTime(
+  workoutId: number,
+  startedAt: number,
+  durationSeconds: number
+): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    "UPDATE workouts SET started_at = ?, finished_at = ?, duration_seconds = ? WHERE id = ?",
+    [startedAt, startedAt + durationSeconds, durationSeconds, workoutId]
+  );
+}
+
+export async function addExerciseToHistory(
+  workoutId: number,
+  exerciseId: number,
+  exerciseName: string
+): Promise<void> {
+  const db = await getDatabase();
+  const maxOrder = await db.getFirstAsync<{ max_idx: number | null }>(
+    "SELECT MAX(order_index) as max_idx FROM logged_exercises WHERE workout_id = ?",
+    [workoutId]
+  );
+  const orderIndex = (maxOrder?.max_idx ?? -1) + 1;
+  const { lastInsertRowId } = await db.runAsync(
+    "INSERT INTO logged_exercises (workout_id, exercise_id, exercise_name, order_index) VALUES (?, ?, ?, ?)",
+    [workoutId, exerciseId, exerciseName, orderIndex]
+  );
+  await db.runAsync(
+    "INSERT INTO logged_sets (logged_exercise_id, set_number, is_completed) VALUES (?, 1, 1)",
+    [lastInsertRowId]
+  );
+}
+
 // ─── Exercise PRs ─────────────────────────────────────────────────────────────
 
 export type PRSet = {

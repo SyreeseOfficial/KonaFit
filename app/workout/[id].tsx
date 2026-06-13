@@ -9,11 +9,22 @@ import {
   Modal,
   Pressable,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { ChevronLeft, FileText, Camera, X, Pencil, Check, Trash2 } from "lucide-react-native";
-import { getWorkoutDetail, type WorkoutDetail, type SetRecord, updateWorkoutName, updateLoggedSetValues, deleteLoggedSetFromHistory } from "../../src/db/historyQueries";
+import { ChevronLeft, FileText, Camera, X, Pencil, Check, Trash2, Plus, Calendar } from "lucide-react-native";
+import {
+  getWorkoutDetail,
+  type WorkoutDetail,
+  type SetRecord,
+  updateWorkoutName,
+  updateLoggedSetValues,
+  deleteLoggedSetFromHistory,
+  updateWorkoutDateTime,
+  addExerciseToHistory,
+} from "../../src/db/historyQueries";
 import {
   formatDate,
   formatDuration,
@@ -21,6 +32,62 @@ import {
   shareWorkoutMarkdown,
 } from "../../src/utils/exportUtils";
 import { WorkoutShareCard } from "../../src/components/export/WorkoutShareCard";
+import { AddExerciseSheet } from "../../src/components/workout/AddExerciseSheet";
+import type { Exercise } from "../../src/types/workout";
+
+// ─── Date/Duration editing helpers ───────────────────────────────────────────
+
+type InfoEdits = {
+  month: string;
+  day: string;
+  year: string;
+  hour: string;
+  minute: string;
+  ampm: "AM" | "PM";
+  durHours: string;
+  durMins: string;
+};
+
+function initInfoEdits(workout: WorkoutDetail): InfoEdits {
+  const d = new Date(workout.started_at * 1000);
+  let h = d.getHours();
+  const ampm: "AM" | "PM" = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  const totalDurMin = Math.round(workout.duration_seconds / 60);
+  return {
+    month: String(d.getMonth() + 1),
+    day: String(d.getDate()),
+    year: String(d.getFullYear()),
+    hour: String(h),
+    minute: String(d.getMinutes()).padStart(2, "0"),
+    ampm,
+    durHours: String(Math.floor(totalDurMin / 60)),
+    durMins: String(totalDurMin % 60),
+  };
+}
+
+function infoEditsToTimestamp(edits: InfoEdits): { startedAt: number; durationSeconds: number } | null {
+  const month = parseInt(edits.month, 10);
+  const day = parseInt(edits.day, 10);
+  const year = parseInt(edits.year, 10);
+  let hour = parseInt(edits.hour, 10) % 12;
+  if (edits.ampm === "PM") hour += 12;
+  const minute = parseInt(edits.minute, 10);
+  if (
+    isNaN(month) || isNaN(day) || isNaN(year) ||
+    isNaN(hour) || isNaN(minute) ||
+    month < 1 || month > 12 || day < 1 || day > 31 || year < 2000 ||
+    minute < 0 || minute > 59
+  ) return null;
+  const d = new Date(year, month - 1, day, hour, minute, 0);
+  const startedAt = Math.floor(d.getTime() / 1000);
+  const dH = parseInt(edits.durHours, 10) || 0;
+  const dM = parseInt(edits.durMins, 10) || 0;
+  const durationSeconds = Math.max(0, dH * 3600 + dM * 60);
+  return { startedAt, durationSeconds };
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -31,6 +98,9 @@ export default function WorkoutDetailScreen() {
   const [editMode, setEditMode] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameText, setNameText] = useState("");
+  const [infoEdits, setInfoEdits] = useState<InfoEdits | null>(null);
+  const [infoModalOpen, setInfoModalOpen] = useState(false);
+  const [exerciseSheetOpen, setExerciseSheetOpen] = useState(false);
 
   // Per-set edit buffers: setId → { weight, reps, rpe }
   const [setEdits, setSetEdits] = useState<Record<number, { weight: string; reps: string; rpe: string }>>({});
@@ -47,7 +117,6 @@ export default function WorkoutDetailScreen() {
 
   const enterEdit = useCallback(() => {
     if (!workout) return;
-    // Pre-populate edit buffers
     const buffers: Record<number, { weight: string; reps: string; rpe: string }> = {};
     for (const ex of workout.exercises) {
       for (const s of ex.sets) {
@@ -59,6 +128,7 @@ export default function WorkoutDetailScreen() {
       }
     }
     setSetEdits(buffers);
+    setInfoEdits(initInfoEdits(workout));
     setEditMode(true);
   }, [workout]);
 
@@ -71,9 +141,15 @@ export default function WorkoutDetailScreen() {
       const rpe = vals.rpe === "" ? null : parseFloat(vals.rpe);
       await updateLoggedSetValues(setId, weight, reps, rpe);
     }
+    if (infoEdits) {
+      const parsed = infoEditsToTimestamp(infoEdits);
+      if (parsed) {
+        await updateWorkoutDateTime(workout.id, parsed.startedAt, parsed.durationSeconds);
+      }
+    }
     setEditMode(false);
     reload();
-  }, [workout, setEdits, reload]);
+  }, [workout, setEdits, infoEdits, reload]);
 
   const saveNameEdit = useCallback(async () => {
     if (!workout || !nameText.trim()) return;
@@ -100,6 +176,13 @@ export default function WorkoutDetailScreen() {
       },
     ]);
   }, [reload]);
+
+  const handleAddExercise = useCallback(async (exercise: Exercise) => {
+    if (!workout) return;
+    await addExerciseToHistory(workout.id, exercise.id, exercise.name);
+    setExerciseSheetOpen(false);
+    reload();
+  }, [workout, reload]);
 
   const handleShareMarkdown = useCallback(async () => {
     if (!workout) return;
@@ -159,9 +242,18 @@ export default function WorkoutDetailScreen() {
               <Text className="font-anton text-white text-xl tracking-widest uppercase">
                 {workout.name !== "Workout" ? workout.name : formatDate(workout.started_at)}
               </Text>
-              <Text className="font-mono text-text-muted text-xs mt-0.5">
-                {formatDate(workout.started_at)} · {formatDuration(workout.duration_seconds)} · {formatVolume(workout.totalVolume)}
-              </Text>
+              {/* Subtitle: tappable in edit mode to edit date/duration */}
+              <TouchableOpacity
+                onPress={() => editMode && setInfoModalOpen(true)}
+                activeOpacity={editMode ? 0.7 : 1}
+              >
+                <View className="flex-row items-center gap-1">
+                  <Text className="font-mono text-text-muted text-xs mt-0.5">
+                    {formatDate(workout.started_at)} · {formatDuration(workout.duration_seconds)} · {formatVolume(workout.totalVolume)}
+                  </Text>
+                  {editMode && <Calendar size={10} color="#606060" style={{ marginTop: 2 }} />}
+                </View>
+              </TouchableOpacity>
             </TouchableOpacity>
           )}
         </View>
@@ -281,6 +373,20 @@ export default function WorkoutDetailScreen() {
           </View>
         ))}
 
+        {/* Add Exercise button (edit mode only) */}
+        {editMode && (
+          <TouchableOpacity
+            onPress={() => setExerciseSheetOpen(true)}
+            className="mx-4 mt-3 py-3.5 border border-surface-3 flex-row items-center justify-center gap-2"
+            activeOpacity={0.7}
+          >
+            <Plus size={16} color="#A0A0A0" />
+            <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-widest uppercase">
+              Add Exercise
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* Stats summary */}
         <View className="mx-4 mt-4 bg-surface flex-row">
           {[
@@ -295,7 +401,7 @@ export default function WorkoutDetailScreen() {
           ))}
         </View>
 
-        {/* Share actions (only in read mode) */}
+        {/* Share actions (read mode only) */}
         {!editMode && (
           <View className="mx-4 mt-4 gap-2">
             <TouchableOpacity
@@ -326,7 +432,7 @@ export default function WorkoutDetailScreen() {
         {editMode && (
           <View className="mx-4 mt-4 gap-2">
             <Text className="font-mono text-text-muted text-xs text-center">
-              Tap the workout title to rename · Trash icon to delete a set
+              Tap title to rename · Tap date to edit date/duration · Trash to delete a set
             </Text>
             <TouchableOpacity
               onPress={saveEdits}
@@ -364,6 +470,180 @@ export default function WorkoutDetailScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* Date / Duration edit modal */}
+      {infoEdits && (
+        <Modal
+          visible={infoModalOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setInfoModalOpen(false)}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1 }}
+          >
+            <Pressable
+              className="flex-1 bg-black/70 justify-end"
+              onPress={() => setInfoModalOpen(false)}
+            >
+              <Pressable>
+                <View className="bg-surface-2 px-4 pt-5 pb-10">
+                  <View className="flex-row items-center justify-between mb-5">
+                    <Text className="font-anton text-white text-base tracking-widest uppercase">
+                      Edit Workout Info
+                    </Text>
+                    <TouchableOpacity onPress={() => setInfoModalOpen(false)} hitSlop={8}>
+                      <X size={18} color="#606060" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Date row */}
+                  <Text className="font-mono text-text-muted text-xs tracking-widest uppercase mb-2">Date</Text>
+                  <View className="flex-row items-center gap-2 mb-5">
+                    <View className="items-center">
+                      <TextInput
+                        className="bg-surface-3 text-white font-mono text-base text-center w-14 py-3"
+                        value={infoEdits.month}
+                        onChangeText={(v) => setInfoEdits((p) => p ? { ...p, month: v } : p)}
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        placeholder="MM"
+                        placeholderTextColor="#606060"
+                      />
+                      <Text className="font-mono text-text-muted text-xs mt-1">Month</Text>
+                    </View>
+                    <Text className="font-mono text-text-muted text-xl">/</Text>
+                    <View className="items-center">
+                      <TextInput
+                        className="bg-surface-3 text-white font-mono text-base text-center w-14 py-3"
+                        value={infoEdits.day}
+                        onChangeText={(v) => setInfoEdits((p) => p ? { ...p, day: v } : p)}
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        placeholder="DD"
+                        placeholderTextColor="#606060"
+                      />
+                      <Text className="font-mono text-text-muted text-xs mt-1">Day</Text>
+                    </View>
+                    <Text className="font-mono text-text-muted text-xl">/</Text>
+                    <View className="items-center">
+                      <TextInput
+                        className="bg-surface-3 text-white font-mono text-base text-center w-20 py-3"
+                        value={infoEdits.year}
+                        onChangeText={(v) => setInfoEdits((p) => p ? { ...p, year: v } : p)}
+                        keyboardType="number-pad"
+                        maxLength={4}
+                        placeholder="YYYY"
+                        placeholderTextColor="#606060"
+                      />
+                      <Text className="font-mono text-text-muted text-xs mt-1">Year</Text>
+                    </View>
+                  </View>
+
+                  {/* Time row */}
+                  <Text className="font-mono text-text-muted text-xs tracking-widest uppercase mb-2">Time</Text>
+                  <View className="flex-row items-center gap-2 mb-5">
+                    <View className="items-center">
+                      <TextInput
+                        className="bg-surface-3 text-white font-mono text-base text-center w-14 py-3"
+                        value={infoEdits.hour}
+                        onChangeText={(v) => setInfoEdits((p) => p ? { ...p, hour: v } : p)}
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        placeholder="H"
+                        placeholderTextColor="#606060"
+                      />
+                      <Text className="font-mono text-text-muted text-xs mt-1">Hour</Text>
+                    </View>
+                    <Text className="font-mono text-text-muted text-xl">:</Text>
+                    <View className="items-center">
+                      <TextInput
+                        className="bg-surface-3 text-white font-mono text-base text-center w-14 py-3"
+                        value={infoEdits.minute}
+                        onChangeText={(v) => setInfoEdits((p) => p ? { ...p, minute: v } : p)}
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        placeholder="MM"
+                        placeholderTextColor="#606060"
+                      />
+                      <Text className="font-mono text-text-muted text-xs mt-1">Min</Text>
+                    </View>
+                    <View className="flex-row gap-1 ml-1">
+                      {(["AM", "PM"] as const).map((v) => (
+                        <TouchableOpacity
+                          key={v}
+                          onPress={() => setInfoEdits((p) => p ? { ...p, ampm: v } : p)}
+                          className={`px-4 py-3 ${infoEdits.ampm === v ? "bg-crimson" : "bg-surface-3"}`}
+                          activeOpacity={0.7}
+                        >
+                          <Text className={`font-mono text-sm ${infoEdits.ampm === v ? "text-white" : "text-text-muted"}`}>
+                            {v}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Duration row */}
+                  <Text className="font-mono text-text-muted text-xs tracking-widest uppercase mb-2">Duration</Text>
+                  <View className="flex-row items-center gap-2 mb-6">
+                    <View className="items-center">
+                      <TextInput
+                        className="bg-surface-3 text-white font-mono text-base text-center w-14 py-3"
+                        value={infoEdits.durHours}
+                        onChangeText={(v) => setInfoEdits((p) => p ? { ...p, durHours: v } : p)}
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        placeholder="0"
+                        placeholderTextColor="#606060"
+                      />
+                      <Text className="font-mono text-text-muted text-xs mt-1">Hours</Text>
+                    </View>
+                    <View className="items-center">
+                      <TextInput
+                        className="bg-surface-3 text-white font-mono text-base text-center w-14 py-3"
+                        value={infoEdits.durMins}
+                        onChangeText={(v) => setInfoEdits((p) => p ? { ...p, durMins: v } : p)}
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        placeholder="0"
+                        placeholderTextColor="#606060"
+                      />
+                      <Text className="font-mono text-text-muted text-xs mt-1">Minutes</Text>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (!infoEdits) return;
+                      const parsed = infoEditsToTimestamp(infoEdits);
+                      if (!parsed) {
+                        Alert.alert("Invalid date", "Please check your date and time values.");
+                        return;
+                      }
+                      setInfoModalOpen(false);
+                    }}
+                    className="bg-crimson py-3 items-center"
+                    activeOpacity={0.8}
+                  >
+                    <Text className="font-montserrat-bold text-white text-xs tracking-widest uppercase">
+                      Done
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </Pressable>
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Modal>
+      )}
+
+      {/* Add exercise sheet (edit mode) */}
+      <AddExerciseSheet
+        visible={exerciseSheetOpen}
+        onClose={() => setExerciseSheetOpen(false)}
+        onSelect={handleAddExercise}
+      />
     </SafeAreaView>
   );
 }

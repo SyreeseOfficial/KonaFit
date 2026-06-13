@@ -9,6 +9,7 @@ export type Goal = {
   exercise_id: number | null;
   exercise_name: string | null;
   target_value: number | null;
+  target_reps: number | null;
   notes: string | null;
   is_achieved: number; // 0 | 1
   created_at: number;
@@ -28,14 +29,15 @@ export async function createGoal(data: {
   exerciseId?: number | null;
   exerciseName?: string | null;
   targetValue?: number | null;
+  targetReps?: number | null;
   notes?: string | null;
 }): Promise<number> {
   const db = await getDatabase();
   const result = await db.runAsync(
-    `INSERT INTO goals (type, title, exercise_id, exercise_name, target_value, notes)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO goals (type, title, exercise_id, exercise_name, target_value, target_reps, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [data.type, data.title.trim(), data.exerciseId ?? null, data.exerciseName ?? null,
-     data.targetValue ?? null, data.notes?.trim() ?? null]
+     data.targetValue ?? null, data.targetReps ?? null, data.notes?.trim() ?? null]
   );
   return result.lastInsertRowId;
 }
@@ -61,10 +63,25 @@ export async function deleteGoal(id: number): Promise<void> {
   await db.runAsync("DELETE FROM goals WHERE id = ?", [id]);
 }
 
-// Current progress for lift PR goals: best 1RM for the exercise (Epley)
+// Current progress for lift PR goals.
+// If target_reps is set: returns best actual reps logged at or above target weight.
+// Otherwise: returns best estimated 1RM (Epley formula).
 export async function getGoalProgress(goal: Goal): Promise<number | null> {
   const db = await getDatabase();
   if (goal.type === "lift_pr" && goal.exercise_id) {
+    if (goal.target_reps != null && goal.target_value != null) {
+      const row = await db.getFirstAsync<{ best_reps: number }>(
+        `SELECT MAX(ls.reps) AS best_reps
+         FROM logged_sets ls
+         JOIN logged_exercises le ON ls.logged_exercise_id = le.id
+         JOIN workouts w ON le.workout_id = w.id
+         WHERE le.exercise_id = ? AND ls.is_completed = 1 AND ls.is_warmup = 0
+           AND ls.weight_lbs >= ? AND ls.reps IS NOT NULL
+           AND w.finished_at IS NOT NULL`,
+        [goal.exercise_id, goal.target_value]
+      );
+      return row?.best_reps ?? null;
+    }
     const row = await db.getFirstAsync<{ one_rm: number }>(
       `SELECT MAX(ls.weight_lbs * (1.0 + ls.reps / 30.0)) AS one_rm
        FROM logged_sets ls

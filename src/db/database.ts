@@ -148,6 +148,7 @@ export async function initializeDatabase(): Promise<void> {
     `ALTER TABLE programs ADD COLUMN difficulty TEXT`,
     `ALTER TABLE programs ADD COLUMN archived INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE exercises ADD COLUMN is_custom INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE goals ADD COLUMN target_reps INTEGER`,
   ];
   for (const m of migrations) {
     try { await database.execAsync(m); } catch { /* already applied */ }
