@@ -276,7 +276,7 @@ export default function SettingsScreen() {
               <Text className="font-mono text-text-muted text-xs mt-0.5">Used for strength score</Text>
             </View>
             <TextInput
-              className="font-mono-medium text-white text-sm bg-surface-2 w-16 text-center h-9"
+              className="font-mono-medium text-white text-sm bg-surface-2 w-16 text-center h-11"
               value={ageText}
               onChangeText={setAgeText}
               onBlur={handleAgeBlur}

@@ -212,7 +212,8 @@ export async function searchExercises(
     params.push(equipment);
   }
 
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  conditions.push("is_deleted = 0");
+  const where = `WHERE ${conditions.join(" AND ")}`;
   return db.getAllAsync<Exercise>(
     `SELECT * FROM exercises ${where} ORDER BY use_count DESC, name ASC LIMIT 50`,
     params
@@ -222,13 +223,13 @@ export async function searchExercises(
 export async function getCustomExercises(): Promise<Exercise[]> {
   const db = await getDatabase();
   return db.getAllAsync<Exercise>(
-    "SELECT * FROM exercises WHERE is_custom = 1 ORDER BY name ASC"
+    "SELECT * FROM exercises WHERE is_custom = 1 AND is_deleted = 0 ORDER BY name ASC"
   );
 }
 
 export async function updateExercise(
   id: number,
-  patch: { name?: string; muscleGroup?: string; equipmentType?: string }
+  patch: { name?: string; muscleGroup?: string; equipmentType?: string; targetType?: string }
 ): Promise<void> {
   const db = await getDatabase();
   const sets: string[] = [];
@@ -236,6 +237,7 @@ export async function updateExercise(
   if (patch.name !== undefined) { sets.push("name = ?"); args.push(patch.name.trim()); }
   if (patch.muscleGroup !== undefined) { sets.push("muscle_group = ?"); args.push(patch.muscleGroup.trim()); }
   if (patch.equipmentType !== undefined) { sets.push("equipment_type = ?"); args.push(patch.equipmentType.trim()); }
+  if (patch.targetType !== undefined) { sets.push("target_type = ?"); args.push(patch.targetType.trim()); }
   if (sets.length === 0) return;
   args.push(id);
   await db.runAsync(`UPDATE exercises SET ${sets.join(", ")} WHERE id = ?`, args);
@@ -243,5 +245,6 @@ export async function updateExercise(
 
 export async function deleteExercise(id: number): Promise<void> {
   const db = await getDatabase();
-  await db.runAsync("DELETE FROM exercises WHERE id = ?", [id]);
+  // ponytail: soft-delete keeps FK refs in logged_exercises intact
+  await db.runAsync("UPDATE exercises SET is_deleted = 1 WHERE id = ?", [id]);
 }

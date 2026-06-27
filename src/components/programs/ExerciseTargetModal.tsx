@@ -6,6 +6,8 @@ import {
   TextInput,
   TouchableOpacity,
   Pressable,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { X } from "lucide-react-native";
 import type { ProgramExercise } from "../../types/program";
@@ -27,6 +29,7 @@ export function ExerciseTargetModal({ exercise, onSave, onClose }: Props) {
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <Pressable className="flex-1 bg-black/70 justify-center px-6" onPress={onClose}>
         <Pressable>
           <View className="bg-surface-2">
@@ -109,6 +112,7 @@ export function ExerciseTargetModal({ exercise, onSave, onClose }: Props) {
           </View>
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

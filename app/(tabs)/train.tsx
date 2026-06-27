@@ -50,7 +50,6 @@ export default function TrainScreen() {
   const restTimer = useRestTimer();
   const [exerciseSheetOpen, setExerciseSheetOpen] = useState(false);
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
-  const pendingWorkoutIdRef = useRef<number | null>(null);
 
   const handleCameraPress = useCallback(async () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -158,36 +157,28 @@ export default function TrainScreen() {
 
   const handleFinish = useCallback(() => {
     if (!session) return;
-    Alert.alert(
-      "Finish Workout",
-      "Save this workout to your history?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Discard", style: "destructive", onPress: discardWorkout },
-        {
-          text: "Save",
-          onPress: () => {
-            // Store workoutId so LocationSheet can reference it after session clears
-            pendingWorkoutIdRef.current = session.workoutId;
-            setLocationSheetOpen(true);
-          },
-        },
-      ]
-    );
-  }, [session, discardWorkout]);
+    setLocationSheetOpen(true);
+  }, [session]);
 
-  const handleLocationDone = useCallback(
+  const handleSaveWorkout = useCallback(
     async (location: string | null) => {
       setLocationSheetOpen(false);
-      const wid = pendingWorkoutIdRef.current;
-      pendingWorkoutIdRef.current = null;
-      if (location && wid !== null) {
-        await saveWorkoutLocation(wid, location);
+      try {
+        if (location && session) {
+          await saveWorkoutLocation(session.workoutId, location);
+        }
+      } catch (e) {
+        console.error("Failed to save location:", e);
       }
       await finishWorkout();
     },
-    [finishWorkout]
+    [session, finishWorkout]
   );
+
+  const handleDiscardWorkout = useCallback(async () => {
+    setLocationSheetOpen(false);
+    await discardWorkout();
+  }, [discardWorkout]);
 
   // ─── Recovery prompt ───────────────────────────────────────────────
   if (recoveryVisible && cachedSession) {
@@ -414,10 +405,12 @@ export default function TrainScreen() {
         }}
       />
 
-      {/* Location picker — shown after Save is tapped */}
+      {/* Finish workout sheet */}
       <LocationSheet
         visible={locationSheetOpen}
-        onSelect={handleLocationDone}
+        onSave={handleSaveWorkout}
+        onDiscard={handleDiscardWorkout}
+        onCancel={() => setLocationSheetOpen(false)}
       />
     </SafeAreaView>
   );

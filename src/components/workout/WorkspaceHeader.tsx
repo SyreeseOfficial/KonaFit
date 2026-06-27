@@ -164,6 +164,7 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
                   snapToInterval={ITEM_H}
                   decelerationRate="fast"
                   showsVerticalScrollIndicator={false}
+                  nestedScrollEnabled
                   onMomentumScrollEnd={onScrollEnd}
                   onScrollEndDrag={onScrollEnd}
                   ListHeaderComponent={<View style={{ height: ITEM_H * SIDE_ITEMS }} />}
