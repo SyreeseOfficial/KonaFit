@@ -15,7 +15,21 @@
       "Bash(pkill -9 -f \"expo start\")",
       "Bash(awk '{print $2}')",
       "Bash(xargs -r kill)",
-      "Bash(eas *)"
+      "Bash(eas *)",
+      "WebFetch(domain:www.nativewind.dev)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git remote *)",
+      "Bash(git reset *)",
+      "Bash(git commit *)",
+      "Bash(npm uninstall *)",
+      "Bash(npx tsc *)",
+      "Read(//home/sy/**)",
+      "Read(//opt/**)",
+      "Bash(adb devices *)",
+      "Bash(npx eas *)",
+      "Bash(git *)"
     ]
   }
 }
