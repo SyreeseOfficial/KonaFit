@@ -145,16 +145,16 @@ export default function ProgramDetailScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-obsidian">
+    <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">
       {/* Header */}
-      <View className="flex-row items-center gap-3 px-4 pt-4 pb-4 border-b border-surface-2">
+      <View className="flex-row items-center gap-3 px-5 pt-5 pb-5 border-b border-surface-2 dark:border-zinc-800">
         <TouchableOpacity onPress={() => router.back()} hitSlop={8} activeOpacity={0.7}>
-          <ChevronLeft size={22} color="#A0A0A0" />
+          <ChevronLeft size={22} color="#94A3B8" />
         </TouchableOpacity>
         <View className="flex-1">
           {editingName ? (
             <TextInput
-              className="font-anton text-white text-xl tracking-widest uppercase border-b border-crimson pb-0.5"
+              className="font-montserrat-bold text-text-primary dark:text-white text-xl border-b border-crimson dark:border-blue-500 pb-0.5"
               value={nameInput}
               onChangeText={setNameInput}
               onSubmitEditing={handleSaveName}
@@ -167,39 +167,39 @@ export default function ProgramDetailScreen() {
               onPress={() => { setNameInput(program.name); setEditingName(true); }}
               activeOpacity={0.7}
             >
-              <Text className="font-anton text-white text-xl tracking-widest uppercase">
+              <Text className="font-montserrat-bold text-text-primary dark:text-white text-xl">
                 {program.name}
               </Text>
             </TouchableOpacity>
           )}
           {program.description ? (
-            <Text className="font-montserrat text-text-muted text-xs mt-0.5" numberOfLines={1}>
+            <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5" numberOfLines={1}>
               {program.description}
             </Text>
           ) : null}
         </View>
         <TouchableOpacity onPress={() => setMenuOpen(true)} hitSlop={8}>
-          <MoreHorizontal size={20} color="#A0A0A0" />
+          <MoreHorizontal size={20} color="#94A3B8" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 56 }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 56, paddingHorizontal: 20, paddingTop: 16, gap: 12 }}>
         {/* Days */}
         {program.days.map((day) => (
-          <View key={day.id} className="mt-5 mx-4 bg-surface">
+          <View key={day.id} className="bg-surface dark:bg-zinc-900 rounded-2xl overflow-hidden">
             {/* Day header */}
-            <View className="flex-row items-center justify-between px-4 py-4 border-b border-surface-2">
-              <Text className="font-montserrat-bold text-white text-sm tracking-widest uppercase">
+            <View className="flex-row items-center justify-between px-5 py-4 border-b border-surface-2 dark:border-zinc-800">
+              <Text className="font-montserrat-bold text-text-primary dark:text-white text-base">
                 {day.name}
               </Text>
               <View className="flex-row items-center gap-3">
                 <TouchableOpacity
                   onPress={() => handleLaunch(day)}
-                  className="bg-crimson flex-row items-center gap-1.5 px-3 py-1.5"
-                  activeOpacity={0.8}
+                  className="bg-crimson dark:bg-blue-500 flex-row items-center gap-1.5 px-4 py-2 rounded-xl"
+                  activeOpacity={0.85}
                 >
                   <Zap size={12} color="#FFFFFF" />
-                  <Text className="font-montserrat-bold text-white text-xs tracking-widest uppercase">
+                  <Text className="font-montserrat-bold text-white text-sm">
                     Launch
                   </Text>
                 </TouchableOpacity>
@@ -208,15 +208,15 @@ export default function ProgramDetailScreen() {
                   hitSlop={8}
                   activeOpacity={0.7}
                 >
-                  <Trash2 size={15} color="#606060" />
+                  <Trash2 size={16} color="#94A3B8" />
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Exercises */}
             {day.exercises.length === 0 ? (
-              <View className="px-4 py-3">
-                <Text className="font-montserrat text-text-muted text-xs">
+              <View className="px-5 py-4">
+                <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm">
                   No exercises — tap + to add
                 </Text>
               </View>
@@ -224,18 +224,18 @@ export default function ProgramDetailScreen() {
               day.exercises.map((ex) => (
                 <View
                   key={ex.id}
-                  className="flex-row items-center px-4 py-4 border-b border-surface-2"
+                  className="flex-row items-center px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
                 >
                   <View className="flex-1">
-                    <Text className="font-montserrat-semibold text-white text-xs tracking-wider">
+                    <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">
                       {ex.exerciseName}
                     </Text>
                     <View className="flex-row gap-2 mt-0.5">
-                      <Text className="font-mono text-text-muted text-xs">
+                      <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm">
                         {ex.muscleGroup}
                       </Text>
                       {ex.targetSets && (
-                        <Text className="font-mono text-text-secondary text-xs">
+                        <Text className="font-mono text-text-secondary dark:text-zinc-400 text-sm">
                           {ex.targetSets} × {ex.targetReps ?? "—"}
                           {ex.targetRpe ? ` @ RPE ${ex.targetRpe}` : ""}
                         </Text>
@@ -248,14 +248,14 @@ export default function ProgramDetailScreen() {
                     activeOpacity={0.7}
                     className="mr-3"
                   >
-                    <Settings2 size={15} color="#606060" />
+                    <Settings2 size={16} color="#94A3B8" />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleDeleteExercise(ex)}
                     hitSlop={8}
                     activeOpacity={0.7}
                   >
-                    <Trash2 size={15} color="#606060" />
+                    <Trash2 size={16} color="#94A3B8" />
                   </TouchableOpacity>
                 </View>
               ))
@@ -267,8 +267,8 @@ export default function ProgramDetailScreen() {
               className="flex-row items-center justify-center gap-2 py-4"
               activeOpacity={0.7}
             >
-              <Plus size={14} color="#606060" />
-              <Text className="font-montserrat-semibold text-text-muted text-xs tracking-widest uppercase">
+              <Plus size={14} color="#94A3B8" />
+              <Text className="font-montserrat-semibold text-text-muted dark:text-zinc-500 text-sm">
                 Add Exercise
               </Text>
             </TouchableOpacity>
@@ -278,48 +278,47 @@ export default function ProgramDetailScreen() {
         {/* Add day */}
         <TouchableOpacity
           onPress={handleAddDay}
-          className="mx-4 mt-5 py-5 border border-surface-3 flex-row items-center justify-center gap-2"
+          className="py-5 border-2 border-dashed border-surface-3 dark:border-zinc-700 rounded-2xl flex-row items-center justify-center gap-2"
           activeOpacity={0.7}
         >
-          <Plus size={15} color="#A0A0A0" />
-          <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-widest uppercase">
+          <Plus size={16} color="#94A3B8" />
+          <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-base">
             Add Day
           </Text>
         </TouchableOpacity>
       </ScrollView>
 
       {/* Context menu */}
-      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
-        <Pressable className="flex-1 bg-black/60 justify-end" onPress={() => setMenuOpen(false)}>
+      <Modal visible={menuOpen} transparent animationType="slide" onRequestClose={() => setMenuOpen(false)}>
+        <Pressable className="flex-1 bg-black/50 justify-end" onPress={() => setMenuOpen(false)}>
           <Pressable>
-            <View className="bg-surface-2 pb-8">
-              <View className="flex-row items-center justify-between px-4 py-4 border-b border-surface-3">
-                <Text className="font-montserrat-bold text-white text-xs tracking-widest uppercase">
+            <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl pb-10">
+              <View className="px-5 py-5 border-b border-surface-2 dark:border-zinc-800">
+                <Text className="font-montserrat-bold text-text-primary dark:text-white text-base">
                   {program.name}
                 </Text>
               </View>
               <TouchableOpacity
                 onPress={() => { setMenuOpen(false); handleClone(); }}
-                className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-3"
+                className="flex-row items-center gap-3 px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
                 activeOpacity={0.7}
               >
-                <Copy size={16} color="#A0A0A0" />
-                <Text className="font-montserrat-semibold text-white text-sm">Clone Program</Text>
+                <Copy size={18} color="#64748B" />
+                <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Clone Program</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => { setMenuOpen(false); handleDelete(); }}
-                className="flex-row items-center gap-3 px-4 py-4"
+                className="flex-row items-center gap-3 px-5 py-4"
                 activeOpacity={0.7}
               >
-                <Trash2 size={16} color="#FF0000" />
-                <Text className="font-montserrat-semibold text-crimson text-sm">Delete Program</Text>
+                <Trash2 size={18} color="#EF4444" />
+                <Text className="font-montserrat-semibold text-rose-500 text-base">Delete Program</Text>
               </TouchableOpacity>
             </View>
           </Pressable>
         </Pressable>
       </Modal>
 
-      {/* Add exercise sheet */}
       <AddExerciseSheet
         visible={addExerciseDayId !== null}
         onClose={() => setAddExerciseDayId(null)}
@@ -327,7 +326,6 @@ export default function ProgramDetailScreen() {
         multiSelect
       />
 
-      {/* Edit exercise target modal */}
       <ExerciseTargetModal
         exercise={editExercise}
         onSave={handleSaveExerciseTarget}

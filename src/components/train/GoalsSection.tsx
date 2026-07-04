@@ -25,24 +25,20 @@ import {
 import { AddExerciseSheet } from "../workout/AddExerciseSheet";
 import type { Exercise } from "../../types/workout";
 
-// ─── Progress Bar ──────────────────────────────────────────────────────────────
-
 function ProgressBar({ current, target }: { current: number; target: number }) {
   const pct = target > 0 ? Math.min(1, current / target) : 0;
   return (
-    <View style={{ height: 3, backgroundColor: "#2A2A2A", marginTop: 8, overflow: "hidden" }}>
-      <View style={{ width: `${pct * 100}%`, height: "100%", backgroundColor: "#CC2200" }} />
+    <View className="h-1 bg-surface-2 dark:bg-zinc-800 mt-2 rounded-full overflow-hidden">
+      <View
+        className="h-1 bg-crimson dark:bg-blue-500 rounded-full"
+        style={{ width: `${pct * 100}%` }}
+      />
     </View>
   );
 }
 
-// ─── Goal Card ─────────────────────────────────────────────────────────────────
-
 function GoalCard({
-  goal,
-  progress,
-  onToggleAchieved,
-  onDelete,
+  goal, progress, onToggleAchieved, onDelete,
 }: {
   goal: Goal & { progress: number | null };
   progress: number | null;
@@ -50,9 +46,9 @@ function GoalCard({
   onDelete: () => void;
 }) {
   const isAchieved = goal.is_achieved === 1;
-  const borderColor =
-    goal.type === "lift_pr" ? "#CC2200" :
-    goal.type === "bodyweight" ? "#1565C0" : "#3A3A3A";
+  const accentColor =
+    goal.type === "lift_pr" ? "#2563EB" :
+    goal.type === "bodyweight" ? "#8B5CF6" : "#64748B";
 
   const hasRepTarget = goal.type === "lift_pr" && goal.target_reps != null;
   const progressLabel =
@@ -64,31 +60,31 @@ function GoalCard({
 
   return (
     <View
-      style={{ borderLeftWidth: 3, borderLeftColor: borderColor }}
-      className={`bg-surface mb-2 ${isAchieved ? "opacity-50" : ""}`}
+      style={{ borderLeftWidth: 3, borderLeftColor: accentColor }}
+      className={`bg-surface dark:bg-zinc-900 mb-2 rounded-r-xl ${isAchieved ? "opacity-50" : ""}`}
     >
       <View className="px-4 py-4 flex-row items-start">
         <View className="flex-1 mr-3">
-          <Text className={`font-montserrat-bold text-sm ${isAchieved ? "text-text-muted line-through" : "text-white"}`}>
+          <Text className={`font-montserrat-bold text-base ${isAchieved ? "text-text-muted dark:text-zinc-500 line-through" : "text-text-primary dark:text-white"}`}>
             {goal.title}
           </Text>
           {goal.exercise_name && goal.type === "lift_pr" && (
-            <Text className="font-mono text-text-muted text-xs mt-0.5">{goal.exercise_name}</Text>
+            <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs mt-0.5">{goal.exercise_name}</Text>
           )}
           {goal.target_value !== null && (
             <View className="flex-row items-baseline mt-1" style={{ gap: 6 }}>
               {progress !== null && progressLabel && (
-                <Text className="font-mono text-text-secondary text-xs">
+                <Text className="font-mono text-text-secondary dark:text-zinc-400 text-xs">
                   {progressLabel}: {hasRepTarget ? Math.round(progress) : progress.toFixed(1)} {progressUnit} →
                 </Text>
               )}
-              <Text className="font-mono text-text-muted text-xs">
+              <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">
                 Target: {goal.target_value} lbs{goal.target_reps != null ? ` × ${goal.target_reps} reps` : ""}
               </Text>
             </View>
           )}
           {goal.notes ? (
-            <Text className="font-montserrat text-text-muted text-xs mt-1" numberOfLines={2}>
+            <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-xs mt-1" numberOfLines={2}>
               {goal.notes}
             </Text>
           ) : null}
@@ -100,27 +96,23 @@ function GoalCard({
           <TouchableOpacity
             onPress={onToggleAchieved}
             hitSlop={8}
-            style={{
-              width: 28, height: 28,
-              alignItems: "center", justifyContent: "center",
-              borderWidth: 1,
-              borderColor: isAchieved ? "#CC2200" : "#3A3A3A",
-              backgroundColor: isAchieved ? "#CC2200" : "transparent",
-            }}
+            className={`w-7 h-7 items-center justify-center rounded-full border ${
+              isAchieved
+                ? "bg-crimson dark:bg-blue-500 border-crimson dark:border-blue-500"
+                : "border-surface-3 dark:border-zinc-700"
+            }`}
             activeOpacity={0.7}
           >
-            <Check size={14} color={isAchieved ? "#FFFFFF" : "#606060"} />
+            <Check size={14} color={isAchieved ? "#FFFFFF" : "#94A3B8"} />
           </TouchableOpacity>
           <TouchableOpacity onPress={onDelete} hitSlop={8} activeOpacity={0.7}>
-            <X size={14} color="#606060" />
+            <X size={14} color="#94A3B8" />
           </TouchableOpacity>
         </View>
       </View>
     </View>
   );
 }
-
-// ─── Add Goal Modal ───────────────────────────────────────────────────────────
 
 type GoalFormState = {
   type: GoalType;
@@ -133,29 +125,18 @@ type GoalFormState = {
 };
 
 const DEFAULT_FORM: GoalFormState = {
-  type: "lift_pr",
-  exerciseId: null,
-  exerciseName: null,
-  targetValue: "",
-  targetReps: "",
-  title: "",
-  notes: "",
+  type: "lift_pr", exerciseId: null, exerciseName: null,
+  targetValue: "", targetReps: "", title: "", notes: "",
 };
 
 const GOAL_TYPES: { key: GoalType; label: string }[] = [
-  { key: "lift_pr",    label: "Lift PR" },
+  { key: "lift_pr", label: "Lift PR" },
   { key: "bodyweight", label: "Body Weight" },
-  { key: "custom",     label: "Custom" },
+  { key: "custom", label: "Custom" },
 ];
 
 function AddGoalModal({
-  visible,
-  form,
-  onFormChange,
-  onOpenExercisePicker,
-  onSave,
-  onClose,
-  saving,
+  visible, form, onFormChange, onOpenExercisePicker, onSave, onClose, saving,
 }: {
   visible: boolean;
   form: GoalFormState;
@@ -166,183 +147,122 @@ function AddGoalModal({
   saving: boolean;
 }) {
   const canSave =
-    form.type === "lift_pr"
-      ? form.exerciseId !== null && form.targetValue.trim() !== ""
-      : form.type === "bodyweight"
-      ? form.targetValue.trim() !== ""
-      : form.title.trim() !== "";
+    form.type === "lift_pr" ? form.exerciseId !== null && form.targetValue.trim() !== "" :
+    form.type === "bodyweight" ? form.targetValue.trim() !== "" :
+    form.title.trim() !== "";
 
-  const labelClass = "font-mono text-text-muted text-xs tracking-widest uppercase mb-1.5";
-  const inputClass = "bg-surface-3 px-3 py-3 font-montserrat text-white text-sm";
+  const labelClass = "font-mono text-text-muted dark:text-zinc-500 text-xs uppercase tracking-widest mb-1.5";
+  const inputClass = "bg-surface-3 dark:bg-zinc-700 px-4 py-3.5 font-montserrat text-text-primary dark:text-white text-base rounded-xl border border-surface-3 dark:border-zinc-700";
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-      <Pressable className="flex-1 bg-black/70 justify-end" onPress={onClose}>
-        <Pressable>
-          <View className="bg-surface-2 pb-10">
-            <View className="flex-row items-center justify-between px-4 py-4 border-b border-surface-3">
-              <Text className="font-anton text-white text-base tracking-widest uppercase">Add Goal</Text>
-              <TouchableOpacity onPress={onClose} hitSlop={8}>
-                <X size={18} color="#606060" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={{ maxHeight: 520 }} keyboardShouldPersistTaps="handled">
-              <View className="px-4 py-4" style={{ gap: 20 }}>
-                {/* Type selector */}
-                <View>
-                  <Text className={labelClass}>Goal Type</Text>
-                  <View className="flex-row" style={{ gap: 8 }}>
-                    {GOAL_TYPES.map((t) => (
-                      <TouchableOpacity
-                        key={t.key}
-                        onPress={() =>
-                          onFormChange({
-                            type: t.key,
-                            exerciseId: null,
-                            exerciseName: null,
-                            targetValue: "",
-                            targetReps: "",
-                            title: "",
-                            notes: "",
-                          })
-                        }
-                        style={{ flex: 1 }}
-                        className={`py-2.5 items-center ${
-                          form.type === t.key ? "bg-crimson" : "bg-surface-3"
-                        }`}
-                        activeOpacity={0.7}
-                      >
-                        <Text
-                          className={`font-mono text-xs ${
-                            form.type === t.key ? "text-white" : "text-text-secondary"
-                          }`}
-                        >
-                          {t.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* Lift PR */}
-                {form.type === "lift_pr" && (
-                  <>
-                    <View>
-                      <Text className={labelClass}>Exercise</Text>
-                      <TouchableOpacity
-                        onPress={onOpenExercisePicker}
-                        className="bg-surface-3 px-3 py-3 flex-row items-center justify-between"
-                        activeOpacity={0.7}
-                      >
-                        <Text
-                          className={`font-montserrat text-sm ${
-                            form.exerciseName ? "text-white" : "text-text-muted"
-                          }`}
-                        >
-                          {form.exerciseName ?? "Select exercise…"}
-                        </Text>
-                        <ChevronRight size={16} color="#606060" />
-                      </TouchableOpacity>
-                    </View>
-                    <View className="flex-row gap-3">
-                      <View className="flex-1">
-                        <Text className={labelClass}>Target Weight (lbs)</Text>
-                        <TextInput
-                          className={inputClass}
-                          placeholder="e.g. 315"
-                          placeholderTextColor="#606060"
-                          value={form.targetValue}
-                          onChangeText={(v) => onFormChange({ targetValue: v })}
-                          keyboardType="decimal-pad"
-                        />
-                      </View>
-                      <View style={{ width: 110 }}>
-                        <Text className={labelClass}>Target Reps</Text>
-                        <TextInput
-                          className={inputClass}
-                          placeholder="e.g. 10"
-                          placeholderTextColor="#606060"
-                          value={form.targetReps}
-                          onChangeText={(v) => onFormChange({ targetReps: v })}
-                          keyboardType="number-pad"
-                        />
-                      </View>
-                    </View>
-                  </>
-                )}
-
-                {/* Bodyweight */}
-                {form.type === "bodyweight" && (
-                  <View>
-                    <Text className={labelClass}>Target Weight (lbs)</Text>
-                    <TextInput
-                      className={inputClass}
-                      placeholder="e.g. 180"
-                      placeholderTextColor="#606060"
-                      value={form.targetValue}
-                      onChangeText={(v) => onFormChange({ targetValue: v })}
-                      keyboardType="decimal-pad"
-                    />
-                  </View>
-                )}
-
-                {/* Custom */}
-                {form.type === "custom" && (
-                  <>
-                    <View>
-                      <Text className={labelClass}>Goal Title</Text>
-                      <TextInput
-                        className={inputClass}
-                        placeholder="e.g. Run a 5K"
-                        placeholderTextColor="#606060"
-                        value={form.title}
-                        onChangeText={(v) => onFormChange({ title: v })}
-                      />
-                    </View>
-                    <View>
-                      <Text className={labelClass}>Notes (optional)</Text>
-                      <TextInput
-                        className={`${inputClass} min-h-16`}
-                        placeholder="Any details…"
-                        placeholderTextColor="#606060"
-                        value={form.notes}
-                        onChangeText={(v) => onFormChange({ notes: v })}
-                        multiline
-                      />
-                    </View>
-                  </>
-                )}
-
-                <TouchableOpacity
-                  onPress={onSave}
-                  disabled={!canSave || saving}
-                  className={`py-3 items-center ${canSave ? "bg-crimson" : "bg-surface-3"}`}
-                  activeOpacity={0.8}
-                >
-                  <Text
-                    className={`font-montserrat-bold text-xs tracking-widest uppercase ${
-                      canSave ? "text-white" : "text-text-muted"
-                    }`}
-                  >
-                    {saving ? "Saving…" : "Add Goal"}
-                  </Text>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+        <Pressable className="flex-1 bg-black/70 justify-end" onPress={onClose}>
+          <Pressable>
+            <View className="bg-surface dark:bg-zinc-900 pb-10 rounded-t-3xl">
+              <View className="flex-row items-center justify-between px-5 py-5 border-b border-surface-2 dark:border-zinc-800">
+                <Text className="font-montserrat-bold text-text-primary dark:text-white text-lg">Add Goal</Text>
+                <TouchableOpacity onPress={onClose} hitSlop={8}>
+                  <X size={18} color="#94A3B8" />
                 </TouchableOpacity>
               </View>
-            </ScrollView>
-          </View>
+
+              <ScrollView style={{ maxHeight: 520 }} keyboardShouldPersistTaps="handled">
+                <View className="px-5 py-5" style={{ gap: 20 }}>
+                  {/* Type selector */}
+                  <View>
+                    <Text className={labelClass}>Goal Type</Text>
+                    <View className="flex-row gap-2">
+                      {GOAL_TYPES.map((t) => (
+                        <TouchableOpacity
+                          key={t.key}
+                          onPress={() => onFormChange({ type: t.key, exerciseId: null, exerciseName: null, targetValue: "", targetReps: "", title: "", notes: "" })}
+                          style={{ flex: 1 }}
+                          className={`py-3 items-center rounded-full border ${
+                            form.type === t.key
+                              ? "bg-crimson dark:bg-blue-500 border-crimson dark:border-blue-500"
+                              : "bg-surface-2 dark:bg-zinc-800 border-surface-3 dark:border-zinc-700"
+                          }`}
+                          activeOpacity={0.7}
+                        >
+                          <Text className={`font-montserrat-semibold text-sm ${form.type === t.key ? "text-white" : "text-text-secondary dark:text-zinc-400"}`}>
+                            {t.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Lift PR */}
+                  {form.type === "lift_pr" && (
+                    <>
+                      <View>
+                        <Text className={labelClass}>Exercise</Text>
+                        <TouchableOpacity
+                          onPress={onOpenExercisePicker}
+                          className="bg-surface-2 dark:bg-zinc-800 px-4 py-3.5 flex-row items-center justify-between rounded-xl border border-surface-3 dark:border-zinc-700"
+                          activeOpacity={0.7}
+                        >
+                          <Text className={`font-montserrat text-base ${form.exerciseName ? "text-text-primary dark:text-white" : "text-text-muted dark:text-zinc-500"}`}>
+                            {form.exerciseName ?? "Select exercise…"}
+                          </Text>
+                          <ChevronRight size={16} color="#94A3B8" />
+                        </TouchableOpacity>
+                      </View>
+                      <View className="flex-row gap-3">
+                        <View className="flex-1">
+                          <Text className={labelClass}>Target Weight (lbs)</Text>
+                          <TextInput className={inputClass} placeholder="e.g. 315" placeholderTextColor="#94A3B8" value={form.targetValue} onChangeText={(v) => onFormChange({ targetValue: v })} keyboardType="decimal-pad" />
+                        </View>
+                        <View style={{ width: 110 }}>
+                          <Text className={labelClass}>Target Reps</Text>
+                          <TextInput className={inputClass} placeholder="e.g. 10" placeholderTextColor="#94A3B8" value={form.targetReps} onChangeText={(v) => onFormChange({ targetReps: v })} keyboardType="number-pad" />
+                        </View>
+                      </View>
+                    </>
+                  )}
+
+                  {/* Bodyweight */}
+                  {form.type === "bodyweight" && (
+                    <View>
+                      <Text className={labelClass}>Target Weight (lbs)</Text>
+                      <TextInput className={inputClass} placeholder="e.g. 180" placeholderTextColor="#94A3B8" value={form.targetValue} onChangeText={(v) => onFormChange({ targetValue: v })} keyboardType="decimal-pad" />
+                    </View>
+                  )}
+
+                  {/* Custom */}
+                  {form.type === "custom" && (
+                    <>
+                      <View>
+                        <Text className={labelClass}>Goal Title</Text>
+                        <TextInput className={inputClass} placeholder="e.g. Run a 5K" placeholderTextColor="#94A3B8" value={form.title} onChangeText={(v) => onFormChange({ title: v })} />
+                      </View>
+                      <View>
+                        <Text className={labelClass}>Notes (optional)</Text>
+                        <TextInput className={`${inputClass} min-h-16`} placeholder="Any details…" placeholderTextColor="#94A3B8" value={form.notes} onChangeText={(v) => onFormChange({ notes: v })} multiline />
+                      </View>
+                    </>
+                  )}
+
+                  <TouchableOpacity
+                    onPress={onSave}
+                    disabled={!canSave || saving}
+                    className={`py-4 items-center rounded-2xl ${canSave ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
+                    activeOpacity={0.85}
+                  >
+                    <Text className={`font-montserrat-bold text-base ${canSave ? "text-white" : "text-text-muted dark:text-zinc-500"}`}>
+                      {saving ? "Saving…" : "Add Goal"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </Pressable>
         </Pressable>
-      </Pressable>
       </KeyboardAvoidingView>
     </Modal>
   );
 }
-
-// ─── Main Section ─────────────────────────────────────────────────────────────
 
 type GoalWithProgress = Goal & { progress: number | null };
 
@@ -358,43 +278,23 @@ export function GoalsSection() {
     setLoading(true);
     try {
       const raw = await getGoals();
-      const withProgress = await Promise.all(
-        raw.map(async (g) => ({ ...g, progress: await getGoalProgress(g) }))
-      );
+      const withProgress = await Promise.all(raw.map(async (g) => ({ ...g, progress: await getGoalProgress(g) })));
       setGoals(withProgress);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   const handleToggleAchieved = async (goal: GoalWithProgress) => {
-    if (goal.is_achieved) {
-      await unmarkGoalAchieved(goal.id);
-    } else {
-      await markGoalAchieved(goal.id);
-    }
+    if (goal.is_achieved) await unmarkGoalAchieved(goal.id);
+    else await markGoalAchieved(goal.id);
     load();
   };
 
-  const handleDelete = async (id: number) => {
-    await deleteGoal(id);
-    load();
-  };
-
-  const handleOpenExercisePicker = () => {
-    setAddOpen(false);
-    setExercisePickerOpen(true);
-  };
+  const handleDelete = async (id: number) => { await deleteGoal(id); load(); };
 
   const handleSelectExercise = (ex: Exercise) => {
     setForm((f) => ({ ...f, exerciseId: ex.id, exerciseName: ex.name }));
-    setExercisePickerOpen(false);
-    setAddOpen(true);
-  };
-
-  const handleCloseExercisePicker = () => {
     setExercisePickerOpen(false);
     setAddOpen(true);
   };
@@ -406,53 +306,39 @@ export function GoalsSection() {
       const parsedReps = form.targetReps ? parseInt(form.targetReps, 10) : null;
       const title =
         form.type === "lift_pr"
-          ? parsedReps
-            ? `${form.exerciseName} ${form.targetValue} × ${parsedReps}`
-            : `${form.exerciseName} PR`
-          : form.type === "bodyweight"
-          ? "Bodyweight Goal"
+          ? parsedReps ? `${form.exerciseName} ${form.targetValue} × ${parsedReps}` : `${form.exerciseName} PR`
+          : form.type === "bodyweight" ? "Bodyweight Goal"
           : form.title.trim();
       await createGoal({
-        type: form.type,
-        title,
-        exerciseId: form.exerciseId,
-        exerciseName: form.exerciseName,
+        type: form.type, title,
+        exerciseId: form.exerciseId, exerciseName: form.exerciseName,
         targetValue: form.targetValue ? parseFloat(form.targetValue) : null,
-        targetReps: parsedReps,
-        notes: form.notes || null,
+        targetReps: parsedReps, notes: form.notes || null,
       });
       setAddOpen(false);
       setForm(DEFAULT_FORM);
       load();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCloseModal = () => {
-    setAddOpen(false);
-    setForm(DEFAULT_FORM);
+    } finally { setSaving(false); }
   };
 
   return (
-    <View className="px-4 mb-4">
-      {/* Section header */}
+    <View className="px-5 mb-4">
       <View className="flex-row items-center justify-between mb-4">
-        <Text className="font-anton text-white text-xl tracking-widest uppercase">Goals</Text>
+        <Text className="font-montserrat-bold text-text-primary dark:text-white text-xl">Goals</Text>
         <TouchableOpacity
           onPress={() => setAddOpen(true)}
-          className="bg-crimson w-8 h-8 items-center justify-center"
-          activeOpacity={0.8}
+          className="bg-crimson dark:bg-blue-500 w-9 h-9 items-center justify-center rounded-full"
+          activeOpacity={0.85}
         >
           <Plus size={16} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
       {loading ? (
-        <ActivityIndicator size="small" color="#CC2200" style={{ marginTop: 16 }} />
+        <ActivityIndicator size="small" color="#2563EB" style={{ marginTop: 16 }} />
       ) : goals.length === 0 ? (
-        <View className="py-6 items-center">
-          <Text className="font-montserrat text-text-muted text-sm text-center">
+        <View className="py-6 items-center bg-surface dark:bg-zinc-900 rounded-2xl">
+          <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm text-center">
             No goals yet.{"\n"}Tap + to set your first goal.
           </Text>
         </View>
@@ -472,15 +358,15 @@ export function GoalsSection() {
         visible={addOpen}
         form={form}
         onFormChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
-        onOpenExercisePicker={handleOpenExercisePicker}
+        onOpenExercisePicker={() => { setAddOpen(false); setExercisePickerOpen(true); }}
         onSave={handleSave}
-        onClose={handleCloseModal}
+        onClose={() => { setAddOpen(false); setForm(DEFAULT_FORM); }}
         saving={saving}
       />
 
       <AddExerciseSheet
         visible={exercisePickerOpen}
-        onClose={handleCloseExercisePicker}
+        onClose={() => { setExercisePickerOpen(false); setAddOpen(true); }}
         onSelect={handleSelectExercise}
       />
     </View>

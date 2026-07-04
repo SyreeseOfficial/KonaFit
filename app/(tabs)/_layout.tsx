@@ -1,14 +1,17 @@
 import { Tabs } from "expo-router";
 import { Dumbbell, BarChart2, ClipboardList } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-const TAB_BAR_BG = "#131313";
-const ACTIVE = "#FF0000";
-const INACTIVE = "#606060";
-const BORDER = "#1C1C1C";
+import { useColorScheme } from "react-native";
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const scheme = useColorScheme();
+  const isDark = scheme === "dark";
+
+  const TAB_BAR_BG = isDark ? "#141414" : "#FFFFFF";
+  const ACTIVE      = isDark ? "#60A5FA" : "#2563EB";
+  const INACTIVE    = isDark ? "#6B7280" : "#94A3B8";
+  const BORDER      = isDark ? "#27272A" : "#F1F5F9";
 
   return (
     <Tabs
@@ -26,9 +29,8 @@ export default function TabLayout() {
         tabBarInactiveTintColor: INACTIVE,
         tabBarLabelStyle: {
           fontFamily: "Montserrat_600SemiBold",
-          fontSize: 10,
-          letterSpacing: 1,
-          textTransform: "uppercase",
+          fontSize: 11,
+          letterSpacing: 0,
         },
       }}
     >
@@ -37,7 +39,7 @@ export default function TabLayout() {
         options={{
           title: "Train",
           tabBarIcon: ({ color, size }) => (
-            <Dumbbell color={color} size={size} strokeWidth={1.5} />
+            <Dumbbell color={color} size={size} strokeWidth={1.75} />
           ),
         }}
       />
@@ -46,7 +48,7 @@ export default function TabLayout() {
         options={{
           title: "Stats",
           tabBarIcon: ({ color, size }) => (
-            <BarChart2 color={color} size={size} strokeWidth={1.5} />
+            <BarChart2 color={color} size={size} strokeWidth={1.75} />
           ),
         }}
       />
@@ -55,7 +57,7 @@ export default function TabLayout() {
         options={{
           title: "Programs",
           tabBarIcon: ({ color, size }) => (
-            <ClipboardList color={color} size={size} strokeWidth={1.5} />
+            <ClipboardList color={color} size={size} strokeWidth={1.75} />
           ),
         }}
       />

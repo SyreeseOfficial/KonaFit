@@ -1,8 +1,7 @@
-import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import { useState, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { Scale } from "lucide-react-native";
 import { logBodyweight, getLatestBodyweight } from "../../db/statsQueries";
-import { useEffect } from "react";
 
 type Props = { onSaved: () => void };
 
@@ -11,9 +10,7 @@ export function BodyweightLogger({ onSaved }: Props) {
   const [latest, setLatest] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    getLatestBodyweight().then(setLatest);
-  }, []);
+  useEffect(() => { getLatestBodyweight().then(setLatest); }, []);
 
   const handleLog = async () => {
     const val = parseFloat(weight);
@@ -25,29 +22,27 @@ export function BodyweightLogger({ onSaved }: Props) {
       const updated = await getLatestBodyweight();
       setLatest(updated);
       onSaved();
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   return (
-    <View className="bg-surface p-4">
-      <View className="flex-row items-center gap-2 mb-3">
-        <Scale size={14} color="#606060" />
-        <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-widest uppercase">
+    <View className="bg-surface dark:bg-zinc-900 p-5 rounded-2xl">
+      <View className="flex-row items-center gap-2 mb-4">
+        <Scale size={14} color="#94A3B8" />
+        <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm uppercase tracking-widest">
           Bodyweight
         </Text>
         {latest != null && (
-          <Text className="font-mono text-text-muted text-xs ml-auto">
+          <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs ml-auto">
             Last: {latest} lbs
           </Text>
         )}
       </View>
       <View className="flex-row items-center gap-2">
         <TextInput
-          className="flex-1 h-10 bg-surface-2 px-3 font-mono text-white text-sm"
+          className="flex-1 h-11 bg-surface-2 dark:bg-zinc-800 px-4 font-mono text-text-primary dark:text-white text-base rounded-xl"
           placeholder="lbs"
-          placeholderTextColor="#606060"
+          placeholderTextColor="#94A3B8"
           value={weight}
           onChangeText={setWeight}
           keyboardType="decimal-pad"
@@ -57,10 +52,10 @@ export function BodyweightLogger({ onSaved }: Props) {
         <TouchableOpacity
           onPress={handleLog}
           disabled={saving || weight === ""}
-          className={`px-5 h-10 items-center justify-center ${weight !== "" ? "bg-crimson" : "bg-surface-3"}`}
-          activeOpacity={0.8}
+          className={`h-11 px-5 items-center justify-center rounded-xl ${weight !== "" ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
+          activeOpacity={0.85}
         >
-          <Text className={`font-montserrat-bold text-xs tracking-widest uppercase ${weight !== "" ? "text-white" : "text-text-muted"}`}>
+          <Text className={`font-montserrat-bold text-sm ${weight !== "" ? "text-white" : "text-text-muted dark:text-zinc-500"}`}>
             Log
           </Text>
         </TouchableOpacity>

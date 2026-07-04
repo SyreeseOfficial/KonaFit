@@ -32,6 +32,7 @@ export default function TrainScreen() {
     finishWorkout,
     discardWorkout,
     addExercise,
+    addExerciseAsSuperset,
     addSet,
     removeSet,
     updateSet,
@@ -84,11 +85,11 @@ export default function TrainScreen() {
     ]);
   }, [session?.workoutId]);
   const [swappingExerciseLocalId, setSwappingExerciseLocalId] = useState<string | null>(null);
+  const [supersetTargetLocalId, setSupersetTargetLocalId] = useState<string | null>(null);
   const [reorderMode, setReorderMode] = useState(false);
   const [recoveryVisible, setRecoveryVisible] = useState(false);
   const [cachedSession, setCachedSession] = useState<Awaited<ReturnType<typeof loadCachedSession>>>(null);
 
-  // Check for a cached session on mount
   useEffect(() => {
     loadCachedSession().then((cached) => {
       if (cached) {
@@ -98,7 +99,6 @@ export default function TrainScreen() {
     });
   }, []);
 
-  // Handle launch from Programs tab
   useEffect(() => {
     if (!programDayId || launchedDayRef.current === programDayId) return;
     launchedDayRef.current = programDayId;
@@ -188,17 +188,17 @@ export default function TrainScreen() {
       minute: "2-digit",
     });
     return (
-      <SafeAreaView className="flex-1 bg-obsidian">
+      <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">
         <Modal visible transparent animationType="fade">
-          <View className="flex-1 bg-black/80 items-center justify-center px-6">
-            <View className="bg-surface-2 w-full p-6">
-              <Text className="font-anton text-white text-2xl tracking-widest uppercase mb-1">
+          <View className="flex-1 bg-black/60 items-center justify-center px-6">
+            <View className="bg-surface dark:bg-zinc-900 w-full p-6 rounded-2xl shadow-lg">
+              <Text className="font-montserrat-bold text-text-primary dark:text-white text-2xl mb-1">
                 Resume Workout?
               </Text>
-              <Text className="font-montserrat text-text-secondary text-sm mb-1">
+              <Text className="font-montserrat text-text-secondary dark:text-zinc-400 text-sm mb-1">
                 Started at {started}
               </Text>
-              <Text className="font-montserrat text-text-muted text-xs mb-6">
+              <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-xs mb-6">
                 {exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""} logged
               </Text>
               <TouchableOpacity
@@ -206,10 +206,10 @@ export default function TrainScreen() {
                   resumeSession(cachedSession);
                   setRecoveryVisible(false);
                 }}
-                className="bg-crimson py-3 items-center mb-3"
+                className="bg-crimson dark:bg-blue-500 py-4 items-center mb-3 rounded-xl"
                 activeOpacity={0.8}
               >
-                <Text className="font-montserrat-bold text-white tracking-widest uppercase text-sm">
+                <Text className="font-montserrat-bold text-white text-sm">
                   Resume
                 </Text>
               </TouchableOpacity>
@@ -219,10 +219,10 @@ export default function TrainScreen() {
                   setCachedSession(null);
                   setRecoveryVisible(false);
                 }}
-                className="bg-surface-3 py-3 items-center"
+                className="bg-surface-2 dark:bg-zinc-800 py-4 items-center rounded-xl"
                 activeOpacity={0.8}
               >
-                <Text className="font-montserrat-semibold text-text-secondary tracking-widest uppercase text-sm">
+                <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">
                   Discard
                 </Text>
               </TouchableOpacity>
@@ -236,25 +236,25 @@ export default function TrainScreen() {
   // ─── Idle screen ───────────────────────────────────────────────────
   if (!session) {
     return (
-      <SafeAreaView className="flex-1 bg-obsidian">
-        <View className="flex-row items-start justify-between px-4 pt-8 pb-2">
-          <Text className="font-anton text-white text-3xl tracking-widest uppercase">
+      <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">
+        <View className="flex-row items-center justify-between px-5 pt-6 pb-3">
+          <Text className="font-montserrat-bold text-text-primary dark:text-white text-3xl">
             Train
           </Text>
-          <View className="flex-row items-center gap-4 mt-1">
+          <View className="flex-row items-center gap-4">
             <TouchableOpacity
               onPress={() => router.push("/tools")}
               hitSlop={8}
               activeOpacity={0.7}
             >
-              <Calculator size={20} color="#606060" />
+              <Calculator size={20} color="#94A3B8" />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push("/settings")}
               hitSlop={8}
               activeOpacity={0.7}
             >
-              <Settings size={20} color="#606060" />
+              <Settings size={20} color="#94A3B8" />
             </TouchableOpacity>
           </View>
         </View>
@@ -264,31 +264,31 @@ export default function TrainScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Start workout zone */}
-          <View className="items-center px-4" style={{ paddingTop: 56, paddingBottom: 56, gap: 28 }}>
-            <View className="items-center" style={{ gap: 10 }}>
-              <Text className="font-montserrat-bold text-white text-base tracking-wider uppercase">
+          <View className="items-center px-5" style={{ paddingTop: 48, paddingBottom: 48, gap: 24 }}>
+            <View className="items-center" style={{ gap: 8 }}>
+              <Text className="font-montserrat-bold text-text-primary dark:text-white text-xl">
                 Ready to train?
               </Text>
-              <Text className="font-montserrat text-text-muted text-sm text-center">
+              <Text className="font-montserrat text-text-secondary dark:text-zinc-400 text-base text-center">
                 Start an empty workout and add exercises as you go.
               </Text>
             </View>
             <TouchableOpacity
               onPress={startWorkout}
-              className="bg-crimson px-10 py-4"
-              activeOpacity={0.8}
+              className="bg-crimson dark:bg-blue-500 px-10 py-4 rounded-2xl"
+              activeOpacity={0.85}
             >
-              <Text className="font-montserrat-bold text-white tracking-widest uppercase text-sm">
+              <Text className="font-montserrat-bold text-white text-base">
                 Start Workout
               </Text>
             </TouchableOpacity>
           </View>
 
           {/* Divider */}
-          <View style={{ height: 1, backgroundColor: "#1C1C1C", marginHorizontal: 16 }} />
+          <View style={{ height: 1, backgroundColor: "#E2E8F0", marginHorizontal: 20 }} />
 
           {/* Goals zone */}
-          <View style={{ paddingTop: 40 }}>
+          <View style={{ paddingTop: 32 }}>
             <GoalsSection />
           </View>
         </ScrollView>
@@ -298,7 +298,7 @@ export default function TrainScreen() {
 
   // ─── Active workspace ──────────────────────────────────────────────
   return (
-    <SafeAreaView className="flex-1 bg-obsidian" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950" edges={["top"]}>
       <WorkspaceHeader
         startedAt={session.startedAt}
         onFinish={handleFinish}
@@ -308,12 +308,12 @@ export default function TrainScreen() {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingTop: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingTop: 12, paddingBottom: 32 }}
         keyboardShouldPersistTaps="handled"
       >
         {session.exercises.length === 0 && (
           <View className="items-center mt-16 px-6">
-            <Text className="font-montserrat text-text-muted text-sm text-center">
+            <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-base text-center">
               No exercises yet.{"\n"}Tap + to add your first exercise.
             </Text>
           </View>
@@ -324,6 +324,7 @@ export default function TrainScreen() {
             key={exercise.localId}
             index={i + 1}
             exercise={exercise}
+            supersetId={exercise.supersetId}
             reorderMode={reorderMode}
             canMoveUp={i > 0}
             canMoveDown={i < session.exercises.length - 1}
@@ -338,17 +339,18 @@ export default function TrainScreen() {
             onRemoveExercise={() => removeExercise(exercise.localId)}
             onSwap={() => setSwappingExerciseLocalId(exercise.localId)}
             onTimerPress={() => restTimer.start()}
+            onAddSuperset={() => setSupersetTargetLocalId(exercise.localId)}
           />
         ))}
 
         {/* Add Exercise */}
         <TouchableOpacity
           onPress={() => setExerciseSheetOpen(true)}
-          className="mx-4 mt-2 py-3.5 border border-surface-3 flex-row items-center justify-center gap-2"
+          className="mx-5 mt-2 py-4 border border-surface-3 dark:border-zinc-700 rounded-2xl flex-row items-center justify-center gap-2 bg-surface dark:bg-zinc-900"
           activeOpacity={0.7}
         >
-          <Plus size={16} color="#A0A0A0" />
-          <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-widest uppercase">
+          <Plus size={16} color="#64748B" />
+          <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">
             Add Exercise
           </Text>
         </TouchableOpacity>
@@ -356,12 +358,14 @@ export default function TrainScreen() {
         {/* Reorder toggle */}
         <TouchableOpacity
           onPress={() => setReorderMode((r) => !r)}
-          className={`mx-4 mt-2 py-3.5 border flex-row items-center justify-center gap-2 ${
-            reorderMode ? "border-crimson bg-surface-2" : "border-surface-3"
+          className={`mx-5 mt-2 py-4 border rounded-2xl flex-row items-center justify-center gap-2 ${
+            reorderMode
+              ? "border-crimson dark:border-blue-500 bg-blue-50 dark:bg-blue-950"
+              : "border-surface-3 dark:border-zinc-700 bg-surface dark:bg-zinc-900"
           }`}
           activeOpacity={0.7}
         >
-          <Text className={`font-montserrat-semibold text-xs tracking-widest uppercase ${reorderMode ? "text-crimson" : "text-text-secondary"}`}>
+          <Text className={`font-montserrat-semibold text-sm ${reorderMode ? "text-crimson dark:text-blue-400" : "text-text-secondary dark:text-zinc-400"}`}>
             {reorderMode ? "Done Reordering" : "↕  Reorder Exercises"}
           </Text>
         </TouchableOpacity>
@@ -374,18 +378,17 @@ export default function TrainScreen() {
               { text: "Cancel Workout", style: "destructive", onPress: discardWorkout },
             ])
           }
-          className="mx-4 mt-2 mb-2 py-3.5 border border-surface-3 flex-row items-center justify-center"
+          className="mx-5 mt-2 mb-2 py-4 border border-surface-3 dark:border-zinc-700 rounded-2xl flex-row items-center justify-center bg-surface dark:bg-zinc-900"
           activeOpacity={0.7}
         >
-          <Text className="font-montserrat-semibold text-crimson text-xs tracking-widest uppercase">
-            ✕  Cancel Workout
+          <Text className="font-montserrat-semibold text-rose-500 text-sm">
+            Cancel Workout
           </Text>
         </TouchableOpacity>
       </ScrollView>
 
       <RestTimerBar timer={restTimer} />
 
-      {/* Add exercise */}
       <AddExerciseSheet
         visible={exerciseSheetOpen}
         onClose={() => setExerciseSheetOpen(false)}
@@ -393,7 +396,6 @@ export default function TrainScreen() {
         multiSelect
       />
 
-      {/* Swap exercise */}
       <AddExerciseSheet
         visible={swappingExerciseLocalId !== null}
         onClose={() => setSwappingExerciseLocalId(null)}
@@ -405,7 +407,17 @@ export default function TrainScreen() {
         }}
       />
 
-      {/* Finish workout sheet */}
+      <AddExerciseSheet
+        visible={supersetTargetLocalId !== null}
+        onClose={() => setSupersetTargetLocalId(null)}
+        onSelect={(ex) => {
+          if (supersetTargetLocalId) {
+            addExerciseAsSuperset(supersetTargetLocalId, ex.id, ex.name, ex.muscle_group);
+            setSupersetTargetLocalId(null);
+          }
+        }}
+      />
+
       <LocationSheet
         visible={locationSheetOpen}
         onSave={handleSaveWorkout}

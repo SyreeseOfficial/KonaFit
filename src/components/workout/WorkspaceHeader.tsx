@@ -55,31 +55,28 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
 
   return (
     <>
-      <View className="flex-row items-start justify-between px-4 pt-4 pb-4 border-b border-surface-2">
-        <View>
-          <Text className="font-anton text-white text-3xl tracking-widest uppercase">
-            Train
-          </Text>
-        </View>
+      <View className="flex-row items-center justify-between px-5 pt-4 pb-4 border-b border-surface-2 dark:border-zinc-800 bg-surface dark:bg-zinc-900">
+        <Text className="font-montserrat-bold text-text-primary dark:text-white text-2xl">
+          Train
+        </Text>
 
         <View className="items-end gap-2">
-          {/* Timer row */}
           <View className="flex-row items-center gap-3">
             {onTools && (
               <TouchableOpacity onPress={onTools} hitSlop={8} activeOpacity={0.7}>
-                <Calculator size={17} color="#606060" />
+                <Calculator size={18} color="#94A3B8" />
               </TouchableOpacity>
             )}
 
             {onCamera && (
               <TouchableOpacity onPress={onCamera} hitSlop={8} activeOpacity={0.7}>
-                <Camera size={17} color="#606060" />
+                <Camera size={18} color="#94A3B8" />
               </TouchableOpacity>
             )}
 
             {isPaused && (
               <TouchableOpacity onPress={reset} hitSlop={8} activeOpacity={0.7}>
-                <RotateCcw size={15} color="#606060" />
+                <RotateCcw size={16} color="#94A3B8" />
               </TouchableOpacity>
             )}
 
@@ -89,17 +86,16 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
               activeOpacity={0.7}
             >
               {isPaused ? (
-                <Play size={17} color="#FF0000" fill="#FF0000" />
+                <Play size={18} color="#2563EB" fill="#2563EB" />
               ) : (
-                <Pause size={17} color="#606060" />
+                <Pause size={18} color="#94A3B8" />
               )}
             </TouchableOpacity>
 
-            {/* Tappable timer — opens scroll wheel picker */}
             <TouchableOpacity onPress={openAdjust} hitSlop={4} activeOpacity={0.7}>
               <Text
                 className={`font-mono-medium text-xl tracking-wider ${
-                  isPaused ? "text-text-muted" : "text-white"
+                  isPaused ? "text-text-muted dark:text-zinc-500" : "text-text-primary dark:text-white"
                 }`}
               >
                 {formattedTime}
@@ -109,10 +105,10 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
 
           <TouchableOpacity
             onPress={onFinish}
-            className="bg-crimson px-4 py-1.5"
-            activeOpacity={0.8}
+            className="bg-crimson dark:bg-blue-500 px-5 py-2 rounded-xl"
+            activeOpacity={0.85}
           >
-            <Text className="font-montserrat-bold text-white text-xs tracking-widest uppercase">
+            <Text className="font-montserrat-bold text-white text-sm">
               Finish
             </Text>
           </TouchableOpacity>
@@ -121,21 +117,19 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
 
       {/* Timer scroll wheel modal */}
       <Modal visible={adjustOpen} transparent animationType="fade" onRequestClose={() => setAdjustOpen(false)}>
-        <Pressable className="flex-1 bg-black/70 justify-end" onPress={() => setAdjustOpen(false)}>
+        <Pressable className="flex-1 bg-black/50 justify-end" onPress={() => setAdjustOpen(false)}>
           <Pressable>
-            <View className="bg-surface-2 px-4 pt-5 pb-10">
+            <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl px-5 pt-5 pb-10">
               <View className="flex-row items-center justify-between mb-5">
-                <Text className="font-mono text-text-muted text-xs tracking-widest uppercase">
+                <Text className="font-montserrat-bold text-text-primary dark:text-white text-lg">
                   Set Timer
                 </Text>
                 <TouchableOpacity onPress={() => setAdjustOpen(false)} hitSlop={8}>
-                  <X size={18} color="#606060" />
+                  <X size={20} color="#94A3B8" />
                 </TouchableOpacity>
               </View>
 
-              {/* Scroll wheel */}
               <View style={{ height: ITEM_H * (SIDE_ITEMS * 2 + 1), overflow: "hidden" }}>
-                {/* Center bracket lines */}
                 <View
                   style={{
                     position: "absolute",
@@ -145,7 +139,7 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
                     height: ITEM_H,
                     borderTopWidth: 1,
                     borderBottomWidth: 1,
-                    borderColor: "#3A3A3A",
+                    borderColor: "#E2E8F0",
                     zIndex: 1,
                   }}
                   pointerEvents="none"
@@ -156,7 +150,7 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
                   keyExtractor={(item) => String(item)}
                   renderItem={({ item }) => (
                     <View style={{ height: ITEM_H, justifyContent: "center", alignItems: "center" }}>
-                      <Text className="font-mono text-text-secondary text-xl tracking-wider">
+                      <Text className="font-mono text-text-secondary dark:text-zinc-400 text-xl tracking-wider">
                         {minuteLabel(item)}
                       </Text>
                     </View>
@@ -177,22 +171,21 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
                 />
               </View>
 
-              {/* Selected value display */}
-              <Text className="font-mono-medium text-white text-4xl tracking-widest text-center mt-4 mb-5">
+              <Text className="font-mono-medium text-text-primary dark:text-white text-4xl tracking-widest text-center mt-4 mb-5">
                 {minuteLabel(pickerDisplay)}
               </Text>
 
               <TouchableOpacity
                 onPress={handleSetTime}
-                className="bg-crimson py-3 items-center"
-                activeOpacity={0.8}
+                className="bg-crimson dark:bg-blue-500 py-4 items-center rounded-2xl"
+                activeOpacity={0.85}
               >
-                <Text className="font-montserrat-bold text-white text-xs tracking-widest uppercase">
+                <Text className="font-montserrat-bold text-white text-base">
                   Set Time
                 </Text>
               </TouchableOpacity>
 
-              <Text className="font-mono text-text-muted text-xs text-center mt-3">
+              <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm text-center mt-3">
                 Scroll to adjust · tap timer to open
               </Text>
             </View>

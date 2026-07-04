@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { PERCENTAGES, REP_RANGES, roundWeight } from "../../utils/plateCalc";
 
 type Rounding = 0 | 2.5 | 5;
@@ -10,9 +10,7 @@ type Props = {
 };
 
 export function PercentageCalculator({ initialOneRM, onSelectWeight }: Props) {
-  const [oneRMInput, setOneRMInput] = useState(
-    initialOneRM ? String(Math.round(initialOneRM)) : ""
-  );
+  const [oneRMInput, setOneRMInput] = useState(initialOneRM ? String(Math.round(initialOneRM)) : "");
   const [rounding, setRounding] = useState<Rounding>(2.5);
 
   const oneRM = parseFloat(oneRMInput);
@@ -32,32 +30,30 @@ export function PercentageCalculator({ initialOneRM, onSelectWeight }: Props) {
   return (
     <View>
       {/* 1RM input */}
-      <View className="flex-row items-center gap-2 mb-4">
+      <View className="flex-row items-center gap-3 mb-4">
         <TextInput
-          className="flex-1 h-12 bg-surface-2 px-4 font-mono-medium text-white text-xl text-center"
+          className="flex-1 h-13 bg-surface-2 dark:bg-zinc-800 px-4 font-mono-medium text-text-primary dark:text-white text-xl text-center rounded-xl"
           placeholder="Your 1RM"
-          placeholderTextColor="#606060"
+          placeholderTextColor="#94A3B8"
           value={oneRMInput}
           onChangeText={setOneRMInput}
           keyboardType="decimal-pad"
           selectTextOnFocus
         />
-        <Text className="font-mono text-text-muted text-sm">lbs</Text>
+        <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm">lbs</Text>
       </View>
 
       {/* Rounding toggle */}
-      <View className="flex-row items-center gap-1 mb-5">
-        <Text className="font-mono text-text-muted text-xs tracking-wider mr-2">
-          ROUND:
-        </Text>
+      <View className="flex-row items-center gap-2 mb-5">
+        <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs mr-1">Round:</Text>
         {([0, 2.5, 5] as Rounding[]).map((r) => (
           <TouchableOpacity
             key={r}
             onPress={() => setRounding(r)}
-            className={`px-3 py-1.5 ${rounding === r ? "bg-crimson" : "bg-surface-2"}`}
+            className={`px-4 py-2 rounded-full ${rounding === r ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
             activeOpacity={0.7}
           >
-            <Text className={`font-mono text-xs ${rounding === r ? "text-white" : "text-text-muted"}`}>
+            <Text className={`font-mono text-xs ${rounding === r ? "text-white" : "text-text-muted dark:text-zinc-500"}`}>
               {r === 0 ? "Off" : `${r}`}
             </Text>
           </TouchableOpacity>
@@ -66,16 +62,11 @@ export function PercentageCalculator({ initialOneRM, onSelectWeight }: Props) {
 
       {/* Table */}
       {isValid ? (
-        <View className="bg-surface">
-          {/* Header */}
-          <View className="flex-row px-4 py-2 border-b border-surface-3">
-            <Text className="font-mono text-text-muted text-xs tracking-widest w-12">%</Text>
-            <Text className="font-mono text-text-muted text-xs tracking-widest flex-1 text-right">
-              WEIGHT
-            </Text>
-            <Text className="font-mono text-text-muted text-xs tracking-widest w-20 text-right">
-              REPS
-            </Text>
+        <View className="bg-surface dark:bg-zinc-900 rounded-2xl overflow-hidden">
+          <View className="flex-row px-5 py-3 border-b border-surface-2 dark:border-zinc-800">
+            <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs uppercase tracking-widest w-12">%</Text>
+            <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs uppercase tracking-widest flex-1 text-right">Weight</Text>
+            <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs uppercase tracking-widest w-20 text-right">Reps</Text>
           </View>
 
           {rows.map(({ pct, exact, rounded }) => {
@@ -86,26 +77,26 @@ export function PercentageCalculator({ initialOneRM, onSelectWeight }: Props) {
               <TouchableOpacity
                 key={pct}
                 onPress={() => onSelectWeight?.(rounding === 0 ? exact : rounded)}
-                className={`flex-row items-center px-4 py-3 border-b border-surface-2 ${
-                  isHighlight ? "bg-surface-2" : ""
+                className={`flex-row items-center px-5 py-3.5 border-b border-surface-2 dark:border-zinc-800 ${
+                  isHighlight ? "bg-blue-50 dark:bg-blue-950/30" : ""
                 }`}
                 activeOpacity={onSelectWeight ? 0.7 : 1}
               >
                 <Text
                   className={`font-mono-medium text-sm w-12 ${
-                    isHighlight ? "text-crimson" : "text-text-secondary"
+                    isHighlight ? "text-crimson dark:text-blue-400" : "text-text-secondary dark:text-zinc-400"
                   }`}
                 >
                   {pct}%
                 </Text>
                 <Text
                   className={`font-mono-medium text-sm flex-1 text-right ${
-                    isHighlight ? "text-white" : "text-text-secondary"
+                    isHighlight ? "text-text-primary dark:text-white" : "text-text-secondary dark:text-zinc-400"
                   }`}
                 >
                   {displayWeight} lbs
                 </Text>
-                <Text className="font-mono text-text-muted text-xs w-20 text-right">
+                <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs w-20 text-right">
                   {REP_RANGES[pct]}
                 </Text>
               </TouchableOpacity>
@@ -113,15 +104,15 @@ export function PercentageCalculator({ initialOneRM, onSelectWeight }: Props) {
           })}
         </View>
       ) : (
-        <View className="bg-surface p-6 items-center">
-          <Text className="font-montserrat text-text-muted text-sm text-center">
+        <View className="bg-surface dark:bg-zinc-900 p-6 items-center rounded-2xl">
+          <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm text-center">
             Enter your 1RM to see intensity breakdown
           </Text>
         </View>
       )}
 
       {onSelectWeight && isValid && (
-        <Text className="font-mono text-text-muted text-xs text-center mt-3">
+        <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs text-center mt-3">
           Tap a row to load that weight in the plate calculator
         </Text>
       )}

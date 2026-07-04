@@ -8,11 +8,11 @@ type Props = {
 export function SectionHeader({ title, subtitle }: Props) {
   return (
     <View className="mb-6">
-      <Text className="font-anton text-white text-xl tracking-widest uppercase">
+      <Text className="font-montserrat-bold text-text-primary dark:text-white text-xl">
         {title}
       </Text>
       {subtitle && (
-        <Text className="font-mono text-text-muted text-xs tracking-widest uppercase mt-1.5">
+        <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs uppercase tracking-widest mt-1.5">
           {subtitle}
         </Text>
       )}

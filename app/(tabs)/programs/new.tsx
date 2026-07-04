@@ -84,32 +84,36 @@ export default function NewProgramScreen() {
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
 
-  const labelClass = "font-mono text-text-muted text-xs tracking-widest uppercase mb-2";
-  const inputClass = "bg-surface-2 px-3 py-3 font-montserrat text-white text-sm";
+  const labelClass = "font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase mb-2";
+  const inputClass = "bg-surface-2 dark:bg-zinc-800 px-4 py-3 font-montserrat text-text-primary dark:text-white text-base rounded-xl";
+  const chip = (active: boolean) =>
+    `px-3 py-2 rounded-full ${active ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`;
+  const chipText = (active: boolean) =>
+    `font-montserrat-semibold text-sm ${active ? "text-white" : "text-text-secondary dark:text-zinc-400"}`;
 
   return (
-    <SafeAreaView className="flex-1 bg-obsidian">
+    <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         {/* Header */}
-        <View className="flex-row items-center gap-3 px-4 pt-4 pb-5 border-b border-surface-2">
+        <View className="flex-row items-center gap-3 px-5 pt-5 pb-5 border-b border-surface-2 dark:border-zinc-800">
           <TouchableOpacity onPress={() => router.back()} hitSlop={8} activeOpacity={0.7}>
-            <ChevronLeft size={22} color="#A0A0A0" />
+            <ChevronLeft size={22} color="#94A3B8" />
           </TouchableOpacity>
-          <Text className="font-anton text-white text-xl tracking-widest uppercase flex-1">
+          <Text className="font-montserrat-bold text-text-primary dark:text-white text-xl flex-1">
             New Program
           </Text>
           <TouchableOpacity
             onPress={handleCreate}
             disabled={!canSave || saving}
-            className={`px-4 py-2 ${canSave ? "bg-crimson" : "bg-surface-3"}`}
-            activeOpacity={0.8}
+            className={`px-5 py-2.5 rounded-xl ${canSave ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
+            activeOpacity={0.85}
           >
             <Text
-              className={`font-montserrat-bold text-xs tracking-widest uppercase ${
-                canSave ? "text-white" : "text-text-muted"
+              className={`font-montserrat-bold text-sm ${
+                canSave ? "text-white" : "text-text-muted dark:text-zinc-500"
               }`}
             >
               {saving ? "Saving…" : "Create"}
@@ -119,7 +123,7 @@ export default function NewProgramScreen() {
 
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ padding: 20, gap: 28 }}
+          contentContainerStyle={{ padding: 20, gap: 24 }}
           keyboardShouldPersistTaps="handled"
         >
           {/* Program Type */}
@@ -130,35 +134,35 @@ export default function NewProgramScreen() {
                 <TouchableOpacity
                   key={pt.key}
                   onPress={() => setProgramType(pt.key)}
-                  className={`flex-row items-center px-4 py-3.5 border ${
+                  className={`flex-row items-center px-4 py-4 rounded-2xl border ${
                     programType === pt.key
-                      ? "border-crimson bg-surface-2"
-                      : "border-surface-3 bg-surface"
+                      ? "border-crimson dark:border-blue-500 bg-blue-50 dark:bg-blue-950"
+                      : "border-surface-3 dark:border-zinc-700 bg-surface dark:bg-zinc-900"
                   }`}
                   activeOpacity={0.7}
                 >
                   <View
                     style={{
-                      width: 16, height: 16, borderRadius: 8,
+                      width: 18, height: 18, borderRadius: 9,
                       borderWidth: 2,
-                      borderColor: programType === pt.key ? "#CC2200" : "#404040",
+                      borderColor: programType === pt.key ? "#2563EB" : "#CBD5E1",
                       marginRight: 12,
                       alignItems: "center", justifyContent: "center",
                     }}
                   >
                     {programType === pt.key && (
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#CC2200" }} />
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#2563EB" }} />
                     )}
                   </View>
                   <View className="flex-1">
                     <Text
-                      className={`font-montserrat-bold text-sm ${
-                        programType === pt.key ? "text-white" : "text-text-secondary"
+                      className={`font-montserrat-bold text-base ${
+                        programType === pt.key ? "text-crimson dark:text-blue-400" : "text-text-primary dark:text-white"
                       }`}
                     >
                       {pt.label}
                     </Text>
-                    <Text className="font-montserrat text-text-muted text-xs mt-0.5">{pt.desc}</Text>
+                    <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5">{pt.desc}</Text>
                   </View>
                 </TouchableOpacity>
               ))}
@@ -171,7 +175,7 @@ export default function NewProgramScreen() {
             <TextInput
               className={inputClass}
               placeholder="e.g. Upper / Lower Split"
-              placeholderTextColor="#606060"
+              placeholderTextColor="#94A3B8"
               value={name}
               onChangeText={setName}
               autoFocus
@@ -185,21 +189,20 @@ export default function NewProgramScreen() {
             <TextInput
               className={`${inputClass} min-h-16`}
               placeholder="Optional notes about this program…"
-              placeholderTextColor="#606060"
+              placeholderTextColor="#94A3B8"
               value={description}
               onChangeText={setDescription}
               multiline
             />
           </View>
 
-          {/* Weeks — only for multi_week */}
           {programType === "multi_week" && (
             <View>
               <Text className={labelClass}>Duration (weeks)</Text>
               <TextInput
                 className={inputClass}
                 placeholder="e.g. 8"
-                placeholderTextColor="#606060"
+                placeholderTextColor="#94A3B8"
                 value={weeks}
                 onChangeText={setWeeks}
                 keyboardType="number-pad"
@@ -215,44 +218,42 @@ export default function NewProgramScreen() {
           >
             <ChevronDown
               size={16}
-              color="#A0A0A0"
+              color="#94A3B8"
               style={{ transform: [{ rotate: showAdvanced ? "180deg" : "0deg" }] }}
             />
-            <Text className="font-montserrat-semibold text-text-secondary text-sm tracking-wider">
+            <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-base">
               Advanced Settings
             </Text>
             {(duration || focusTags.length > 0 || equipment || difficulty) ? (
-              <View className="w-1.5 h-1.5 bg-crimson rounded-full ml-1" />
+              <View className="w-2 h-2 bg-crimson dark:bg-blue-400 rounded-full ml-1" />
             ) : null}
           </TouchableOpacity>
 
           {showAdvanced && (
             <>
-              {/* Workout Duration */}
               <View>
                 <Text className={labelClass}>Workout Duration</Text>
                 <TouchableOpacity
                   onPress={() => setDurationPickerOpen(true)}
-                  className="bg-surface-2 px-3 py-3 flex-row items-center justify-between"
+                  className="bg-surface dark:bg-zinc-900 px-4 py-4 rounded-xl flex-row items-center justify-between border border-surface-3 dark:border-zinc-700"
                   activeOpacity={0.7}
                 >
                   <Text
-                    className={`font-montserrat text-sm ${
-                      duration ? "text-white" : "text-text-muted"
+                    className={`font-montserrat text-base ${
+                      duration ? "text-text-primary dark:text-white" : "text-text-muted dark:text-zinc-500"
                     }`}
                   >
                     {duration
                       ? DURATION_OPTIONS.find((d) => d.value === duration)?.label ?? `${duration} min`
                       : "Select duration…"}
                   </Text>
-                  <ChevronDown size={16} color="#606060" />
+                  <ChevronDown size={16} color="#94A3B8" />
                 </TouchableOpacity>
               </View>
 
-              {/* Training Focus (multi-select) */}
               <View>
                 <Text className={labelClass}>Training Focus</Text>
-                <Text className="font-montserrat text-text-muted text-xs mb-2.5">
+                <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mb-2.5">
                   Select all that apply
                 </Text>
                 <View className="flex-row flex-wrap" style={{ gap: 8 }}>
@@ -260,24 +261,15 @@ export default function NewProgramScreen() {
                     <TouchableOpacity
                       key={tag}
                       onPress={() => toggleFocus(tag)}
-                      className={`px-3 py-2 ${
-                        focusTags.includes(tag) ? "bg-crimson" : "bg-surface-2"
-                      }`}
+                      className={chip(focusTags.includes(tag))}
                       activeOpacity={0.7}
                     >
-                      <Text
-                        className={`font-mono text-xs ${
-                          focusTags.includes(tag) ? "text-white" : "text-text-secondary"
-                        }`}
-                      >
-                        {tag}
-                      </Text>
+                      <Text className={chipText(focusTags.includes(tag))}>{tag}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
 
-              {/* Equipment Required (single select) */}
               <View>
                 <Text className={labelClass}>Equipment Required</Text>
                 <View className="flex-row flex-wrap" style={{ gap: 8 }}>
@@ -285,24 +277,15 @@ export default function NewProgramScreen() {
                     <TouchableOpacity
                       key={eq}
                       onPress={() => setEquipment(equipment === eq ? null : eq)}
-                      className={`px-3 py-2 ${
-                        equipment === eq ? "bg-crimson" : "bg-surface-2"
-                      }`}
+                      className={chip(equipment === eq)}
                       activeOpacity={0.7}
                     >
-                      <Text
-                        className={`font-mono text-xs ${
-                          equipment === eq ? "text-white" : "text-text-secondary"
-                        }`}
-                      >
-                        {eq}
-                      </Text>
+                      <Text className={chipText(equipment === eq)}>{eq}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
 
-              {/* Difficulty (single select) */}
               <View>
                 <Text className={labelClass}>Difficulty</Text>
                 <View className="flex-row" style={{ gap: 8 }}>
@@ -311,18 +294,10 @@ export default function NewProgramScreen() {
                       key={diff}
                       onPress={() => setDifficulty(difficulty === diff ? null : diff)}
                       style={{ flex: 1 }}
-                      className={`py-2.5 items-center ${
-                        difficulty === diff ? "bg-crimson" : "bg-surface-2"
-                      }`}
+                      className={`py-3 items-center rounded-xl ${chip(difficulty === diff)}`}
                       activeOpacity={0.7}
                     >
-                      <Text
-                        className={`font-mono text-xs ${
-                          difficulty === diff ? "text-white" : "text-text-secondary"
-                        }`}
-                      >
-                        {diff}
-                      </Text>
+                      <Text className={chipText(difficulty === diff)}>{diff}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -342,20 +317,20 @@ export default function NewProgramScreen() {
         onRequestClose={() => setDurationPickerOpen(false)}
       >
         <Pressable
-          className="flex-1 bg-black/60 justify-end"
+          className="flex-1 bg-black/50 justify-end"
           onPress={() => setDurationPickerOpen(false)}
         >
           <Pressable>
-            <View className="bg-surface-2 pb-10">
-              <View className="flex-row items-center justify-between px-4 py-4 border-b border-surface-3">
-                <Text className="font-anton text-white text-base tracking-widest uppercase">
+            <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl pb-10">
+              <View className="flex-row items-center justify-between px-5 py-5 border-b border-surface-2 dark:border-zinc-800">
+                <Text className="font-montserrat-bold text-text-primary dark:text-white text-lg">
                   Workout Duration
                 </Text>
                 <TouchableOpacity
                   onPress={() => { setDuration(null); setDurationPickerOpen(false); }}
                   hitSlop={8}
                 >
-                  <Text className="font-mono text-text-muted text-xs tracking-widest">CLEAR</Text>
+                  <Text className="font-montserrat-semibold text-crimson dark:text-blue-400 text-base">Clear</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -365,19 +340,19 @@ export default function NewProgramScreen() {
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     onPress={() => { setDuration(item.value); setDurationPickerOpen(false); }}
-                    className={`flex-row items-center justify-between px-4 py-4 border-b border-surface-3 ${
-                      duration === item.value ? "bg-surface-3" : ""
+                    className={`flex-row items-center justify-between px-5 py-4 border-b border-surface-2 dark:border-zinc-800 ${
+                      duration === item.value ? "bg-surface-2 dark:bg-zinc-800" : ""
                     }`}
                     activeOpacity={0.7}
                   >
                     <Text
-                      className={`font-montserrat text-sm ${
-                        duration === item.value ? "text-white" : "text-text-secondary"
+                      className={`font-montserrat text-base ${
+                        duration === item.value ? "text-crimson dark:text-blue-400" : "text-text-primary dark:text-white"
                       }`}
                     >
                       {item.label}
                     </Text>
-                    {duration === item.value && <Check size={16} color="#CC2200" />}
+                    {duration === item.value && <Check size={16} color="#2563EB" />}
                   </TouchableOpacity>
                 )}
               />

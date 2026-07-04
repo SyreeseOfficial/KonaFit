@@ -173,6 +173,42 @@ export function useWorkoutSession() {
     [session, updateSession]
   );
 
+  const addExerciseAsSuperset = useCallback(
+    async (targetLocalId: string, exerciseId: number, exerciseName: string, muscleGroup: string) => {
+      if (!session) return;
+      const target = session.exercises.find((e) => e.localId === targetLocalId);
+      if (!target?.dbId) return;
+      const supersetId = target.supersetId ?? uid();
+      const targetIndex = session.exercises.findIndex((e) => e.localId === targetLocalId);
+      const orderIndex = targetIndex + 1;
+      const dbId = await createLoggedExercise(session.workoutId, exerciseId, exerciseName, orderIndex);
+      const firstSetDbId = await createLoggedSet(dbId, 1);
+      const ghost = await getGhostSets(exerciseId, session.workoutId);
+      const histPRs = await getHistPRs(exerciseId, session.workoutId);
+      const newExercise: ActiveExercise = {
+        localId: uid(),
+        dbId,
+        exerciseId,
+        exerciseName,
+        muscleGroup,
+        orderIndex,
+        supersetId,
+        notes: "",
+        sets: [{ ...defaultSet(1), dbId: firstSetDbId }],
+        ghostSets: ghost,
+        histPRs,
+      };
+      updateSession((prev) => {
+        const exercises = [...prev.exercises];
+        const tIdx = exercises.findIndex((e) => e.localId === targetLocalId);
+        exercises[tIdx] = { ...exercises[tIdx], supersetId };
+        exercises.splice(tIdx + 1, 0, newExercise);
+        return { ...prev, exercises };
+      });
+    },
+    [session, updateSession]
+  );
+
   const addSet = useCallback(
     async (exerciseLocalId: string) => {
       const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
@@ -422,6 +458,7 @@ export function useWorkoutSession() {
     finishWorkout,
     discardWorkout,
     addExercise,
+    addExerciseAsSuperset,
     addSet,
     removeSet,
     updateSet,

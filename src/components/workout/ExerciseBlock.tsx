@@ -7,7 +7,7 @@ import {
   TextInput,
   Pressable,
 } from "react-native";
-import { MoreHorizontal, X, FileText, PlusCircle, ArrowLeftRight, Timer, ChevronDown, ChevronUp, History, ArrowUp, ArrowDown } from "lucide-react-native";
+import { MoreHorizontal, X, FileText, PlusCircle, ArrowLeftRight, Timer, ChevronDown, ChevronUp, History, ArrowUp, ArrowDown, Link } from "lucide-react-native";
 import { SetRow } from "./SetRow";
 import { ExerciseHistoryModal } from "./ExerciseHistoryModal";
 import type { ActiveExercise, ActiveSet } from "../../types/workout";
@@ -15,6 +15,7 @@ import type { ActiveExercise, ActiveSet } from "../../types/workout";
 type Props = {
   index: number;
   exercise: ActiveExercise;
+  supersetId?: string;
   reorderMode?: boolean;
   canMoveUp?: boolean;
   canMoveDown?: boolean;
@@ -29,11 +30,13 @@ type Props = {
   onRemoveExercise: () => void;
   onSwap: () => void;
   onTimerPress: () => void;
+  onAddSuperset?: () => void;
 };
 
 export function ExerciseBlock({
   index,
   exercise,
+  supersetId,
   reorderMode = false,
   canMoveUp = false,
   canMoveDown = false,
@@ -48,6 +51,7 @@ export function ExerciseBlock({
   onRemoveExercise,
   onSwap,
   onTimerPress,
+  onAddSuperset,
 }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -56,22 +60,25 @@ export function ExerciseBlock({
   const [notesText, setNotesText] = useState(exercise.notes);
 
   return (
-    <View className="mb-5 bg-surface">
-      {/* ── Exercise header (tap name to collapse) ───────────── */}
-      <View className="flex-row items-center justify-between px-4 pt-5 pb-4">
+    <View
+      className="mb-3 mx-5 bg-surface dark:bg-zinc-900 rounded-2xl overflow-hidden"
+      style={supersetId ? { borderLeftWidth: 3, borderLeftColor: "#FF0000" } : undefined}
+    >
+      {/* ── Exercise header ───────────── */}
+      <View className="flex-row items-center justify-between px-4 pt-4 pb-3">
         <TouchableOpacity
           onPress={() => !reorderMode && setCollapsed((c) => !c)}
           className="flex-1 flex-row items-center gap-2"
           activeOpacity={reorderMode ? 1 : 0.7}
         >
-          <Text className="font-montserrat-bold text-text-muted text-base">{index}</Text>
-          <Text className="font-montserrat-bold text-white text-base flex-shrink" numberOfLines={1}>
+          <Text className="font-mono text-text-muted dark:text-zinc-500 text-base">{index}</Text>
+          <Text className="font-montserrat-bold text-text-primary dark:text-white text-base flex-shrink" numberOfLines={1}>
             {exercise.exerciseName}
           </Text>
           {!reorderMode && (
             collapsed
-              ? <ChevronDown size={15} color="#606060" />
-              : <ChevronUp size={15} color="#606060" />
+              ? <ChevronDown size={15} color="#94A3B8" />
+              : <ChevronUp size={15} color="#94A3B8" />
           )}
         </TouchableOpacity>
 
@@ -80,42 +87,39 @@ export function ExerciseBlock({
             <TouchableOpacity
               onPress={onMoveUp}
               disabled={!canMoveUp}
-              className={`w-9 h-9 items-center justify-center bg-surface-2 ${!canMoveUp ? "opacity-30" : ""}`}
-              style={{ borderRadius: 6 }}
+              className={`w-9 h-9 items-center justify-center bg-surface-2 dark:bg-zinc-800 rounded-xl ${!canMoveUp ? "opacity-30" : ""}`}
               activeOpacity={0.7}
             >
-              <ArrowUp size={16} color="#A0A0A0" />
+              <ArrowUp size={16} color="#64748B" />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={onMoveDown}
               disabled={!canMoveDown}
-              className={`w-9 h-9 items-center justify-center bg-surface-2 ${!canMoveDown ? "opacity-30" : ""}`}
-              style={{ borderRadius: 6 }}
+              className={`w-9 h-9 items-center justify-center bg-surface-2 dark:bg-zinc-800 rounded-xl ${!canMoveDown ? "opacity-30" : ""}`}
               activeOpacity={0.7}
             >
-              <ArrowDown size={16} color="#A0A0A0" />
+              <ArrowDown size={16} color="#64748B" />
             </TouchableOpacity>
           </View>
         ) : (
           <TouchableOpacity
             onPress={onTimerPress}
-            className="w-10 h-10 bg-surface-2 items-center justify-center ml-3"
-            style={{ borderRadius: 8 }}
+            className="w-10 h-10 bg-surface-2 dark:bg-zinc-800 items-center justify-center ml-3 rounded-xl"
             activeOpacity={0.7}
           >
-            <Timer size={18} color="#606060" />
+            <Timer size={18} color="#94A3B8" />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* ── Collapsed: show set count summary only ───────────── */}
+      {/* ── Collapsed: set count summary ───────────── */}
       {collapsed && (
-        <View className="flex-row items-center px-4 pb-3 gap-2">
-          <Text className="font-mono text-text-muted text-xs">
+        <View className="flex-row items-center px-4 pb-4 gap-2">
+          <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm">
             {exercise.sets.length} {exercise.sets.length === 1 ? "set" : "sets"}
           </Text>
           {exercise.sets.some((s) => s.isCompleted) && (
-            <Text className="font-mono text-crimson text-xs">
+            <Text className="font-mono text-crimson dark:text-blue-400 text-sm">
               · {exercise.sets.filter((s) => s.isCompleted).length} done
             </Text>
           )}
@@ -126,14 +130,14 @@ export function ExerciseBlock({
       {!collapsed && (
         <>
           {/* Column headers */}
-          <View className="flex-row items-center px-3 pt-1 pb-3">
-            <Text className="w-6 text-center font-mono text-text-muted text-xs">Set</Text>
-            <Text className="flex-1 mx-2 text-center font-mono text-text-muted text-xs">Previous</Text>
-            <Text className="w-14 mr-1.5 text-center font-mono text-text-muted text-xs">Lbs</Text>
-            <Text className="w-12 mr-1.5 text-center font-mono text-text-muted text-xs">Reps</Text>
-            <Text className="w-10 mr-1.5 text-center font-mono text-text-muted text-xs">RPE</Text>
+          <View className="flex-row items-center px-3 pt-1 pb-2">
+            <Text className="w-6 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Set</Text>
+            <Text className="flex-1 mx-2 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Previous</Text>
+            <Text className="w-14 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Lbs</Text>
+            <Text className="w-12 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Reps</Text>
+            <Text className="w-10 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">RPE</Text>
             <View className="w-8 items-center">
-              <Text className="font-mono text-text-muted text-xs">✓</Text>
+              <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">✓</Text>
             </View>
           </View>
 
@@ -154,43 +158,43 @@ export function ExerciseBlock({
           {exercise.notes !== "" && (
             <TouchableOpacity
               onPress={() => { setNotesText(exercise.notes); setNotesOpen(true); }}
-              className="flex-row items-center gap-1.5 px-4 py-2 border-t border-surface-2"
+              className="flex-row items-center gap-1.5 px-4 py-3 border-t border-surface-2 dark:border-zinc-800"
               activeOpacity={0.7}
             >
-              <FileText size={11} color="#606060" />
-              <Text className="font-mono text-text-muted text-xs flex-1" numberOfLines={1}>
+              <FileText size={12} color="#94A3B8" />
+              <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm flex-1" numberOfLines={1}>
                 {exercise.notes}
               </Text>
             </TouchableOpacity>
           )}
 
           {/* Footer */}
-          <View className="flex-row items-center px-4 py-4 border-t border-surface-2 gap-4">
+          <View className="flex-row items-center px-4 py-4 border-t border-surface-2 dark:border-zinc-800 gap-4">
             <TouchableOpacity onPress={onAddSet} className="flex-row items-center gap-1.5" activeOpacity={0.7}>
-              <PlusCircle size={16} color="#A0A0A0" />
-              <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-wider">Add Set</Text>
+              <PlusCircle size={16} color="#64748B" />
+              <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">Add Set</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={onSwap} className="flex-row items-center gap-1.5" activeOpacity={0.7}>
-              <ArrowLeftRight size={15} color="#A0A0A0" />
-              <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-wider">Swap</Text>
+              <ArrowLeftRight size={15} color="#64748B" />
+              <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">Swap</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => setHistoryOpen(true)} className="flex-row items-center gap-1.5" activeOpacity={0.7}>
-              <History size={15} color="#A0A0A0" />
-              <Text className="font-montserrat-semibold text-text-secondary text-xs tracking-wider">History</Text>
+              <History size={15} color="#64748B" />
+              <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">History</Text>
             </TouchableOpacity>
 
             <View className="flex-1" />
 
             <TouchableOpacity onPress={() => setMenuOpen(true)} hitSlop={8} activeOpacity={0.7}>
-              <MoreHorizontal size={18} color="#606060" />
+              <MoreHorizontal size={18} color="#94A3B8" />
             </TouchableOpacity>
           </View>
         </>
       )}
 
-      {/* ── Exercise History / PRs ───────────────────────────── */}
+      {/* ── Exercise History / PRs ───────────────────── */}
       <ExerciseHistoryModal
         visible={historyOpen}
         exerciseId={exercise.exerciseId}
@@ -200,30 +204,40 @@ export function ExerciseBlock({
 
       {/* ── Context menu ─────────────────────────────────────── */}
       <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
-        <Pressable className="flex-1 bg-black/60 justify-end" onPress={() => setMenuOpen(false)}>
+        <Pressable className="flex-1 bg-black/50 justify-end" onPress={() => setMenuOpen(false)}>
           <Pressable>
-            <View className="bg-surface-2 pb-10">
-              <View className="flex-row items-center justify-between px-4 py-4 border-b border-surface-3">
-                <Text className="font-montserrat-bold text-white text-xs tracking-widest uppercase flex-1" numberOfLines={1}>
+            <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl pb-10">
+              <View className="flex-row items-center justify-between px-5 py-5 border-b border-surface-2 dark:border-zinc-800">
+                <Text className="font-montserrat-bold text-text-primary dark:text-white text-base flex-1" numberOfLines={1}>
                   {exercise.exerciseName}
                 </Text>
                 <TouchableOpacity onPress={() => setMenuOpen(false)} hitSlop={8}>
-                  <X size={18} color="#606060" />
+                  <X size={20} color="#94A3B8" />
                 </TouchableOpacity>
               </View>
               <TouchableOpacity
                 onPress={() => { setMenuOpen(false); setNotesText(exercise.notes); setNotesOpen(true); }}
-                className="px-4 py-4 border-b border-surface-3"
+                className="px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
                 activeOpacity={0.7}
               >
-                <Text className="font-montserrat-semibold text-white text-sm">Edit Notes</Text>
+                <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Edit Notes</Text>
               </TouchableOpacity>
+              {onAddSuperset && (
+                <TouchableOpacity
+                  onPress={() => { setMenuOpen(false); onAddSuperset(); }}
+                  className="px-5 py-4 border-b border-surface-2 dark:border-zinc-800 flex-row items-center gap-3"
+                  activeOpacity={0.7}
+                >
+                  <Link size={16} color="#94A3B8" />
+                  <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Superset with…</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 onPress={() => { setMenuOpen(false); onRemoveExercise(); }}
-                className="px-4 py-4"
+                className="px-5 py-4"
                 activeOpacity={0.7}
               >
-                <Text className="font-montserrat-semibold text-crimson text-sm">Remove Exercise</Text>
+                <Text className="font-montserrat-semibold text-rose-500 text-base">Remove Exercise</Text>
               </TouchableOpacity>
             </View>
           </Pressable>
@@ -232,16 +246,16 @@ export function ExerciseBlock({
 
       {/* ── Notes modal ──────────────────────────────────────── */}
       <Modal visible={notesOpen} transparent animationType="slide" onRequestClose={() => setNotesOpen(false)}>
-        <Pressable className="flex-1 bg-black/60 justify-end" onPress={() => setNotesOpen(false)}>
+        <Pressable className="flex-1 bg-black/50 justify-end" onPress={() => setNotesOpen(false)}>
           <Pressable>
-            <View className="bg-surface-2 pb-10 px-4 pt-4">
-              <Text className="font-montserrat-bold text-white text-xs tracking-widest uppercase mb-3">
+            <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl pb-10 px-5 pt-5">
+              <Text className="font-montserrat-bold text-text-primary dark:text-white text-base mb-3">
                 Notes — {exercise.exerciseName}
               </Text>
               <TextInput
-                className="bg-surface-3 text-white font-mono text-sm p-3 min-h-20"
-                placeholder="Cues, form reminders, substitutions..."
-                placeholderTextColor="#606060"
+                className="bg-surface-2 dark:bg-zinc-800 text-text-primary dark:text-white font-montserrat text-base p-4 min-h-24 rounded-xl"
+                placeholder="Cues, form reminders, substitutions…"
+                placeholderTextColor="#94A3B8"
                 value={notesText}
                 onChangeText={setNotesText}
                 multiline
@@ -249,10 +263,10 @@ export function ExerciseBlock({
               />
               <TouchableOpacity
                 onPress={() => { onUpdateNotes(notesText); setNotesOpen(false); }}
-                className="mt-3 bg-crimson py-3 items-center"
-                activeOpacity={0.8}
+                className="mt-3 bg-crimson dark:bg-blue-500 py-4 items-center rounded-2xl"
+                activeOpacity={0.85}
               >
-                <Text className="font-montserrat-bold text-white text-xs tracking-widest uppercase">
+                <Text className="font-montserrat-bold text-white text-base">
                   Save
                 </Text>
               </TouchableOpacity>

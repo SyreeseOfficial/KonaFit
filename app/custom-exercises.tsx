@@ -24,8 +24,6 @@ import {
 } from "../src/db/workoutQueries";
 import type { Exercise } from "../src/types/workout";
 
-// ─── Constants (mirrors AddExerciseSheet) ────────────────────────────────────
-
 const MUSCLE_GROUPS = [
   "Chest", "Front Delts", "Mid Delts", "Rear Delts",
   "Biceps", "Forearms", "Triceps", "Lats", "Upper Back",
@@ -50,8 +48,6 @@ const TARGET_TYPES = [
   { key: "weight", label: "Weight" },
   { key: "calories", label: "Calories" },
 ];
-
-// ─── Edit Modal ───────────────────────────────────────────────────────────────
 
 type SaveData = {
   name: string;
@@ -109,11 +105,10 @@ function EditModal({
       prev.includes(eq) ? prev.filter((e) => e !== eq) : [...prev, eq]
     );
 
-  const labelClass = "font-mono text-text-muted text-xs tracking-widest uppercase mb-2";
   const chip = (active: boolean) =>
-    `px-3 py-2 border ${active ? "bg-crimson border-crimson" : "bg-surface-3 border-surface-3"}`;
+    `px-3 py-2 rounded-full ${active ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`;
   const chipText = (active: boolean) =>
-    `font-montserrat-semibold text-xs ${active ? "text-white" : "text-text-secondary"}`;
+    `font-montserrat-semibold text-sm ${active ? "text-white" : "text-text-secondary dark:text-zinc-400"}`;
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
@@ -121,30 +116,29 @@ function EditModal({
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <Pressable className="flex-1 bg-black/70 justify-end" onPress={onClose}>
+        <Pressable className="flex-1 bg-black/50 justify-end" onPress={onClose}>
           <Pressable>
-            <View className="bg-surface-2" style={{ maxHeight: screenHeight * 0.88 }}>
-              {/* Header */}
-              <View className="flex-row items-center justify-between px-4 py-4 border-b border-surface-3">
-                <Text className="font-anton text-white text-base tracking-widest uppercase">
+            <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl" style={{ maxHeight: screenHeight * 0.88 }}>
+              <View className="flex-row items-center justify-between px-5 py-5 border-b border-surface-2 dark:border-zinc-800">
+                <Text className="font-montserrat-bold text-text-primary dark:text-white text-lg">
                   Edit Exercise
                 </Text>
                 <TouchableOpacity onPress={onClose} hitSlop={8}>
-                  <X size={18} color="#606060" />
+                  <X size={20} color="#94A3B8" />
                 </TouchableOpacity>
               </View>
 
-              {/* Scrollable form */}
               <ScrollView
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ padding: 16, paddingBottom: 8, gap: 20 }}
+                contentContainerStyle={{ padding: 20, paddingBottom: 8, gap: 20 }}
                 style={{ flexShrink: 1 }}
               >
-                {/* Name */}
                 <View>
-                  <Text className={labelClass}>Exercise Name *</Text>
+                  <Text className="font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase mb-2">
+                    Exercise Name
+                  </Text>
                   <TextInput
-                    className="bg-surface-3 px-3 py-3 font-montserrat text-white text-sm"
+                    className="bg-surface-2 dark:bg-zinc-800 px-4 py-3 font-montserrat text-text-primary dark:text-white text-base rounded-xl"
                     value={name}
                     onChangeText={setName}
                     autoFocus
@@ -152,9 +146,10 @@ function EditModal({
                   />
                 </View>
 
-                {/* Target Type */}
                 <View>
-                  <Text className={labelClass}>Target Type</Text>
+                  <Text className="font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase mb-2">
+                    Target Type
+                  </Text>
                   <View className="flex-row flex-wrap" style={{ gap: 8 }}>
                     {TARGET_TYPES.map((t) => (
                       <TouchableOpacity
@@ -169,14 +164,13 @@ function EditModal({
                   </View>
                 </View>
 
-                {/* Muscle Groups */}
                 <View>
                   <View className="flex-row items-center justify-between mb-2">
-                    <Text className="font-mono text-text-muted text-xs tracking-widest uppercase">
-                      Muscle Groups *
+                    <Text className="font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase">
+                      Muscle Groups
                     </Text>
                     {muscleGroups.length > 0 && (
-                      <Text className="font-mono text-crimson text-xs">
+                      <Text className="font-montserrat text-crimson dark:text-blue-400 text-sm">
                         {muscleGroups.length} selected
                       </Text>
                     )}
@@ -195,14 +189,13 @@ function EditModal({
                   </View>
                 </View>
 
-                {/* Equipment */}
                 <View>
                   <View className="flex-row items-center justify-between mb-2">
-                    <Text className="font-mono text-text-muted text-xs tracking-widest uppercase">
-                      Equipment *
+                    <Text className="font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase">
+                      Equipment
                     </Text>
                     {equipmentTypes.length > 0 && (
-                      <Text className="font-mono text-crimson text-xs">
+                      <Text className="font-montserrat text-crimson dark:text-blue-400 text-sm">
                         {equipmentTypes.length} selected
                       </Text>
                     )}
@@ -222,17 +215,16 @@ function EditModal({
                 </View>
               </ScrollView>
 
-              {/* Sticky Save button */}
-              <View className="px-4 pb-10 pt-3 border-t border-surface-3">
+              <View className="px-5 pb-10 pt-3 border-t border-surface-2 dark:border-zinc-800">
                 <TouchableOpacity
                   onPress={handleSave}
                   disabled={!canSave || saving}
-                  className={`py-3 items-center ${canSave ? "bg-crimson" : "bg-surface-3"}`}
+                  className={`py-4 items-center rounded-2xl ${canSave ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
                   activeOpacity={0.8}
                 >
                   <Text
-                    className={`font-montserrat-bold text-xs tracking-widest uppercase ${
-                      canSave ? "text-white" : "text-text-muted"
+                    className={`font-montserrat-bold text-base ${
+                      canSave ? "text-white" : "text-text-muted dark:text-zinc-500"
                     }`}
                   >
                     {saving ? "Saving…" : "Save Changes"}
@@ -246,8 +238,6 @@ function EditModal({
     </Modal>
   );
 }
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function CustomExercisesScreen() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -292,16 +282,16 @@ export default function CustomExercisesScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-obsidian">
-      <View className="flex-row items-center gap-3 px-4 pt-5 pb-5 border-b border-surface-2">
+    <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">
+      <View className="flex-row items-center gap-3 px-5 pt-5 pb-5 border-b border-surface-2 dark:border-zinc-800">
         <TouchableOpacity onPress={() => router.back()} hitSlop={8} activeOpacity={0.7}>
-          <ChevronLeft size={22} color="#A0A0A0" />
+          <ChevronLeft size={22} color="#94A3B8" />
         </TouchableOpacity>
         <View className="flex-1">
-          <Text className="font-anton text-white text-2xl tracking-widest uppercase">
+          <Text className="font-montserrat-bold text-text-primary dark:text-white text-2xl">
             Custom Exercises
           </Text>
-          <Text className="font-mono text-text-muted text-xs mt-0.5">
+          <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5">
             Exercises you've created
           </Text>
         </View>
@@ -311,16 +301,16 @@ export default function CustomExercisesScreen() {
         data={exercises}
         keyExtractor={(item) => String(item.id)}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={load} tintColor="#FF0000" colors={["#FF0000"]} />
+          <RefreshControl refreshing={refreshing} onRefresh={load} tintColor="#2563EB" colors={["#2563EB"]} />
         }
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 40, gap: 8 }}
         renderItem={({ item }) => (
-          <View className="mx-4 mt-4 bg-surface flex-row items-center px-4 py-5">
+          <View className="bg-surface dark:bg-zinc-900 rounded-2xl flex-row items-center px-5 py-5">
             <View className="flex-1">
-              <Text className="font-montserrat-semibold text-white text-sm">{item.name}</Text>
-              <Text className="font-mono text-text-muted text-xs mt-0.5">{item.muscle_group}</Text>
+              <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">{item.name}</Text>
+              <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm mt-0.5">{item.muscle_group}</Text>
               {item.equipment_type ? (
-                <Text className="font-mono text-text-muted text-xs">{item.equipment_type}</Text>
+                <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm">{item.equipment_type}</Text>
               ) : null}
             </View>
             <View className="flex-row items-center" style={{ gap: 16 }}>
@@ -329,31 +319,30 @@ export default function CustomExercisesScreen() {
                 hitSlop={8}
                 activeOpacity={0.7}
               >
-                <Pencil size={16} color="#A0A0A0" />
+                <Pencil size={18} color="#64748B" />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => handleDelete(item)}
                 hitSlop={8}
                 activeOpacity={0.7}
               >
-                <Trash2 size={16} color="#606060" />
+                <Trash2 size={18} color="#94A3B8" />
               </TouchableOpacity>
             </View>
           </View>
         )}
         ListEmptyComponent={
           <View className="items-center mt-24 px-8">
-            <Text className="font-montserrat-bold text-white text-base tracking-wider uppercase mb-2">
+            <Text className="font-montserrat-bold text-text-primary dark:text-white text-lg mb-2">
               No Custom Exercises
             </Text>
-            <Text className="font-montserrat text-text-muted text-sm text-center">
+            <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-base text-center">
               Custom exercises you create in the exercise picker will appear here for editing.
             </Text>
           </View>
         }
       />
 
-      {/* key forces remount so useState re-initializes with fresh exercise data */}
       <EditModal
         key={editingExercise?.id ?? -1}
         exercise={editingExercise}

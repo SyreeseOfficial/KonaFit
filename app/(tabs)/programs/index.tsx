@@ -71,16 +71,16 @@ export default function ProgramsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-obsidian">
+    <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 pt-6 pb-7">
-        <Text className="font-anton text-white text-3xl tracking-widest uppercase">
+      <View className="flex-row items-center justify-between px-5 pt-6 pb-4">
+        <Text className="font-montserrat-bold text-text-primary dark:text-white text-3xl">
           Programs
         </Text>
         <TouchableOpacity
           onPress={() => router.push("/programs/new" as never)}
-          className="bg-crimson w-10 h-10 items-center justify-center"
-          activeOpacity={0.8}
+          className="bg-crimson dark:bg-blue-500 w-10 h-10 items-center justify-center rounded-full"
+          activeOpacity={0.85}
         >
           <Plus size={20} color="#FFFFFF" />
         </TouchableOpacity>
@@ -90,44 +90,44 @@ export default function ProgramsScreen() {
         data={programs}
         keyExtractor={(item) => String(item.id)}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={load} tintColor="#FF0000" colors={["#FF0000"]} />
+          <RefreshControl refreshing={refreshing} onRefresh={load} tintColor="#2563EB" colors={["#2563EB"]} />
         }
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32, gap: 12 }}
         renderItem={({ item }) => (
-          <View className="mx-4 mb-4 bg-surface">
+          <View className="bg-surface dark:bg-zinc-900 rounded-2xl overflow-hidden">
             <TouchableOpacity
               onPress={() => router.push(`/programs/${item.id}` as never)}
               activeOpacity={0.8}
-              className="flex-row items-center px-4 py-5"
+              className="flex-row items-center px-5 py-5"
             >
               <View className="flex-1">
-                <View className="flex-row items-center gap-2 mb-0.5">
-                  <Text className="font-montserrat-bold text-white text-sm tracking-wider uppercase">
+                <View className="flex-row items-center gap-2 mb-1">
+                  <Text className="font-montserrat-bold text-text-primary dark:text-white text-base">
                     {item.name}
                   </Text>
-                  <View className="bg-surface-3 px-2 py-0.5">
-                    <Text className="font-mono text-text-muted text-xs">
+                  <View className="bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded-full">
+                    <Text className="font-montserrat-semibold text-crimson dark:text-blue-400 text-xs">
                       {TYPE_LABEL[item.programType] ?? item.programType}
                     </Text>
                   </View>
                 </View>
                 {item.description ? (
-                  <Text className="font-montserrat text-text-muted text-xs mb-1.5" numberOfLines={1}>
+                  <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mb-2" numberOfLines={1}>
                     {item.description}
                   </Text>
                 ) : null}
                 <View className="flex-row" style={{ gap: 12 }}>
-                  <Text className="font-mono text-text-muted text-xs">
+                  <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">
                     {item.dayCount} {item.dayCount === 1 ? "day" : "days"}
                   </Text>
-                  <Text className="font-mono text-text-muted text-xs">
+                  <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">
                     {item.exerciseCount} exercises
                   </Text>
                   {item.durationWeeks ? (
-                    <Text className="font-mono text-text-muted text-xs">{item.durationWeeks}w</Text>
+                    <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">{item.durationWeeks}w</Text>
                   ) : null}
                   {item.difficulty ? (
-                    <Text className="font-mono text-text-muted text-xs">{item.difficulty}</Text>
+                    <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">{item.difficulty}</Text>
                   ) : null}
                 </View>
               </View>
@@ -137,19 +137,19 @@ export default function ProgramsScreen() {
                   hitSlop={8}
                   activeOpacity={0.7}
                 >
-                  <MoreHorizontal size={18} color="#606060" />
+                  <MoreHorizontal size={18} color="#94A3B8" />
                 </TouchableOpacity>
-                <ChevronRight size={16} color="#606060" />
+                <ChevronRight size={16} color="#94A3B8" />
               </View>
             </TouchableOpacity>
           </View>
         )}
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center mt-24 px-8">
-            <Text className="font-montserrat-bold text-white text-base tracking-wider uppercase mb-2">
+            <Text className="font-montserrat-bold text-text-primary dark:text-white text-lg mb-2">
               No Programs Yet
             </Text>
-            <Text className="font-montserrat text-text-muted text-sm text-center mb-6">
+            <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-base text-center">
               Build reusable workout templates and launch them directly into the workspace.
             </Text>
           </View>
@@ -163,42 +163,42 @@ export default function ProgramsScreen() {
         animationType="slide"
         onRequestClose={() => setMenuProgram(null)}
       >
-        <Pressable className="flex-1 bg-black/60 justify-end" onPress={() => setMenuProgram(null)}>
+        <Pressable className="flex-1 bg-black/50 justify-end" onPress={() => setMenuProgram(null)}>
           <Pressable>
-            <View className="bg-surface-2 pb-10">
-              <View className="px-4 py-4 border-b border-surface-3">
-                <Text className="font-montserrat-bold text-white text-sm tracking-wider uppercase" numberOfLines={1}>
+            <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl pb-10">
+              <View className="px-5 py-5 border-b border-surface-2 dark:border-zinc-800">
+                <Text className="font-montserrat-bold text-text-primary dark:text-white text-base" numberOfLines={1}>
                   {menuProgram?.name}
                 </Text>
               </View>
               <TouchableOpacity
                 onPress={() => menuProgram && handleClone(menuProgram)}
-                className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-3"
+                className="flex-row items-center gap-3 px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
                 activeOpacity={0.7}
               >
-                <Copy size={16} color="#A0A0A0" />
-                <Text className="font-montserrat-semibold text-white text-sm">Duplicate Program</Text>
+                <Copy size={18} color="#64748B" />
+                <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Duplicate Program</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => menuProgram && handleArchive(menuProgram)}
-                className="flex-row items-center gap-3 px-4 py-4 border-b border-surface-3"
+                className="flex-row items-center gap-3 px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
                 activeOpacity={0.7}
               >
-                <Archive size={16} color="#A0A0A0" />
+                <Archive size={18} color="#64748B" />
                 <View className="flex-1">
-                  <Text className="font-montserrat-semibold text-white text-sm">Archive Program</Text>
-                  <Text className="font-mono text-text-muted text-xs mt-0.5">
+                  <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Archive Program</Text>
+                  <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5">
                     Hidden from list, restore anytime in Settings
                   </Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => menuProgram && handleDelete(menuProgram)}
-                className="flex-row items-center gap-3 px-4 py-4"
+                className="flex-row items-center gap-3 px-5 py-4"
                 activeOpacity={0.7}
               >
-                <Trash2 size={16} color="#FF0000" />
-                <Text className="font-montserrat-semibold text-crimson text-sm">Delete Permanently</Text>
+                <Trash2 size={18} color="#EF4444" />
+                <Text className="font-montserrat-semibold text-rose-500 text-base">Delete Permanently</Text>
               </TouchableOpacity>
             </View>
           </Pressable>

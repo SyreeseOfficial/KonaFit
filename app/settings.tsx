@@ -6,7 +6,6 @@ import {
   ScrollView,
   Alert,
   TextInput,
-  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react-native";
@@ -16,8 +15,6 @@ import { getAllWorkoutDataForExport } from "../src/db/historyQueries";
 import { exportCsvAndShare } from "../src/utils/exportUtils";
 import { getDatabase } from "../src/db/database";
 import type { Gender } from "../src/utils/strengthScore";
-
-// ─── Keys & defaults ──────────────────────────────────────────────────────────
 
 const REST_TIMER_KEY = "@konafit_default_rest_seconds";
 export const GENDER_KEY = "@konafit_gender";
@@ -53,8 +50,6 @@ export async function getDistanceUnit(): Promise<DistanceUnit> {
   return (v as DistanceUnit) ?? "mile";
 }
 
-// ─── Shared UI ────────────────────────────────────────────────────────────────
-
 function Row({
   label,
   sublabel,
@@ -73,29 +68,29 @@ function Row({
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-row items-center justify-between px-4 py-5 border-b border-surface-2"
+      className="flex-row items-center justify-between px-5 py-5 border-b border-surface-2 dark:border-zinc-800"
       activeOpacity={onPress && !disabled ? 0.7 : 1}
     >
       <View className="flex-1">
         <Text
-          className={`font-montserrat-semibold text-sm ${
-            danger ? "text-crimson" : disabled ? "text-text-muted" : "text-white"
+          className={`font-montserrat-semibold text-base ${
+            danger ? "text-rose-500" : disabled ? "text-text-muted dark:text-zinc-500" : "text-text-primary dark:text-white"
           }`}
         >
           {label}
         </Text>
         {sublabel && (
-          <Text className="font-mono text-text-muted text-xs mt-0.5">{sublabel}</Text>
+          <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5">{sublabel}</Text>
         )}
       </View>
-      {right ?? (onPress && !disabled ? <ChevronRight size={16} color="#606060" /> : null)}
+      {right ?? (onPress && !disabled ? <ChevronRight size={16} color="#94A3B8" /> : null)}
     </TouchableOpacity>
   );
 }
 
 function SectionLabel({ title }: { title: string }) {
   return (
-    <Text className="font-mono text-text-muted text-xs tracking-widest uppercase px-4 pt-8 pb-3">
+    <Text className="font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase px-5 pt-8 pb-3">
       {title}
     </Text>
   );
@@ -116,12 +111,12 @@ function ChipGroup<T extends string>({
         <TouchableOpacity
           key={opt.key}
           onPress={() => onChange(opt.key)}
-          className={`px-4 py-2 ${value === opt.key ? "bg-crimson" : "bg-surface-2"}`}
+          className={`px-4 py-2 rounded-full ${value === opt.key ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
           activeOpacity={0.7}
         >
           <Text
-            className={`font-mono text-xs ${
-              value === opt.key ? "text-white" : "text-text-secondary"
+            className={`font-montserrat-semibold text-sm ${
+              value === opt.key ? "text-white" : "text-text-secondary dark:text-zinc-400"
             }`}
           >
             {opt.label}
@@ -131,8 +126,6 @@ function ChipGroup<T extends string>({
     </View>
   );
 }
-
-// ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function SettingsScreen() {
   const [restSeconds, setRestSeconds] = useState(DEFAULT_REST_SECONDS);
@@ -235,12 +228,12 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-obsidian">
-      <View className="flex-row items-center gap-3 px-4 pt-5 pb-5 border-b border-surface-2">
+    <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">
+      <View className="flex-row items-center gap-3 px-5 pt-5 pb-5 border-b border-surface-2 dark:border-zinc-800">
         <TouchableOpacity onPress={() => router.back()} hitSlop={8} activeOpacity={0.7}>
-          <ChevronLeft size={22} color="#A0A0A0" />
+          <ChevronLeft size={22} color="#94A3B8" />
         </TouchableOpacity>
-        <Text className="font-anton text-white text-2xl tracking-widest uppercase">
+        <Text className="font-montserrat-bold text-text-primary dark:text-white text-2xl">
           Settings
         </Text>
       </View>
@@ -249,34 +242,28 @@ export default function SettingsScreen() {
 
         {/* ── Profile ─────────────────────────────────────────────────────── */}
         <SectionLabel title="Profile" />
-        <View className="bg-surface">
-          <View className="flex-row items-center justify-between px-4 py-4 border-b border-surface-2">
+        <View className="bg-surface dark:bg-zinc-900 mx-5 rounded-2xl overflow-hidden">
+          <View className="flex-row items-center justify-between px-5 py-5 border-b border-surface-2 dark:border-zinc-800">
             <View>
-              <Text className="font-montserrat-semibold text-white text-sm">Gender</Text>
-              <Text className="font-mono text-text-muted text-xs mt-0.5">Used for strength score</Text>
+              <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Gender</Text>
+              <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5">Used for strength score</Text>
             </View>
-            <View className="flex-row gap-1">
-              {(["male", "female"] as Gender[]).map((g) => (
-                <TouchableOpacity
-                  key={g}
-                  onPress={() => handleGender(g)}
-                  className={`px-4 py-2 ${gender === g ? "bg-crimson" : "bg-surface-2"}`}
-                  activeOpacity={0.7}
-                >
-                  <Text className={`font-montserrat-semibold text-xs uppercase tracking-wider ${gender === g ? "text-white" : "text-text-secondary"}`}>
-                    {g === "male" ? "Male" : "Female"}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <ChipGroup
+              options={[
+                { key: "male" as Gender, label: "Male" },
+                { key: "female" as Gender, label: "Female" },
+              ]}
+              value={gender}
+              onChange={handleGender}
+            />
           </View>
-          <View className="flex-row items-center justify-between px-4 py-4">
+          <View className="flex-row items-center justify-between px-5 py-5">
             <View>
-              <Text className="font-montserrat-semibold text-white text-sm">Age</Text>
-              <Text className="font-mono text-text-muted text-xs mt-0.5">Used for strength score</Text>
+              <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Age</Text>
+              <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5">Used for strength score</Text>
             </View>
             <TextInput
-              className="font-mono-medium text-white text-sm bg-surface-2 w-16 text-center h-11"
+              className="font-mono-medium text-text-primary dark:text-white text-base bg-surface-2 dark:bg-zinc-800 w-16 text-center h-11 rounded-xl"
               value={ageText}
               onChangeText={setAgeText}
               onBlur={handleAgeBlur}
@@ -288,11 +275,9 @@ export default function SettingsScreen() {
 
         {/* ── Units ───────────────────────────────────────────────────────── */}
         <SectionLabel title="Units" />
-        <View className="bg-surface">
-          <View className="flex-row items-center justify-between px-4 py-4 border-b border-surface-2">
-            <View>
-              <Text className="font-montserrat-semibold text-white text-sm">Weight</Text>
-            </View>
+        <View className="bg-surface dark:bg-zinc-900 mx-5 rounded-2xl overflow-hidden">
+          <View className="flex-row items-center justify-between px-5 py-5 border-b border-surface-2 dark:border-zinc-800">
+            <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Weight</Text>
             <ChipGroup
               options={[
                 { key: "lbs", label: "lbs" },
@@ -302,10 +287,8 @@ export default function SettingsScreen() {
               onChange={handleWeightUnit}
             />
           </View>
-          <View className="flex-row items-center justify-between px-4 py-4">
-            <View>
-              <Text className="font-montserrat-semibold text-white text-sm">Distance</Text>
-            </View>
+          <View className="flex-row items-center justify-between px-5 py-5">
+            <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Distance</Text>
             <ChipGroup
               options={[
                 { key: "mile", label: "mi" },
@@ -319,20 +302,30 @@ export default function SettingsScreen() {
 
         {/* ── Workout ─────────────────────────────────────────────────────── */}
         <SectionLabel title="Workout" />
-        <View className="bg-surface">
+        <View className="bg-surface dark:bg-zinc-900 mx-5 rounded-2xl overflow-hidden">
           <Row
             label="Default Rest Timer"
             sublabel="Duration when rest timer auto-starts"
             right={
               <View className="flex-row items-center gap-3">
-                <TouchableOpacity onPress={() => adjustRest(-REST_STEP)} hitSlop={8} activeOpacity={0.7}>
-                  <Minus size={16} color="#A0A0A0" />
+                <TouchableOpacity
+                  onPress={() => adjustRest(-REST_STEP)}
+                  className="w-9 h-9 bg-surface-2 dark:bg-zinc-800 rounded-full items-center justify-center"
+                  hitSlop={8}
+                  activeOpacity={0.7}
+                >
+                  <Minus size={14} color="#64748B" />
                 </TouchableOpacity>
-                <Text className="font-mono-medium text-white text-sm w-14 text-center">
+                <Text className="font-mono-medium text-text-primary dark:text-white text-base w-14 text-center">
                   {formatRestTime(restSeconds)}
                 </Text>
-                <TouchableOpacity onPress={() => adjustRest(REST_STEP)} hitSlop={8} activeOpacity={0.7}>
-                  <Plus size={16} color="#A0A0A0" />
+                <TouchableOpacity
+                  onPress={() => adjustRest(REST_STEP)}
+                  className="w-9 h-9 bg-surface-2 dark:bg-zinc-800 rounded-full items-center justify-center"
+                  hitSlop={8}
+                  activeOpacity={0.7}
+                >
+                  <Plus size={14} color="#64748B" />
                 </TouchableOpacity>
               </View>
             }
@@ -341,7 +334,7 @@ export default function SettingsScreen() {
 
         {/* ── Library ─────────────────────────────────────────────────────── */}
         <SectionLabel title="Library" />
-        <View className="bg-surface">
+        <View className="bg-surface dark:bg-zinc-900 mx-5 rounded-2xl overflow-hidden">
           <Row
             label="Custom Exercises"
             sublabel="Edit or delete exercises you've created"
@@ -356,7 +349,7 @@ export default function SettingsScreen() {
 
         {/* ── Data ────────────────────────────────────────────────────────── */}
         <SectionLabel title="Data" />
-        <View className="bg-surface">
+        <View className="bg-surface dark:bg-zinc-900 mx-5 rounded-2xl overflow-hidden">
           <Row
             label="Export Workouts"
             sublabel="Download all workout data as CSV"
@@ -366,7 +359,7 @@ export default function SettingsScreen() {
 
         {/* ── Danger Zone ─────────────────────────────────────────────────── */}
         <SectionLabel title="Danger Zone" />
-        <View className="bg-surface">
+        <View className="bg-surface dark:bg-zinc-900 mx-5 rounded-2xl overflow-hidden">
           <Row
             label="Wipe All Data"
             sublabel="Permanently delete all workouts, goals, and records"
@@ -377,43 +370,43 @@ export default function SettingsScreen() {
 
         {/* ── About ───────────────────────────────────────────────────────── */}
         <SectionLabel title="About" />
-        <View className="bg-surface mx-0 px-4 py-5" style={{ gap: 16 }}>
+        <View className="bg-surface dark:bg-zinc-900 mx-5 rounded-2xl px-5 py-6" style={{ gap: 16 }}>
           <View>
-            <Text className="font-anton text-white text-2xl tracking-widest uppercase mb-1">
+            <Text className="font-montserrat-bold text-text-primary dark:text-white text-2xl mb-1">
               KonaFit
             </Text>
-            <Text className="font-mono text-text-muted text-xs tracking-widest">
-              VERSION 1.0.0 · LOCAL-FIRST · FULLY FREE
+            <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm tracking-widest">
+              Version 1.0.0 · Local-first · Completely free
             </Text>
           </View>
 
-          <View style={{ height: 1, backgroundColor: "#2A2A2A" }} />
+          <View style={{ height: 1, backgroundColor: "#E2E8F0" }} />
 
-          <Text className="font-montserrat text-text-secondary text-sm leading-6">
+          <Text className="font-montserrat text-text-secondary dark:text-zinc-400 text-base leading-7">
             Built by{" "}
-            <Text className="font-montserrat-bold text-white">Syreese Delos Santos</Text>
+            <Text className="font-montserrat-bold text-text-primary dark:text-white">Syreese Delos Santos</Text>
             {" "}— a lifter who got tired of every good workout app either being garbage or locking its best features behind a paywall.
           </Text>
 
-          <Text className="font-montserrat text-text-secondary text-sm leading-6">
+          <Text className="font-montserrat text-text-secondary dark:text-zinc-400 text-base leading-7">
             KonaFit is completely free. No subscriptions. No premium tiers. No paywalled features. Everything works out of the box, stored locally on your device. Your data is yours.
           </Text>
 
-          <Text className="font-montserrat text-text-secondary text-sm leading-6">
+          <Text className="font-montserrat text-text-secondary dark:text-zinc-400 text-base leading-7">
             The mission is simple: build the best free workout tracker that actually respects the people using it.
           </Text>
 
-          <Text className="font-montserrat-bold text-crimson text-sm tracking-widest uppercase">
+          <Text className="font-montserrat-bold text-crimson dark:text-blue-400 text-base">
             Train hard.
           </Text>
 
-          <View style={{ height: 1, backgroundColor: "#2A2A2A" }} />
+          <View style={{ height: 1, backgroundColor: "#E2E8F0" }} />
 
           <View style={{ gap: 4 }}>
-            <Text className="font-mono text-text-muted text-xs">
+            <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm">
               Data stored locally · No account required · No ads
             </Text>
-            <Text className="font-mono text-text-muted text-xs">
+            <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm">
               © 2025 Syreese Delos Santos
             </Text>
           </View>

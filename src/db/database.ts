@@ -150,6 +150,15 @@ export async function initializeDatabase(): Promise<void> {
     `ALTER TABLE exercises ADD COLUMN is_custom INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE goals ADD COLUMN target_reps INTEGER`,
     `ALTER TABLE exercises ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0`,
+    // Backfill: mark sets with data as completed for workouts already finished
+    `UPDATE logged_sets SET is_completed = 1
+     WHERE is_completed = 0
+       AND weight_lbs IS NOT NULL AND reps IS NOT NULL AND reps > 0
+       AND logged_exercise_id IN (
+         SELECT le.id FROM logged_exercises le
+         JOIN workouts w ON le.workout_id = w.id
+         WHERE w.finished_at IS NOT NULL
+       )`,
   ];
   for (const m of migrations) {
     try { await database.execAsync(m); } catch { /* already applied */ }

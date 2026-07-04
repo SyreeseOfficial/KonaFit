@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
-import { Anton_400Regular } from "@expo-google-fonts/anton";
 import {
   Montserrat_400Regular,
   Montserrat_500Medium,
@@ -20,7 +19,6 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    anton: Anton_400Regular,
     montserrat: Montserrat_400Regular,
     "montserrat-medium": Montserrat_500Medium,
     "montserrat-semibold": Montserrat_600SemiBold,
@@ -36,14 +34,14 @@ export default function RootLayout() {
   if (!fontsLoaded) {
     return (
       <SafeAreaProvider>
-        <View className="flex-1 bg-obsidian" />
+        <View className="flex-1 bg-obsidian dark:bg-zinc-950" />
       </SafeAreaProvider>
     );
   }
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" backgroundColor="#0A0A0A" />
+      <StatusBar style="auto" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" />

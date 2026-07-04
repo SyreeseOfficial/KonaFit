@@ -96,7 +96,7 @@ export default function StatsScreen() {
   }, []);
 
   return (
-    <SafeAreaView className="flex-1 bg-obsidian">
+    <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 80 }}
@@ -104,35 +104,33 @@ export default function StatsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => refresh(true)}
-            tintColor="#FF0000"
-            colors={["#FF0000"]}
+            tintColor="#2563EB"
+            colors={["#2563EB"]}
           />
         }
       >
         {/* Header */}
-        <View className="flex-row items-start justify-between px-4 pt-8 pb-6">
-          <View>
-            <Text className="font-anton text-white text-3xl tracking-widest uppercase">
-              Stats
-            </Text>
-          </View>
-          <View className="flex-row items-center gap-4 mt-1">
+        <View className="flex-row items-center justify-between px-5 pt-6 pb-4">
+          <Text className="font-montserrat-bold text-text-primary dark:text-white text-3xl">
+            Stats
+          </Text>
+          <View className="flex-row items-center gap-4">
             <TouchableOpacity onPress={handleExportCsv} hitSlop={8} activeOpacity={0.7}>
-              <Download size={20} color="#606060" />
+              <Download size={20} color="#94A3B8" />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push({ pathname: "/tools", params: { tab: "percent" } })}
               hitSlop={8}
               activeOpacity={0.7}
             >
-              <Calculator size={20} color="#606060" />
+              <Calculator size={20} color="#94A3B8" />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push("/settings")}
               hitSlop={8}
               activeOpacity={0.7}
             >
-              <Settings size={20} color="#606060" />
+              <Settings size={20} color="#94A3B8" />
             </TouchableOpacity>
           </View>
         </View>
@@ -147,65 +145,55 @@ export default function StatsScreen() {
           prCount={stats?.prCount ?? 0}
         />
 
-        {/* Strength Score */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
-          <SectionHeader title="Strength Score" subtitle="Relative strength rating" />
-          <StrengthScore refreshKey={refreshKey} />
-        </View>
-
-        {/* 1RM Trajectory */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
-          <SectionHeader title="1RM Trajectory" subtitle="Epley formula" />
-          <OneRMChart refreshKey={refreshKey} />
-        </View>
-
-        {/* Exercise Analytics */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
-          <SectionHeader title="Exercise Analytics" subtitle="Brzycki · RPE · volume per lift" />
-          <ExerciseAnalytics refreshKey={refreshKey} />
-        </View>
-
-        {/* Muscle Tracker */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
-          <SectionHeader title="Muscle Tracker" subtitle="Weighted sets by muscle" />
-          <MuscleTracker refreshKey={refreshKey} />
-        </View>
-
-        {/* Training Trends */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
-          <SectionHeader title="Training Trends" subtitle="Volume · frequency · bodyweight" />
-          <TrainingTrends refreshKey={refreshKey} />
-        </View>
-
-        {/* Habit Calendar */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
-          <SectionHeader title="Training Calendar" subtitle="Last 13 weeks" />
-          <View className="bg-surface p-4">
-            <HabitCalendar workoutDays={stats?.workoutDays ?? new Set()} />
-          </View>
-        </View>
-
-        {/* Workout History */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
-          <SectionHeader title="History" subtitle="Last 5 workouts" />
-          <WorkoutHistoryList workouts={stats?.recentWorkouts ?? []} />
-        </View>
-
-        {/* Progress Photos */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
-          <ProgressPhotoGallery refreshKey={refreshKey} />
-        </View>
-
-        {/* Lifestyle Logger */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
           <SectionHeader title="Lifestyle" subtitle="Daily tracking" />
           <LifestyleLogger onSaved={() => refresh()} />
         </View>
 
-        {/* Caffeine */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 72 }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
           <SectionHeader title="Caffeine" subtitle="Pre-workout mg over time" />
           <CaffeineChart refreshKey={refreshKey} />
+        </View>
+
+        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
+          <SectionHeader title="Strength Score" subtitle="Relative strength rating" />
+          <StrengthScore refreshKey={refreshKey} />
+        </View>
+
+        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
+          <SectionHeader title="1RM Trajectory" subtitle="Epley formula" />
+          <OneRMChart refreshKey={refreshKey} />
+        </View>
+
+        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
+          <SectionHeader title="Exercise Analytics" subtitle="Brzycki · RPE · volume per lift" />
+          <ExerciseAnalytics refreshKey={refreshKey} />
+        </View>
+
+        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
+          <SectionHeader title="Muscle Tracker" subtitle="Weighted sets by muscle" />
+          <MuscleTracker refreshKey={refreshKey} />
+        </View>
+
+        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
+          <SectionHeader title="Training Trends" subtitle="Volume · frequency · bodyweight" />
+          <TrainingTrends refreshKey={refreshKey} />
+        </View>
+
+        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
+          <SectionHeader title="Training Calendar" subtitle="Last 13 weeks" />
+          <View className="bg-surface dark:bg-zinc-900 p-4 rounded-2xl">
+            <HabitCalendar workoutDays={stats?.workoutDays ?? new Set()} />
+          </View>
+        </View>
+
+        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
+          <SectionHeader title="History" subtitle="Last 5 workouts" />
+          <WorkoutHistoryList workouts={stats?.recentWorkouts ?? []} />
+        </View>
+
+        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
+          <ProgressPhotoGallery refreshKey={refreshKey} />
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -11,6 +11,16 @@ export async function createWorkout(): Promise<number> {
 
 export async function finalizeWorkout(workoutId: number, location?: string): Promise<void> {
   const db = await getDatabase();
+  // Auto-complete any set with weight+reps filled in — covers users who don't tap ✓
+  await db.runAsync(
+    `UPDATE logged_sets SET is_completed = 1
+     WHERE is_completed = 0
+       AND weight_lbs IS NOT NULL AND reps IS NOT NULL AND reps > 0
+       AND logged_exercise_id IN (
+         SELECT id FROM logged_exercises WHERE workout_id = ?
+       )`,
+    [workoutId]
+  );
   await db.runAsync(
     `UPDATE workouts
      SET finished_at = unixepoch(),
@@ -215,7 +225,7 @@ export async function searchExercises(
   conditions.push("is_deleted = 0");
   const where = `WHERE ${conditions.join(" AND ")}`;
   return db.getAllAsync<Exercise>(
-    `SELECT * FROM exercises ${where} ORDER BY use_count DESC, name ASC LIMIT 50`,
+    `SELECT * FROM exercises ${where} ORDER BY use_count DESC, name ASC`,
     params
   );
 }
