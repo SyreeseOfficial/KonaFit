@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Dumbbell, BarChart2, ClipboardList } from "lucide-react-native";
+import { Dumbbell, BarChart2 } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColorScheme } from "react-native";
 
@@ -49,15 +49,6 @@ export default function TabLayout() {
           title: "Stats",
           tabBarIcon: ({ color, size }) => (
             <BarChart2 color={color} size={size} strokeWidth={1.75} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="programs"
-        options={{
-          title: "Programs",
-          tabBarIcon: ({ color, size }) => (
-            <ClipboardList color={color} size={size} strokeWidth={1.75} />
           ),
         }}
       />

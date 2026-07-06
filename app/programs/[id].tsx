@@ -24,18 +24,17 @@ import {
   getProgramWithDays,
   createProgramDay,
   deleteProgramDay,
-  updateProgramDay,
   addProgramExercise,
   deleteProgramExercise,
   updateProgramExercise,
   updateProgram,
   deleteProgram,
   cloneProgram,
-} from "../../../src/db/programQueries";
-import { AddExerciseSheet } from "../../../src/components/workout/AddExerciseSheet";
-import { ExerciseTargetModal } from "../../../src/components/programs/ExerciseTargetModal";
-import type { Program, ProgramDay, ProgramExercise } from "../../../src/types/program";
-import type { Exercise } from "../../../src/types/workout";
+} from "../../src/db/programQueries";
+import { AddExerciseSheet } from "../../src/components/workout/AddExerciseSheet";
+import { ExerciseTargetModal } from "../../src/components/programs/ExerciseTargetModal";
+import type { Program, ProgramDay, ProgramExercise } from "../../src/types/program";
+import type { Exercise } from "../../src/types/workout";
 
 const DAY_NAMES = ["Day A", "Day B", "Day C", "Day D", "Day E", "Day F"];
 

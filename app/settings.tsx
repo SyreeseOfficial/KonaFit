@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react-native";
@@ -14,40 +13,22 @@ import { kvStore } from "../src/utils/kvStore";
 import { getAllWorkoutDataForExport } from "../src/db/historyQueries";
 import { exportCsvAndShare } from "../src/utils/exportUtils";
 import { getDatabase } from "../src/db/database";
-import type { Gender } from "../src/utils/strengthScore";
 
 const REST_TIMER_KEY = "@konafit_default_rest_seconds";
-export const GENDER_KEY = "@konafit_gender";
-export const AGE_KEY = "@konafit_age";
 export const WEIGHT_UNIT_KEY = "@konafit_weight_unit";
-export const DISTANCE_UNIT_KEY = "@konafit_distance_unit";
 export const DEFAULT_REST_SECONDS = 90;
 const REST_STEP = 15;
 
 export type WeightUnit = "lbs" | "kg";
-export type DistanceUnit = "mile" | "km";
 
 export async function getDefaultRestSeconds(): Promise<number> {
   const raw = await kvStore.getItem(REST_TIMER_KEY);
   return raw ? parseInt(raw, 10) : DEFAULT_REST_SECONDS;
 }
 
-export async function getProfileSettings(): Promise<{ gender: Gender; age: number }> {
-  const [g, a] = await Promise.all([kvStore.getItem(GENDER_KEY), kvStore.getItem(AGE_KEY)]);
-  return {
-    gender: (g as Gender) ?? "male",
-    age: a ? parseInt(a, 10) : 25,
-  };
-}
-
 export async function getWeightUnit(): Promise<WeightUnit> {
   const v = await kvStore.getItem(WEIGHT_UNIT_KEY);
   return (v as WeightUnit) ?? "lbs";
-}
-
-export async function getDistanceUnit(): Promise<DistanceUnit> {
-  const v = await kvStore.getItem(DISTANCE_UNIT_KEY);
-  return (v as DistanceUnit) ?? "mile";
 }
 
 function Row({
@@ -129,35 +110,12 @@ function ChipGroup<T extends string>({
 
 export default function SettingsScreen() {
   const [restSeconds, setRestSeconds] = useState(DEFAULT_REST_SECONDS);
-  const [gender, setGender] = useState<Gender>("male");
-  const [ageText, setAgeText] = useState("25");
   const [weightUnit, setWeightUnit] = useState<WeightUnit>("lbs");
-  const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>("mile");
 
   useEffect(() => {
     getDefaultRestSeconds().then(setRestSeconds);
-    getProfileSettings().then((p) => {
-      setGender(p.gender);
-      setAgeText(String(p.age));
-    });
     getWeightUnit().then(setWeightUnit);
-    getDistanceUnit().then(setDistanceUnit);
   }, []);
-
-  const handleGender = useCallback(async (g: Gender) => {
-    setGender(g);
-    await kvStore.setItem(GENDER_KEY, g);
-  }, []);
-
-  const handleAgeBlur = useCallback(async () => {
-    const n = parseInt(ageText, 10);
-    if (!isNaN(n) && n > 0 && n < 120) {
-      await kvStore.setItem(AGE_KEY, String(n));
-    } else {
-      setAgeText("25");
-      await kvStore.setItem(AGE_KEY, "25");
-    }
-  }, [ageText]);
 
   const adjustRest = useCallback(async (delta: number) => {
     const next = Math.max(REST_STEP, restSeconds + delta);
@@ -168,11 +126,6 @@ export default function SettingsScreen() {
   const handleWeightUnit = useCallback(async (u: WeightUnit) => {
     setWeightUnit(u);
     await kvStore.setItem(WEIGHT_UNIT_KEY, u);
-  }, []);
-
-  const handleDistanceUnit = useCallback(async (u: DistanceUnit) => {
-    setDistanceUnit(u);
-    await kvStore.setItem(DISTANCE_UNIT_KEY, u);
   }, []);
 
   const handleExport = useCallback(async () => {
@@ -208,7 +161,7 @@ export default function SettingsScreen() {
                 DELETE FROM lifestyle_logs;
                 DELETE FROM progress_photos;
                 DELETE FROM goals;
-                DELETE FROM kv_store WHERE key NOT IN ('${REST_TIMER_KEY}','${WEIGHT_UNIT_KEY}','${DISTANCE_UNIT_KEY}','${GENDER_KEY}','${AGE_KEY}');
+                DELETE FROM kv_store WHERE key NOT IN ('${REST_TIMER_KEY}','${WEIGHT_UNIT_KEY}');
               `);
               Alert.alert("Done", "All workout data has been deleted.");
             } catch (e) {
@@ -240,43 +193,10 @@ export default function SettingsScreen() {
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 64 }}>
 
-        {/* ── Profile ─────────────────────────────────────────────────────── */}
-        <SectionLabel title="Profile" />
-        <View className="bg-surface dark:bg-zinc-900 mx-5 rounded-2xl overflow-hidden">
-          <View className="flex-row items-center justify-between px-5 py-5 border-b border-surface-2 dark:border-zinc-800">
-            <View>
-              <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Gender</Text>
-              <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5">Used for strength score</Text>
-            </View>
-            <ChipGroup
-              options={[
-                { key: "male" as Gender, label: "Male" },
-                { key: "female" as Gender, label: "Female" },
-              ]}
-              value={gender}
-              onChange={handleGender}
-            />
-          </View>
-          <View className="flex-row items-center justify-between px-5 py-5">
-            <View>
-              <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Age</Text>
-              <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5">Used for strength score</Text>
-            </View>
-            <TextInput
-              className="font-mono-medium text-text-primary dark:text-white text-base bg-surface-2 dark:bg-zinc-800 w-16 text-center h-11 rounded-xl"
-              value={ageText}
-              onChangeText={setAgeText}
-              onBlur={handleAgeBlur}
-              keyboardType="number-pad"
-              maxLength={3}
-            />
-          </View>
-        </View>
-
         {/* ── Units ───────────────────────────────────────────────────────── */}
         <SectionLabel title="Units" />
         <View className="bg-surface dark:bg-zinc-900 mx-5 rounded-2xl overflow-hidden">
-          <View className="flex-row items-center justify-between px-5 py-5 border-b border-surface-2 dark:border-zinc-800">
+          <View className="flex-row items-center justify-between px-5 py-5">
             <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Weight</Text>
             <ChipGroup
               options={[
@@ -285,17 +205,6 @@ export default function SettingsScreen() {
               ]}
               value={weightUnit}
               onChange={handleWeightUnit}
-            />
-          </View>
-          <View className="flex-row items-center justify-between px-5 py-5">
-            <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Distance</Text>
-            <ChipGroup
-              options={[
-                { key: "mile", label: "mi" },
-                { key: "km", label: "km" },
-              ]}
-              value={distanceUnit}
-              onChange={handleDistanceUnit}
             />
           </View>
         </View>

@@ -267,6 +267,9 @@ export default function WorkoutDetailScreen() {
               {ex.muscle_group ? (
                 <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs mt-0.5">{ex.muscle_group}</Text>
               ) : null}
+              {ex.notes ? (
+                <Text className="font-mono text-text-secondary dark:text-zinc-400 text-xs mt-1.5 italic">{ex.notes}</Text>
+              ) : null}
             </View>
 
             {/* Column headers */}

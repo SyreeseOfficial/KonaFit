@@ -10,8 +10,8 @@ import {
 } from "react-native";
 import { GoalsSection } from "../../src/components/train/GoalsSection";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Plus, Calculator, Settings } from "lucide-react-native";
-import { useLocalSearchParams, router } from "expo-router";
+import { Plus, Calculator, Settings, ChevronRight, MoreHorizontal, Copy, Archive, Trash2 } from "lucide-react-native";
+import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
 import * as FileSystem from "expo-file-system/legacy";
 import { saveProgressPhoto } from "../../src/db/photoQueries";
 import { useWorkoutSession, loadCachedSession } from "../../src/hooks/useWorkoutSession";
@@ -22,7 +22,17 @@ import { AddExerciseSheet } from "../../src/components/workout/AddExerciseSheet"
 import { RestTimerBar } from "../../src/components/workout/RestTimerBar";
 import { LocationSheet } from "../../src/components/workout/LocationSheet";
 import { saveWorkoutLocation } from "../../src/db/locationQueries";
+import { formatVolume } from "../../src/utils/exportUtils";
+import { getPrograms, deleteProgram, cloneProgram, archiveProgram } from "../../src/db/programQueries";
 import type { Exercise } from "../../src/types/workout";
+import type { ProgramSummary } from "../../src/types/program";
+
+type FinishSummary = {
+  volume: number;
+  sets: number;
+  exercises: number;
+  prs: string[];
+};
 
 export default function TrainScreen() {
   const {
@@ -89,6 +99,43 @@ export default function TrainScreen() {
   const [reorderMode, setReorderMode] = useState(false);
   const [recoveryVisible, setRecoveryVisible] = useState(false);
   const [cachedSession, setCachedSession] = useState<Awaited<ReturnType<typeof loadCachedSession>>>(null);
+  const [finishSummary, setFinishSummary] = useState<FinishSummary | null>(null);
+  const [programs, setPrograms] = useState<ProgramSummary[]>([]);
+  const [menuProgram, setMenuProgram] = useState<ProgramSummary | null>(null);
+
+  const loadPrograms = useCallback(async () => {
+    setPrograms(await getPrograms());
+  }, []);
+
+  useFocusEffect(useCallback(() => { loadPrograms(); }, [loadPrograms]));
+
+  const handleProgramDelete = (p: ProgramSummary) => {
+    setMenuProgram(null);
+    Alert.alert(
+      "Delete Program",
+      `Permanently delete "${p.name}"? This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => { await deleteProgram(p.id); loadPrograms(); },
+        },
+      ]
+    );
+  };
+
+  const handleProgramArchive = async (p: ProgramSummary) => {
+    setMenuProgram(null);
+    await archiveProgram(p.id);
+    loadPrograms();
+  };
+
+  const handleProgramClone = async (p: ProgramSummary) => {
+    setMenuProgram(null);
+    await cloneProgram(p.id);
+    loadPrograms();
+  };
 
   useEffect(() => {
     loadCachedSession().then((cached) => {
@@ -170,6 +217,28 @@ export default function TrainScreen() {
       } catch (e) {
         console.error("Failed to save location:", e);
       }
+
+      if (session) {
+        const completedSets = session.exercises.flatMap((e) =>
+          e.sets.filter(
+            (s) => s.isCompleted && !s.isWarmup && s.weightLbs !== "" && s.reps !== ""
+          )
+        );
+        const volume = completedSets.reduce(
+          (sum, s) => sum + parseFloat(s.weightLbs) * parseInt(s.reps, 10),
+          0
+        );
+        const prs = session.exercises
+          .filter((e) => e.sets.some((s) => s.prBadges && s.prBadges.length > 0))
+          .map((e) => e.exerciseName);
+        setFinishSummary({
+          volume,
+          sets: completedSets.length,
+          exercises: session.exercises.length,
+          prs,
+        });
+      }
+
       await finishWorkout();
     },
     [session, finishWorkout]
@@ -242,46 +311,81 @@ export default function TrainScreen() {
             Train
           </Text>
           <View className="flex-row items-center gap-4">
-            <TouchableOpacity
-              onPress={() => router.push("/tools")}
-              hitSlop={8}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity onPress={() => router.push("/tools")} hitSlop={8} activeOpacity={0.7}>
               <Calculator size={20} color="#94A3B8" />
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => router.push("/settings")}
-              hitSlop={8}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity onPress={() => router.push("/settings")} hitSlop={8} activeOpacity={0.7}>
               <Settings size={20} color="#94A3B8" />
             </TouchableOpacity>
           </View>
         </View>
+
         <ScrollView
           className="flex-1"
           contentContainerStyle={{ paddingBottom: 64 }}
           showsVerticalScrollIndicator={false}
         >
-          {/* Start workout zone */}
-          <View className="items-center px-5" style={{ paddingTop: 48, paddingBottom: 48, gap: 24 }}>
-            <View className="items-center" style={{ gap: 8 }}>
-              <Text className="font-montserrat-bold text-text-primary dark:text-white text-xl">
-                Ready to train?
-              </Text>
-              <Text className="font-montserrat text-text-secondary dark:text-zinc-400 text-base text-center">
-                Start an empty workout and add exercises as you go.
-              </Text>
-            </View>
+          {/* Quick start */}
+          <View className="px-5" style={{ paddingTop: 32, paddingBottom: 32 }}>
             <TouchableOpacity
               onPress={startWorkout}
-              className="bg-crimson dark:bg-blue-500 px-10 py-4 rounded-2xl"
+              className="bg-crimson dark:bg-blue-500 py-4 rounded-2xl items-center"
               activeOpacity={0.85}
             >
-              <Text className="font-montserrat-bold text-white text-base">
-                Start Workout
-              </Text>
+              <Text className="font-montserrat-bold text-white text-base">Start Empty Workout</Text>
             </TouchableOpacity>
+          </View>
+
+          {/* Programs */}
+          <View style={{ paddingHorizontal: 20, paddingBottom: 32 }}>
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="font-montserrat-bold text-text-primary dark:text-white text-xl">
+                Programs
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push("/programs/new" as never)}
+                className="bg-crimson dark:bg-blue-500 w-8 h-8 items-center justify-center rounded-full"
+                activeOpacity={0.85}
+              >
+                <Plus size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            {programs.length === 0 ? (
+              <View className="bg-surface dark:bg-zinc-900 px-5 py-6 rounded-2xl items-center">
+                <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm text-center">
+                  No programs yet.{"\n"}Tap + to build a reusable template.
+                </Text>
+              </View>
+            ) : (
+              <View style={{ gap: 8 }}>
+                {programs.map((item) => (
+                  <View key={item.id} className="bg-surface dark:bg-zinc-900 rounded-2xl overflow-hidden">
+                    <TouchableOpacity
+                      onPress={() => router.push(`/programs/${item.id}` as never)}
+                      activeOpacity={0.8}
+                      className="flex-row items-center px-5 py-4"
+                    >
+                      <View className="flex-1">
+                        <Text className="font-montserrat-bold text-text-primary dark:text-white text-base mb-0.5">
+                          {item.name}
+                        </Text>
+                        <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">
+                          {item.dayCount} {item.dayCount === 1 ? "day" : "days"} · {item.exerciseCount} exercises
+                          {item.difficulty ? ` · ${item.difficulty}` : ""}
+                        </Text>
+                      </View>
+                      <View className="flex-row items-center gap-3">
+                        <TouchableOpacity onPress={() => setMenuProgram(item)} hitSlop={8} activeOpacity={0.7}>
+                          <MoreHorizontal size={18} color="#94A3B8" />
+                        </TouchableOpacity>
+                        <ChevronRight size={16} color="#94A3B8" />
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
 
           {/* Divider */}
@@ -292,6 +396,55 @@ export default function TrainScreen() {
             <GoalsSection />
           </View>
         </ScrollView>
+
+        {/* Programs context menu */}
+        <Modal
+          visible={menuProgram !== null}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setMenuProgram(null)}
+        >
+          <Pressable className="flex-1 bg-black/50 justify-end" onPress={() => setMenuProgram(null)}>
+            <Pressable>
+              <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl pb-10">
+                <View className="px-5 py-5 border-b border-surface-2 dark:border-zinc-800">
+                  <Text className="font-montserrat-bold text-text-primary dark:text-white text-base" numberOfLines={1}>
+                    {menuProgram?.name}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => menuProgram && handleProgramClone(menuProgram)}
+                  className="flex-row items-center gap-3 px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
+                  activeOpacity={0.7}
+                >
+                  <Copy size={18} color="#64748B" />
+                  <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Duplicate</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => menuProgram && handleProgramArchive(menuProgram)}
+                  className="flex-row items-center gap-3 px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
+                  activeOpacity={0.7}
+                >
+                  <Archive size={18} color="#64748B" />
+                  <View className="flex-1">
+                    <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Archive</Text>
+                    <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5">
+                      Hidden from list, restore in Settings
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => menuProgram && handleProgramDelete(menuProgram)}
+                  className="flex-row items-center gap-3 px-5 py-4"
+                  activeOpacity={0.7}
+                >
+                  <Trash2 size={18} color="#EF4444" />
+                  <Text className="font-montserrat-semibold text-rose-500 text-base">Delete Permanently</Text>
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
       </SafeAreaView>
     );
   }
@@ -424,6 +577,73 @@ export default function TrainScreen() {
         onDiscard={handleDiscardWorkout}
         onCancel={() => setLocationSheetOpen(false)}
       />
+
+      {/* Finish summary modal */}
+      <Modal
+        visible={finishSummary !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFinishSummary(null)}
+      >
+        <Pressable
+          className="flex-1 bg-black/70 items-center justify-center px-6"
+          onPress={() => setFinishSummary(null)}
+        >
+          <Pressable>
+            <View className="bg-surface dark:bg-zinc-900 w-full p-6 rounded-2xl">
+              <Text className="font-montserrat-bold text-text-primary dark:text-white text-2xl mb-1">
+                Workout Done
+              </Text>
+              <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs mb-6 uppercase tracking-widest">
+                Session Summary
+              </Text>
+
+              {/* Stats row */}
+              <View className="flex-row mb-5">
+                {[
+                  { label: "Volume", value: formatVolume(finishSummary?.volume ?? 0) },
+                  { label: "Sets", value: String(finishSummary?.sets ?? 0) },
+                  { label: "Exercises", value: String(finishSummary?.exercises ?? 0) },
+                ].map((item, i) => (
+                  <View
+                    key={item.label}
+                    className={`flex-1 items-center ${i > 0 ? "border-l border-surface-2 dark:border-zinc-800" : ""}`}
+                  >
+                    <Text className="font-mono-medium text-text-primary dark:text-white text-xl">
+                      {item.value}
+                    </Text>
+                    <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs uppercase tracking-widest mt-0.5">
+                      {item.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* PRs */}
+              {(finishSummary?.prs ?? []).length > 0 && (
+                <View className="bg-surface-2 dark:bg-zinc-800 rounded-xl px-4 py-3 mb-5">
+                  <Text className="font-mono text-crimson text-xs uppercase tracking-widest mb-2">
+                    New PRs
+                  </Text>
+                  {(finishSummary?.prs ?? []).map((name) => (
+                    <Text key={name} className="font-montserrat-semibold text-text-primary dark:text-white text-sm mb-0.5">
+                      {name}
+                    </Text>
+                  ))}
+                </View>
+              )}
+
+              <TouchableOpacity
+                onPress={() => setFinishSummary(null)}
+                className="bg-crimson dark:bg-blue-500 py-4 items-center rounded-xl"
+                activeOpacity={0.85}
+              >
+                <Text className="font-montserrat-bold text-white text-base">Done</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }

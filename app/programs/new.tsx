@@ -14,8 +14,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { ChevronLeft, ChevronDown, Check } from "lucide-react-native";
-import { createProgram } from "../../../src/db/programQueries";
-import type { ProgramType } from "../../../src/types/program";
+import { createProgram } from "../../src/db/programQueries";
+import type { ProgramType } from "../../src/types/program";
 
 const PROGRAM_TYPES: { key: ProgramType; label: string; desc: string }[] = [
   { key: "single",     label: "Single Workout", desc: "One-off session template" },

@@ -17,16 +17,10 @@ import { getWorkoutHistory, getAllWorkoutDataForExport, type WorkoutSummary } fr
 import { exportCsvAndShare } from "../../src/utils/exportUtils";
 import { StatsGrid } from "../../src/components/stats/StatsGrid";
 import { HabitCalendar } from "../../src/components/stats/HabitCalendar";
-import { OneRMChart } from "../../src/components/stats/OneRMChart";
-import { MuscleTracker } from "../../src/components/stats/MuscleTracker";
 import { LifestyleLogger } from "../../src/components/stats/LifestyleLogger";
 import { SectionHeader } from "../../src/components/stats/SectionHeader";
 import { WorkoutHistoryList } from "../../src/components/stats/WorkoutHistoryList";
 import { ProgressPhotoGallery } from "../../src/components/stats/ProgressPhotoGallery";
-import { StrengthScore } from "../../src/components/stats/StrengthScore";
-import { TrainingTrends } from "../../src/components/stats/TrainingTrends";
-import { CaffeineChart } from "../../src/components/stats/CaffeineChart";
-import { ExerciseAnalytics } from "../../src/components/stats/ExerciseAnalytics";
 
 type StatsData = {
   totalLiftedLbs: number;
@@ -148,36 +142,6 @@ export default function StatsScreen() {
         <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
           <SectionHeader title="Lifestyle" subtitle="Daily tracking" />
           <LifestyleLogger onSaved={() => refresh()} />
-        </View>
-
-        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
-          <SectionHeader title="Caffeine" subtitle="Pre-workout mg over time" />
-          <CaffeineChart refreshKey={refreshKey} />
-        </View>
-
-        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
-          <SectionHeader title="Strength Score" subtitle="Relative strength rating" />
-          <StrengthScore refreshKey={refreshKey} />
-        </View>
-
-        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
-          <SectionHeader title="1RM Trajectory" subtitle="Epley formula" />
-          <OneRMChart refreshKey={refreshKey} />
-        </View>
-
-        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
-          <SectionHeader title="Exercise Analytics" subtitle="Brzycki · RPE · volume per lift" />
-          <ExerciseAnalytics refreshKey={refreshKey} />
-        </View>
-
-        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
-          <SectionHeader title="Muscle Tracker" subtitle="Weighted sets by muscle" />
-          <MuscleTracker refreshKey={refreshKey} />
-        </View>
-
-        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
-          <SectionHeader title="Training Trends" subtitle="Volume · frequency · bodyweight" />
-          <TrainingTrends refreshKey={refreshKey} />
         </View>
 
         <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>

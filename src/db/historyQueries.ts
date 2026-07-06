@@ -27,6 +27,7 @@ export type ExerciseRecord = {
   exercise_name: string;
   muscle_group: string;
   order_index: number;
+  notes: string | null;
   sets: SetRecord[];
 };
 
@@ -73,9 +74,9 @@ export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail
   if (!workout) return null;
 
   const exerciseRows = await db.getAllAsync<{
-    id: number; exercise_name: string; muscle_group: string; order_index: number;
+    id: number; exercise_name: string; muscle_group: string; order_index: number; notes: string | null;
   }>(
-    `SELECT le.id, le.exercise_name, COALESCE(e.muscle_group, '') as muscle_group, le.order_index
+    `SELECT le.id, le.exercise_name, COALESCE(e.muscle_group, '') as muscle_group, le.order_index, le.notes
      FROM logged_exercises le
      LEFT JOIN exercises e ON le.exercise_id = e.id
      WHERE le.workout_id = ?
@@ -96,7 +97,7 @@ export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail
           totalVolume += s.weight_lbs * s.reps;
         }
       });
-      return { ...ex, sets };
+      return { ...ex, notes: ex.notes ?? null, sets };
     })
   );
 
