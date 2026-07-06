@@ -13,13 +13,12 @@ import {
   getLatestBodyweight,
   getWorkoutDays,
 } from "../../src/db/statsQueries";
-import { getWorkoutHistory, getAllWorkoutDataForExport, type WorkoutSummary } from "../../src/db/historyQueries";
+import { getAllWorkoutDataForExport } from "../../src/db/historyQueries";
 import { exportCsvAndShare } from "../../src/utils/exportUtils";
 import { StatsGrid } from "../../src/components/stats/StatsGrid";
 import { HabitCalendar } from "../../src/components/stats/HabitCalendar";
 import { LifestyleLogger } from "../../src/components/stats/LifestyleLogger";
 import { SectionHeader } from "../../src/components/stats/SectionHeader";
-import { WorkoutHistoryList } from "../../src/components/stats/WorkoutHistoryList";
 import { ProgressPhotoGallery } from "../../src/components/stats/ProgressPhotoGallery";
 
 type StatsData = {
@@ -30,11 +29,10 @@ type StatsData = {
   totalHours: number;
   prCount: number;
   workoutDays: Set<string>;
-  recentWorkouts: WorkoutSummary[];
 };
 
 async function loadStats(): Promise<StatsData> {
-  const [total, hours, prs, count, dates, bw, days, recent] = await Promise.all([
+  const [total, hours, prs, count, dates, bw, days] = await Promise.all([
     getTotalLifted(),
     getTotalHours(),
     getTotalPRCount(),
@@ -42,7 +40,6 @@ async function loadStats(): Promise<StatsData> {
     getWorkoutDatesForStreak(),
     getLatestBodyweight(),
     getWorkoutDays(91),
-    getWorkoutHistory(5),
   ]);
   return {
     totalLiftedLbs: total,
@@ -52,7 +49,6 @@ async function loadStats(): Promise<StatsData> {
     totalHours: hours,
     prCount: prs,
     workoutDays: days,
-    recentWorkouts: recent,
   };
 }
 
@@ -149,11 +145,6 @@ export default function StatsScreen() {
           <View className="bg-surface dark:bg-zinc-900 p-4 rounded-2xl">
             <HabitCalendar workoutDays={stats?.workoutDays ?? new Set()} />
           </View>
-        </View>
-
-        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
-          <SectionHeader title="History" subtitle="Last 5 workouts" />
-          <WorkoutHistoryList workouts={stats?.recentWorkouts ?? []} />
         </View>
 
         <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>

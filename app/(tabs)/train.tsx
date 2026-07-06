@@ -105,7 +105,7 @@ export default function TrainScreen() {
   }, []);
 
   const loadRecentWorkouts = useCallback(async () => {
-    setRecentWorkouts(await getWorkoutHistory(5));
+    setRecentWorkouts(await getWorkoutHistory(3));
   }, []);
 
   useFocusEffect(useCallback(() => {
@@ -386,11 +386,18 @@ export default function TrainScreen() {
             )}
           </View>
 
-          {/* Recent Workouts */}
+          {/* History */}
           <View style={{ paddingHorizontal: 20, paddingBottom: 32 }}>
-            <Text className="font-montserrat-bold text-text-primary dark:text-white text-xl mb-3">
-              Recent
-            </Text>
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="font-montserrat-bold text-text-primary dark:text-white text-xl">
+                History
+              </Text>
+              <TouchableOpacity onPress={() => router.push("/history" as never)} hitSlop={8} activeOpacity={0.7}>
+                <Text className="font-montserrat-semibold text-crimson dark:text-blue-400 text-sm">
+                  View All
+                </Text>
+              </TouchableOpacity>
+            </View>
             {recentWorkouts.length === 0 ? (
               <View className="bg-surface dark:bg-zinc-900 px-5 py-6 rounded-2xl items-center">
                 <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm text-center">
@@ -428,9 +435,6 @@ export default function TrainScreen() {
               </View>
             )}
           </View>
-
-          {/* Divider */}
-          <View style={{ height: 1, backgroundColor: "#E2E8F0", marginHorizontal: 20 }} />
 
           {/* Goals zone */}
           <View style={{ paddingTop: 32 }}>

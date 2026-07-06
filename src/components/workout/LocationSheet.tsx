@@ -68,13 +68,12 @@ export function LocationSheet({ visible, onSave, onDiscard, onCancel }: Props) {
       animationType="slide"
       onRequestClose={onCancel}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
+      <Pressable
+        className="flex-1 bg-black/50 justify-end"
+        onPress={onCancel}
       >
-        <Pressable
-          className="flex-1 bg-black/50 justify-end"
-          onPress={onCancel}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <Pressable>
             <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl">
@@ -206,8 +205,8 @@ export function LocationSheet({ visible, onSave, onDiscard, onCancel }: Props) {
               </View>
             </View>
           </Pressable>
-        </Pressable>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </Pressable>
     </Modal>
   );
 }

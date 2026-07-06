@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback } from "react";
-import { View, Text, TouchableOpacity, Modal, Pressable, FlatList } from "react-native";
-import { Calculator, Pause, Play, RotateCcw, Camera, X } from "lucide-react-native";
+import { useState, useCallback } from "react";
+import { View, Text, TouchableOpacity, Modal, Pressable } from "react-native";
+import { Calculator, Pause, Play, RotateCcw, Camera, X, Minus, Plus } from "lucide-react-native";
 import { useWorkoutTimer } from "../../hooks/useWorkoutTimer";
 
 type Props = {
@@ -10,49 +10,37 @@ type Props = {
   onCamera?: () => void;
 };
 
-const ITEM_H = 56;
-const SIDE_ITEMS = 2;
 const MAX_MINS = 360;
 
-const minuteLabel = (m: number): string => {
-  const h = Math.floor(m / 60);
-  const min = m % 60;
+const minuteLabel = (totalMins: number): string => {
+  const h = Math.floor(totalMins / 60);
+  const min = totalMins % 60;
   if (h === 0) return `${min}m`;
   if (min === 0) return `${h}h`;
   return `${h}h ${min}m`;
 };
 
-const MINUTES = Array.from({ length: MAX_MINS + 1 }, (_, i) => i);
+const ADJUSTMENTS = [-10, -5, -1, 1, 5, 10] as const;
 
 export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Props) {
   const { elapsed, formattedTime, isPaused, pause, resume, reset, adjustElapsed } = useWorkoutTimer(startedAt);
   const [adjustOpen, setAdjustOpen] = useState(false);
-  const [pickerDisplay, setPickerDisplay] = useState(0);
-  // Track live scroll position so "Set Time" always reads the correct value
-  const scrollYRef = useRef(0);
-  const listRef = useRef<FlatList>(null);
+  // Target minutes shown in the picker — initialised when modal opens
+  const [targetMins, setTargetMins] = useState(0);
 
   const openAdjust = useCallback(() => {
-    const mins = Math.min(MAX_MINS, Math.max(0, Math.round(elapsed / 60)));
-    scrollYRef.current = mins * ITEM_H;
-    setPickerDisplay(mins);
+    setTargetMins(Math.min(MAX_MINS, Math.max(0, Math.round(elapsed / 60))));
     setAdjustOpen(true);
-    setTimeout(() => {
-      listRef.current?.scrollToOffset({ offset: mins * ITEM_H, animated: false });
-    }, 150);
   }, [elapsed]);
 
-  const onScrollEnd = useCallback((e: { nativeEvent: { contentOffset: { y: number } } }) => {
-    const idx = Math.max(0, Math.min(MAX_MINS, Math.round(e.nativeEvent.contentOffset.y / ITEM_H)));
-    setPickerDisplay(idx);
+  const changeTarget = useCallback((delta: number) => {
+    setTargetMins((prev) => Math.max(0, Math.min(MAX_MINS, prev + delta)));
   }, []);
 
   const handleSetTime = useCallback(() => {
-    const snapped = Math.max(0, Math.min(MAX_MINS, Math.round(scrollYRef.current / ITEM_H)));
-    const targetSecs = snapped * 60;
-    adjustElapsed(targetSecs - elapsed);
+    adjustElapsed(targetMins * 60 - elapsed);
     setAdjustOpen(false);
-  }, [elapsed, adjustElapsed]);
+  }, [targetMins, elapsed, adjustElapsed]);
 
   return (
     <>
@@ -116,72 +104,63 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
         </View>
       </View>
 
-      {/* Timer scroll wheel modal */}
+      {/* Timer adjustment modal */}
       <Modal visible={adjustOpen} transparent animationType="fade" onRequestClose={() => setAdjustOpen(false)}>
         <Pressable className="flex-1 bg-black/50 justify-end" onPress={() => setAdjustOpen(false)}>
           <Pressable>
             <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl px-5 pt-5 pb-10">
-              <View className="flex-row items-center justify-between mb-5">
+              <View className="flex-row items-center justify-between mb-6">
                 <Text className="font-montserrat-bold text-text-primary dark:text-white text-lg">
-                  Set Timer
+                  Adjust Timer
                 </Text>
                 <TouchableOpacity onPress={() => setAdjustOpen(false)} hitSlop={8}>
                   <X size={20} color="#94A3B8" />
                 </TouchableOpacity>
               </View>
 
-              <View style={{ height: ITEM_H * (SIDE_ITEMS * 2 + 1), overflow: "hidden" }}>
-                <View
-                  style={{
-                    position: "absolute",
-                    top: ITEM_H * SIDE_ITEMS,
-                    left: 0,
-                    right: 0,
-                    height: ITEM_H,
-                    borderTopWidth: 1,
-                    borderBottomWidth: 1,
-                    borderColor: "#E2E8F0",
-                    zIndex: 1,
-                  }}
-                  pointerEvents="none"
-                />
-                <FlatList
-                  ref={listRef}
-                  data={MINUTES}
-                  keyExtractor={(item) => String(item)}
-                  renderItem={({ item }) => (
-                    <View style={{ height: ITEM_H, justifyContent: "center", alignItems: "center" }}>
-                      <Text className="font-mono text-text-secondary dark:text-zinc-400 text-xl tracking-wider">
-                        {minuteLabel(item)}
-                      </Text>
-                    </View>
-                  )}
-                  snapToInterval={ITEM_H}
-                  decelerationRate="fast"
-                  showsVerticalScrollIndicator={false}
-                  nestedScrollEnabled
-                  onScroll={(e) => {
-                    scrollYRef.current = e.nativeEvent.contentOffset.y;
-                    // Update display label smoothly based on nearest item
-                    const idx = Math.max(0, Math.min(MAX_MINS, Math.round(e.nativeEvent.contentOffset.y / ITEM_H)));
-                    setPickerDisplay(idx);
-                  }}
-                  scrollEventThrottle={32}
-                  onMomentumScrollEnd={onScrollEnd}
-                  onScrollEndDrag={onScrollEnd}
-                  ListHeaderComponent={<View style={{ height: ITEM_H * SIDE_ITEMS }} />}
-                  ListFooterComponent={<View style={{ height: ITEM_H * SIDE_ITEMS }} />}
-                  getItemLayout={(_, index) => ({
-                    length: ITEM_H,
-                    offset: ITEM_H * SIDE_ITEMS + ITEM_H * index,
-                    index,
-                  })}
-                />
+              {/* Target time display */}
+              <Text className="font-mono-medium text-text-primary dark:text-white text-5xl tracking-widest text-center mb-2">
+                {minuteLabel(targetMins)}
+              </Text>
+              <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm text-center mb-8">
+                Current: {formattedTime}
+              </Text>
+
+              {/* Decrement row */}
+              <View className="flex-row gap-2 mb-3">
+                {([-10, -5, -1] as const).map((delta) => (
+                  <TouchableOpacity
+                    key={delta}
+                    onPress={() => changeTarget(delta)}
+                    disabled={targetMins === 0}
+                    className="flex-1 py-4 items-center bg-surface-2 dark:bg-zinc-800 rounded-2xl"
+                    activeOpacity={0.7}
+                  >
+                    <Minus size={12} color="#64748B" />
+                    <Text className="font-montserrat-bold text-text-primary dark:text-white text-sm mt-1">
+                      {Math.abs(delta)}m
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
 
-              <Text className="font-mono-medium text-text-primary dark:text-white text-4xl tracking-widest text-center mt-4 mb-5">
-                {minuteLabel(pickerDisplay)}
-              </Text>
+              {/* Increment row */}
+              <View className="flex-row gap-2 mb-6">
+                {([1, 5, 10] as const).map((delta) => (
+                  <TouchableOpacity
+                    key={delta}
+                    onPress={() => changeTarget(delta)}
+                    disabled={targetMins >= MAX_MINS}
+                    className="flex-1 py-4 items-center bg-surface-2 dark:bg-zinc-800 rounded-2xl"
+                    activeOpacity={0.7}
+                  >
+                    <Plus size={12} color="#64748B" />
+                    <Text className="font-montserrat-bold text-text-primary dark:text-white text-sm mt-1">
+                      {delta}m
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
 
               <TouchableOpacity
                 onPress={handleSetTime}
@@ -189,13 +168,9 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
                 activeOpacity={0.85}
               >
                 <Text className="font-montserrat-bold text-white text-base">
-                  Set Time
+                  Set Timer
                 </Text>
               </TouchableOpacity>
-
-              <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm text-center mt-3">
-                Scroll to adjust · tap timer to open
-              </Text>
             </View>
           </Pressable>
         </Pressable>
