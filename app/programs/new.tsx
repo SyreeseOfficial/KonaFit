@@ -86,11 +86,6 @@ export default function NewProgramScreen() {
 
   const labelClass = "font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase mb-2";
   const inputClass = "bg-surface-2 dark:bg-zinc-800 px-4 py-3 font-montserrat text-text-primary dark:text-white text-base rounded-xl";
-  const chip = (active: boolean) =>
-    `px-3 py-2 rounded-full ${active ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`;
-  const chipText = (active: boolean) =>
-    `font-montserrat-semibold text-sm ${active ? "text-white" : "text-text-secondary dark:text-zinc-400"}`;
-
   return (
     <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">
       <KeyboardAvoidingView
@@ -261,10 +256,10 @@ export default function NewProgramScreen() {
                     <TouchableOpacity
                       key={tag}
                       onPress={() => toggleFocus(tag)}
-                      className={chip(focusTags.includes(tag))}
+                      className={`px-3 py-2 rounded-full ${focusTags.includes(tag) ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
                       activeOpacity={0.7}
                     >
-                      <Text className={chipText(focusTags.includes(tag))}>{tag}</Text>
+                      <Text className={`font-montserrat-semibold text-sm ${focusTags.includes(tag) ? "text-white" : "text-text-secondary dark:text-zinc-400"}`}>{tag}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -277,10 +272,10 @@ export default function NewProgramScreen() {
                     <TouchableOpacity
                       key={eq}
                       onPress={() => setEquipment(equipment === eq ? null : eq)}
-                      className={chip(equipment === eq)}
+                      className={`px-3 py-2 rounded-full ${equipment === eq ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
                       activeOpacity={0.7}
                     >
-                      <Text className={chipText(equipment === eq)}>{eq}</Text>
+                      <Text className={`font-montserrat-semibold text-sm ${equipment === eq ? "text-white" : "text-text-secondary dark:text-zinc-400"}`}>{eq}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -294,10 +289,10 @@ export default function NewProgramScreen() {
                       key={diff}
                       onPress={() => setDifficulty(difficulty === diff ? null : diff)}
                       style={{ flex: 1 }}
-                      className={`py-3 items-center rounded-xl ${chip(difficulty === diff)}`}
+                      className={`py-3 px-3 items-center rounded-xl ${difficulty === diff ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
                       activeOpacity={0.7}
                     >
-                      <Text className={chipText(difficulty === diff)}>{diff}</Text>
+                      <Text className={`font-montserrat-semibold text-sm ${difficulty === diff ? "text-white" : "text-text-secondary dark:text-zinc-400"}`}>{diff}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>

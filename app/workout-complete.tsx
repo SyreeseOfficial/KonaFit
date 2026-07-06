@@ -4,18 +4,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { CheckCircle, MapPin, Clock, Dumbbell, Zap, TrendingUp } from "lucide-react-native";
 import { getWorkoutDetail, type WorkoutDetail } from "../src/db/historyQueries";
-import { formatDuration, formatVolume } from "../src/utils/exportUtils";
+import { formatDuration, formatShortDate, formatVolume } from "../src/utils/exportUtils";
 import { kvStore } from "../src/utils/kvStore";
 
 const LAST_PRS_KEY = "@konafit_last_prs";
 
-function formatShortDate(unixSeconds: number): string {
-  return new Date(unixSeconds * 1000).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 export default function WorkoutCompleteScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { formatTime } from "../utils/time";
 
 const DEFAULT_SECONDS = 90;
 const STEP = 15;
@@ -43,12 +44,6 @@ export function useRestTimer() {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [isRunning]);
-
-  const formatTime = (secs: number) => {
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  };
 
   return {
     remaining,

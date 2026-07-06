@@ -15,7 +15,7 @@ import { exportCsvAndShare } from "../src/utils/exportUtils";
 import { getDatabase } from "../src/db/database";
 
 const REST_TIMER_KEY = "@konafit_default_rest_seconds";
-export const WEIGHT_UNIT_KEY = "@konafit_weight_unit";
+const WEIGHT_UNIT_KEY = "@konafit_weight_unit";
 export const DEFAULT_REST_SECONDS = 90;
 const REST_STEP = 15;
 

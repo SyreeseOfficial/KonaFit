@@ -105,11 +105,6 @@ function EditModal({
       prev.includes(eq) ? prev.filter((e) => e !== eq) : [...prev, eq]
     );
 
-  const chip = (active: boolean) =>
-    `px-3 py-2 rounded-full ${active ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`;
-  const chipText = (active: boolean) =>
-    `font-montserrat-semibold text-sm ${active ? "text-white" : "text-text-secondary dark:text-zinc-400"}`;
-
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
@@ -155,10 +150,10 @@ function EditModal({
                       <TouchableOpacity
                         key={t.key}
                         onPress={() => setTargetType(t.key)}
-                        className={chip(targetType === t.key)}
+                        className={`px-3 py-2 rounded-full ${targetType === t.key ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
                         activeOpacity={0.7}
                       >
-                        <Text className={chipText(targetType === t.key)}>{t.label}</Text>
+                        <Text className={`font-montserrat-semibold text-sm ${targetType === t.key ? "text-white" : "text-text-secondary dark:text-zinc-400"}`}>{t.label}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -180,10 +175,10 @@ function EditModal({
                       <TouchableOpacity
                         key={mg}
                         onPress={() => toggleMuscle(mg)}
-                        className={chip(muscleGroups.includes(mg))}
+                        className={`px-3 py-2 rounded-full ${muscleGroups.includes(mg) ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
                         activeOpacity={0.7}
                       >
-                        <Text className={chipText(muscleGroups.includes(mg))}>{mg}</Text>
+                        <Text className={`font-montserrat-semibold text-sm ${muscleGroups.includes(mg) ? "text-white" : "text-text-secondary dark:text-zinc-400"}`}>{mg}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -205,10 +200,10 @@ function EditModal({
                       <TouchableOpacity
                         key={eq}
                         onPress={() => toggleEquipment(eq)}
-                        className={chip(equipmentTypes.includes(eq))}
+                        className={`px-3 py-2 rounded-full ${equipmentTypes.includes(eq) ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
                         activeOpacity={0.7}
                       >
-                        <Text className={chipText(equipmentTypes.includes(eq))}>{eq}</Text>
+                        <Text className={`font-montserrat-semibold text-sm ${equipmentTypes.includes(eq) ? "text-white" : "text-text-secondary dark:text-zinc-400"}`}>{eq}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>

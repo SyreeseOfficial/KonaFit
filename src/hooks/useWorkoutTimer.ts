@@ -1,12 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-
-function formatTime(secs: number): string {
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = secs % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
+import { formatTime } from "../utils/time";
 
 export function useWorkoutTimer(startedAt: number) {
   const [isPaused, setIsPaused] = useState(false);
