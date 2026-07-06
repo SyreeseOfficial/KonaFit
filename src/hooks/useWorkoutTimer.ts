@@ -65,6 +65,20 @@ export function useWorkoutTimer(startedAt: number) {
     [isPaused, startedAt]
   );
 
+  // Set elapsed to an exact second value — avoids stale-closure issues when
+  // the caller doesn't have a reliable snapshot of current elapsed
+  const setElapsed = useCallback(
+    (targetSecs: number) => {
+      const clamped = Math.max(0, targetSecs);
+      const now = Date.now();
+      setOffsetMs(now - startedAt - clamped * 1000);
+      if (isPaused) {
+        setFrozenSecs(clamped);
+      }
+    },
+    [isPaused, startedAt]
+  );
+
   return {
     elapsed,
     formattedTime: formatTime(elapsed),
@@ -73,5 +87,6 @@ export function useWorkoutTimer(startedAt: number) {
     resume,
     reset,
     adjustElapsed,
+    setElapsed,
   };
 }

@@ -8,7 +8,6 @@ import {
   TextInput,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
   Alert,
 } from "react-native";
 import { MapPin, Plus, X } from "lucide-react-native";
@@ -72,9 +71,7 @@ export function LocationSheet({ visible, onSave, onDiscard, onCancel }: Props) {
         className="flex-1 bg-black/50 justify-end"
         onPress={onCancel}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
+        <KeyboardAvoidingView behavior="padding">
           <Pressable>
             <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl">
               {/* Header */}

@@ -23,7 +23,7 @@ const minuteLabel = (totalMins: number): string => {
 const ADJUSTMENTS = [-10, -5, -1, 1, 5, 10] as const;
 
 export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Props) {
-  const { elapsed, formattedTime, isPaused, pause, resume, reset, adjustElapsed } = useWorkoutTimer(startedAt);
+  const { elapsed, formattedTime, isPaused, pause, resume, reset, setElapsed } = useWorkoutTimer(startedAt);
   const [adjustOpen, setAdjustOpen] = useState(false);
   // Target minutes shown in the picker — initialised when modal opens
   const [targetMins, setTargetMins] = useState(0);
@@ -38,9 +38,9 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
   }, []);
 
   const handleSetTime = useCallback(() => {
-    adjustElapsed(targetMins * 60 - elapsed);
+    setElapsed(targetMins * 60);
     setAdjustOpen(false);
-  }, [targetMins, elapsed, adjustElapsed]);
+  }, [targetMins, setElapsed]);
 
   return (
     <>
