@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { ScrollView, View, Text, RefreshControl, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Calculator, Download, Settings } from "lucide-react-native";
+import { Download, Settings } from "lucide-react-native";
 import {
   getTotalLifted,
   getTotalHours,
@@ -11,14 +11,12 @@ import {
   getWorkoutDatesForStreak,
   calculateStreak,
   getLatestBodyweight,
-  getWorkoutDays,
 } from "../../src/db/statsQueries";
 import { getAllWorkoutDataForExport } from "../../src/db/historyQueries";
 import { exportCsvAndShare } from "../../src/utils/exportUtils";
 import { StatsGrid } from "../../src/components/stats/StatsGrid";
-import { HabitCalendar } from "../../src/components/stats/HabitCalendar";
-import { LifestyleLogger } from "../../src/components/stats/LifestyleLogger";
 import { SectionHeader } from "../../src/components/stats/SectionHeader";
+import { LifestyleLogger } from "../../src/components/stats/LifestyleLogger";
 import { ProgressPhotoGallery } from "../../src/components/stats/ProgressPhotoGallery";
 
 type StatsData = {
@@ -28,18 +26,16 @@ type StatsData = {
   bodyweightLbs: number | null;
   totalHours: number;
   prCount: number;
-  workoutDays: Set<string>;
 };
 
 async function loadStats(): Promise<StatsData> {
-  const [total, hours, prs, count, dates, bw, days] = await Promise.all([
+  const [total, hours, prs, count, dates, bw] = await Promise.all([
     getTotalLifted(),
     getTotalHours(),
     getTotalPRCount(),
     getWorkoutCount(),
     getWorkoutDatesForStreak(),
     getLatestBodyweight(),
-    getWorkoutDays(91),
   ]);
   return {
     totalLiftedLbs: total,
@@ -48,7 +44,6 @@ async function loadStats(): Promise<StatsData> {
     bodyweightLbs: bw,
     totalHours: hours,
     prCount: prs,
-    workoutDays: days,
   };
 }
 
@@ -109,13 +104,6 @@ export default function StatsScreen() {
               <Download size={20} color="#94A3B8" />
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => router.push({ pathname: "/tools", params: { tab: "percent" } })}
-              hitSlop={8}
-              activeOpacity={0.7}
-            >
-              <Calculator size={20} color="#94A3B8" />
-            </TouchableOpacity>
-            <TouchableOpacity
               onPress={() => router.push("/settings")}
               hitSlop={8}
               activeOpacity={0.7}
@@ -138,13 +126,6 @@ export default function StatsScreen() {
         <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
           <SectionHeader title="Lifestyle" subtitle="Daily tracking" />
           <LifestyleLogger onSaved={() => refresh()} />
-        </View>
-
-        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
-          <SectionHeader title="Training Calendar" subtitle="Last 13 weeks" />
-          <View className="bg-surface dark:bg-zinc-900 p-4 rounded-2xl">
-            <HabitCalendar workoutDays={stats?.workoutDays ?? new Set()} />
-          </View>
         </View>
 
         <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>

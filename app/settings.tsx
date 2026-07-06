@@ -294,15 +294,11 @@ export default function SettingsScreen() {
           <Text className="font-montserrat text-text-secondary dark:text-zinc-400 text-base leading-7">
             Built by{" "}
             <Text className="font-montserrat-bold text-text-primary dark:text-white">Syreese Delos Santos</Text>
-            {" "}— a lifter who got tired of every good workout app either being garbage or locking its best features behind a paywall.
+            {" "}— a lifter tired of great apps locked behind paywalls.
           </Text>
 
           <Text className="font-montserrat text-text-secondary dark:text-zinc-400 text-base leading-7">
-            KonaFit is completely free. No subscriptions. No premium tiers. No paywalled features. Everything works out of the box, stored locally on your device. Your data is yours.
-          </Text>
-
-          <Text className="font-montserrat text-text-secondary dark:text-zinc-400 text-base leading-7">
-            The mission is simple: build the best free workout tracker that actually respects the people using it.
+            No subscriptions. No ads. Everything stored locally on your device. Your data is yours.
           </Text>
 
           <Text className="font-montserrat-bold text-crimson dark:text-blue-400 text-base">
@@ -316,7 +312,7 @@ export default function SettingsScreen() {
               Data stored locally · No account required · No ads
             </Text>
             <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm">
-              © 2025 Syreese Delos Santos
+              © 2026 Syreese Delos Santos
             </Text>
           </View>
         </View>

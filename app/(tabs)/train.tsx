@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { GoalsSection } from "../../src/components/train/GoalsSection";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Plus, Calculator, Settings, ChevronRight, MoreHorizontal, Copy, Archive, Trash2 } from "lucide-react-native";
+import { Plus, Settings, ChevronRight, MoreHorizontal, Copy, Archive, Trash2 } from "lucide-react-native";
 import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
 import * as FileSystem from "expo-file-system/legacy";
 import { saveProgressPhoto } from "../../src/db/photoQueries";
@@ -308,14 +308,9 @@ export default function TrainScreen() {
           <Text className="font-montserrat-bold text-text-primary dark:text-white text-3xl">
             Train
           </Text>
-          <View className="flex-row items-center gap-4">
-            <TouchableOpacity onPress={() => router.push("/tools")} hitSlop={8} activeOpacity={0.7}>
-              <Calculator size={20} color="#94A3B8" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push("/settings")} hitSlop={8} activeOpacity={0.7}>
-              <Settings size={20} color="#94A3B8" />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity onPress={() => router.push("/settings")} hitSlop={8} activeOpacity={0.7}>
+            <Settings size={20} color="#94A3B8" />
+          </TouchableOpacity>
         </View>
 
         <ScrollView
