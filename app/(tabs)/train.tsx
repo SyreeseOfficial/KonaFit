@@ -22,17 +22,14 @@ import { AddExerciseSheet } from "../../src/components/workout/AddExerciseSheet"
 import { RestTimerBar } from "../../src/components/workout/RestTimerBar";
 import { LocationSheet } from "../../src/components/workout/LocationSheet";
 import { saveWorkoutLocation } from "../../src/db/locationQueries";
-import { formatVolume } from "../../src/utils/exportUtils";
+import { formatVolume, formatShortDate, formatDuration } from "../../src/utils/exportUtils";
 import { getPrograms, deleteProgram, cloneProgram, archiveProgram } from "../../src/db/programQueries";
+import { getWorkoutHistory, type WorkoutSummary } from "../../src/db/historyQueries";
+import { kvStore } from "../../src/utils/kvStore";
 import type { Exercise } from "../../src/types/workout";
 import type { ProgramSummary } from "../../src/types/program";
 
-type FinishSummary = {
-  volume: number;
-  sets: number;
-  exercises: number;
-  prs: string[];
-};
+const LAST_PRS_KEY = "@konafit_last_prs";
 
 export default function TrainScreen() {
   const {
@@ -99,15 +96,22 @@ export default function TrainScreen() {
   const [reorderMode, setReorderMode] = useState(false);
   const [recoveryVisible, setRecoveryVisible] = useState(false);
   const [cachedSession, setCachedSession] = useState<Awaited<ReturnType<typeof loadCachedSession>>>(null);
-  const [finishSummary, setFinishSummary] = useState<FinishSummary | null>(null);
   const [programs, setPrograms] = useState<ProgramSummary[]>([]);
+  const [recentWorkouts, setRecentWorkouts] = useState<WorkoutSummary[]>([]);
   const [menuProgram, setMenuProgram] = useState<ProgramSummary | null>(null);
 
   const loadPrograms = useCallback(async () => {
     setPrograms(await getPrograms());
   }, []);
 
-  useFocusEffect(useCallback(() => { loadPrograms(); }, [loadPrograms]));
+  const loadRecentWorkouts = useCallback(async () => {
+    setRecentWorkouts(await getWorkoutHistory(5));
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    loadPrograms();
+    loadRecentWorkouts();
+  }, [loadPrograms, loadRecentWorkouts]));
 
   const handleProgramDelete = (p: ProgramSummary) => {
     setMenuProgram(null);
@@ -209,37 +213,31 @@ export default function TrainScreen() {
 
   const handleSaveWorkout = useCallback(
     async (location: string | null) => {
+      if (!session) return;
       setLocationSheetOpen(false);
+
+      const workoutId = session.workoutId;
+
       try {
-        if (location && session) {
-          await saveWorkoutLocation(session.workoutId, location);
-        }
+        if (location) await saveWorkoutLocation(workoutId, location);
       } catch (e) {
         console.error("Failed to save location:", e);
       }
 
-      if (session) {
-        const completedSets = session.exercises.flatMap((e) =>
-          e.sets.filter(
-            (s) => s.isCompleted && !s.isWarmup && s.weightLbs !== "" && s.reps !== ""
-          )
-        );
-        const volume = completedSets.reduce(
-          (sum, s) => sum + parseFloat(s.weightLbs) * parseInt(s.reps, 10),
-          0
-        );
-        const prs = session.exercises
-          .filter((e) => e.sets.some((s) => s.prBadges && s.prBadges.length > 0))
-          .map((e) => e.exerciseName);
-        setFinishSummary({
-          volume,
-          sets: completedSets.length,
-          exercises: session.exercises.length,
-          prs,
-        });
-      }
+      // Capture PRs before session is cleared
+      const prs = session.exercises
+        .filter((e) => e.sets.some((s) => s.prBadges && s.prBadges.length > 0))
+        .map((e) => e.exerciseName);
+      try {
+        await kvStore.setItem(LAST_PRS_KEY, JSON.stringify(prs));
+      } catch {}
 
       await finishWorkout();
+
+      router.push({
+        pathname: "/workout-complete",
+        params: { id: String(workoutId) },
+      } as never);
     },
     [session, finishWorkout]
   );
@@ -388,6 +386,49 @@ export default function TrainScreen() {
             )}
           </View>
 
+          {/* Recent Workouts */}
+          <View style={{ paddingHorizontal: 20, paddingBottom: 32 }}>
+            <Text className="font-montserrat-bold text-text-primary dark:text-white text-xl mb-3">
+              Recent
+            </Text>
+            {recentWorkouts.length === 0 ? (
+              <View className="bg-surface dark:bg-zinc-900 px-5 py-6 rounded-2xl items-center">
+                <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm text-center">
+                  No workouts yet.{"\n"}Start your first session above.
+                </Text>
+              </View>
+            ) : (
+              <View style={{ gap: 8 }}>
+                {recentWorkouts.map((w) => (
+                  <TouchableOpacity
+                    key={w.id}
+                    onPress={() => router.push(`/workout/${w.id}` as never)}
+                    className="bg-surface dark:bg-zinc-900 rounded-2xl px-5 py-4 flex-row items-center"
+                    activeOpacity={0.8}
+                  >
+                    <View className="flex-1">
+                      <Text className="font-montserrat-bold text-text-primary dark:text-white text-base mb-0.5">
+                        {w.name}
+                      </Text>
+                      <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">
+                        {formatShortDate(w.started_at)} · {w.exercise_count} exercises
+                      </Text>
+                    </View>
+                    <View className="items-end mr-3">
+                      <Text className="font-mono-medium text-text-primary dark:text-white text-sm">
+                        {formatVolume(w.total_volume)}
+                      </Text>
+                      <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">
+                        {formatDuration(w.duration_seconds)}
+                      </Text>
+                    </View>
+                    <ChevronRight size={16} color="#94A3B8" />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
           {/* Divider */}
           <View style={{ height: 1, backgroundColor: "#E2E8F0", marginHorizontal: 20 }} />
 
@@ -491,7 +532,6 @@ export default function TrainScreen() {
             onUpdateNotes={(notes) => updateExerciseNotes(exercise.localId, notes)}
             onRemoveExercise={() => removeExercise(exercise.localId)}
             onSwap={() => setSwappingExerciseLocalId(exercise.localId)}
-            onTimerPress={() => restTimer.start()}
             onAddSuperset={() => setSupersetTargetLocalId(exercise.localId)}
           />
         ))}
@@ -577,73 +617,6 @@ export default function TrainScreen() {
         onDiscard={handleDiscardWorkout}
         onCancel={() => setLocationSheetOpen(false)}
       />
-
-      {/* Finish summary modal */}
-      <Modal
-        visible={finishSummary !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setFinishSummary(null)}
-      >
-        <Pressable
-          className="flex-1 bg-black/70 items-center justify-center px-6"
-          onPress={() => setFinishSummary(null)}
-        >
-          <Pressable>
-            <View className="bg-surface dark:bg-zinc-900 w-full p-6 rounded-2xl">
-              <Text className="font-montserrat-bold text-text-primary dark:text-white text-2xl mb-1">
-                Workout Done
-              </Text>
-              <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs mb-6 uppercase tracking-widest">
-                Session Summary
-              </Text>
-
-              {/* Stats row */}
-              <View className="flex-row mb-5">
-                {[
-                  { label: "Volume", value: formatVolume(finishSummary?.volume ?? 0) },
-                  { label: "Sets", value: String(finishSummary?.sets ?? 0) },
-                  { label: "Exercises", value: String(finishSummary?.exercises ?? 0) },
-                ].map((item, i) => (
-                  <View
-                    key={item.label}
-                    className={`flex-1 items-center ${i > 0 ? "border-l border-surface-2 dark:border-zinc-800" : ""}`}
-                  >
-                    <Text className="font-mono-medium text-text-primary dark:text-white text-xl">
-                      {item.value}
-                    </Text>
-                    <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs uppercase tracking-widest mt-0.5">
-                      {item.label}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* PRs */}
-              {(finishSummary?.prs ?? []).length > 0 && (
-                <View className="bg-surface-2 dark:bg-zinc-800 rounded-xl px-4 py-3 mb-5">
-                  <Text className="font-mono text-crimson text-xs uppercase tracking-widest mb-2">
-                    New PRs
-                  </Text>
-                  {(finishSummary?.prs ?? []).map((name) => (
-                    <Text key={name} className="font-montserrat-semibold text-text-primary dark:text-white text-sm mb-0.5">
-                      {name}
-                    </Text>
-                  ))}
-                </View>
-              )}
-
-              <TouchableOpacity
-                onPress={() => setFinishSummary(null)}
-                className="bg-crimson dark:bg-blue-500 py-4 items-center rounded-xl"
-                activeOpacity={0.85}
-              >
-                <Text className="font-montserrat-bold text-white text-base">Done</Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </SafeAreaView>
   );
 }

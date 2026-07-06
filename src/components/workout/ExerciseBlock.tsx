@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,8 +6,10 @@ import {
   Modal,
   TextInput,
   Pressable,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { MoreHorizontal, X, FileText, PlusCircle, ArrowLeftRight, Timer, ChevronDown, ChevronUp, History, ArrowUp, ArrowDown, Link } from "lucide-react-native";
+import { MoreHorizontal, X, FileText, PlusCircle, ArrowLeftRight, ChevronDown, ChevronUp, History, ArrowUp, ArrowDown, Link } from "lucide-react-native";
 import { SetRow } from "./SetRow";
 import { ExerciseHistoryModal } from "./ExerciseHistoryModal";
 import type { ActiveExercise, ActiveSet } from "../../types/workout";
@@ -29,7 +31,6 @@ type Props = {
   onUpdateNotes: (notes: string) => void;
   onRemoveExercise: () => void;
   onSwap: () => void;
-  onTimerPress: () => void;
   onAddSuperset?: () => void;
 };
 
@@ -50,10 +51,13 @@ export function ExerciseBlock({
   onUpdateNotes,
   onRemoveExercise,
   onSwap,
-  onTimerPress,
   onAddSuperset,
 }: Props) {
   const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (reorderMode) setCollapsed(true);
+  }, [reorderMode]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -101,15 +105,7 @@ export function ExerciseBlock({
               <ArrowDown size={16} color="#64748B" />
             </TouchableOpacity>
           </View>
-        ) : (
-          <TouchableOpacity
-            onPress={onTimerPress}
-            className="w-10 h-10 bg-surface-2 dark:bg-zinc-800 items-center justify-center ml-3 rounded-xl"
-            activeOpacity={0.7}
-          >
-            <Timer size={18} color="#94A3B8" />
-          </TouchableOpacity>
-        )}
+        ) : null}
       </View>
 
       {/* ── Collapsed: set count summary ───────────── */}
@@ -135,7 +131,6 @@ export function ExerciseBlock({
             <Text className="flex-1 mx-2 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Previous</Text>
             <Text className="w-14 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Lbs</Text>
             <Text className="w-12 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Reps</Text>
-            <Text className="w-10 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">RPE</Text>
             <View className="w-8 items-center">
               <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">✓</Text>
             </View>
@@ -246,32 +241,40 @@ export function ExerciseBlock({
 
       {/* ── Notes modal ──────────────────────────────────────── */}
       <Modal visible={notesOpen} transparent animationType="slide" onRequestClose={() => setNotesOpen(false)}>
-        <Pressable className="flex-1 bg-black/50 justify-end" onPress={() => setNotesOpen(false)}>
-          <Pressable>
-            <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl pb-10 px-5 pt-5">
-              <Text className="font-montserrat-bold text-text-primary dark:text-white text-base mb-3">
-                Notes — {exercise.exerciseName}
-              </Text>
-              <TextInput
-                className="bg-surface-2 dark:bg-zinc-800 text-text-primary dark:text-white font-montserrat text-base p-4 min-h-24 rounded-xl"
-                placeholder="Cues, form reminders, substitutions…"
-                placeholderTextColor="#94A3B8"
-                value={notesText}
-                onChangeText={setNotesText}
-                multiline
-                autoFocus
-              />
-              <TouchableOpacity
-                onPress={() => { onUpdateNotes(notesText); setNotesOpen(false); }}
-                className="mt-3 bg-crimson dark:bg-blue-500 py-4 items-center rounded-2xl"
-                activeOpacity={0.85}
-              >
-                <Text className="font-montserrat-bold text-white text-base">
-                  Save
+        <Pressable className="flex-1 bg-black/50" onPress={() => setNotesOpen(false)}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1, justifyContent: "flex-end" }}
+          >
+            <Pressable>
+              <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl pb-10 px-5 pt-5">
+                <Text className="font-montserrat-bold text-text-primary dark:text-white text-base mb-3">
+                  Notes — {exercise.exerciseName}
                 </Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
+                <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-xs mb-3">
+                  Saved to this exercise for all future workouts
+                </Text>
+                <TextInput
+                  className="bg-surface-2 dark:bg-zinc-800 text-text-primary dark:text-white font-montserrat text-base p-4 min-h-24 rounded-xl"
+                  placeholder="Cues, form reminders, substitutions…"
+                  placeholderTextColor="#94A3B8"
+                  value={notesText}
+                  onChangeText={setNotesText}
+                  multiline
+                  autoFocus
+                />
+                <TouchableOpacity
+                  onPress={() => { onUpdateNotes(notesText); setNotesOpen(false); }}
+                  className="mt-3 bg-crimson dark:bg-blue-500 py-4 items-center rounded-2xl"
+                  activeOpacity={0.85}
+                >
+                  <Text className="font-montserrat-bold text-white text-base">
+                    Save
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </KeyboardAvoidingView>
         </Pressable>
       </Modal>
     </View>

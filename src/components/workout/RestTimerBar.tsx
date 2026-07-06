@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity } from "react-native";
-import { X } from "lucide-react-native";
+import { X, Timer } from "lucide-react-native";
 import type { useRestTimer } from "../../hooks/useRestTimer";
 
 type RestTimer = ReturnType<typeof useRestTimer>;
@@ -8,8 +8,32 @@ type Props = {
   timer: RestTimer;
 };
 
+function formatSeconds(s: number): string {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  if (m > 0 && sec > 0) return `${m}m ${sec}s`;
+  if (m > 0) return `${m}m`;
+  return `${sec}s`;
+}
+
 export function RestTimerBar({ timer }: Props) {
-  if (!timer.isRunning) return null;
+  if (!timer.isRunning) {
+    return (
+      <TouchableOpacity
+        onPress={() => timer.start()}
+        activeOpacity={0.7}
+        className="flex-row items-center gap-2 px-5 py-3 border-t border-surface-2 dark:border-zinc-800 bg-surface dark:bg-zinc-900"
+      >
+        <Timer size={15} color="#64748B" />
+        <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">
+          Rest Timer
+        </Text>
+        <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm ml-1">
+          {formatSeconds(timer.totalSeconds)}
+        </Text>
+      </TouchableOpacity>
+    );
+  }
 
   const progress = timer.remaining / timer.totalSeconds;
 

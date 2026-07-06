@@ -95,7 +95,7 @@ export default function NewProgramScreen() {
     <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         {/* Header */}
         <View className="flex-row items-center gap-3 px-5 pt-5 pb-5 border-b border-surface-2 dark:border-zinc-800">

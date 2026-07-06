@@ -7,7 +7,7 @@ const PR_LABELS: Record<PRBadge, string> = { W: "WT", R: "REP", V: "VOL" };
 type Props = {
   set: ActiveSet;
   ghost?: GhostSet;
-  onUpdate: (patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe">>) => void;
+  onUpdate: (patch: Partial<Pick<ActiveSet, "weightLbs" | "reps">>) => void;
   onToggleComplete: () => void;
   onToggleWarmup: () => void;
   onRemove: () => void;
@@ -74,18 +74,6 @@ export function SetRow({ set, ghost, onUpdate, onToggleComplete, onToggleWarmup,
         value={set.reps}
         onChangeText={(v) => onUpdate({ reps: v })}
         keyboardType="number-pad"
-        selectTextOnFocus
-        editable={!completed}
-      />
-
-      {/* RPE */}
-      <TextInput
-        className={`${inputBase} w-10 mr-1.5`}
-        placeholder="rpe"
-        placeholderTextColor="#94A3B8"
-        value={set.rpe}
-        onChangeText={(v) => onUpdate({ rpe: v })}
-        keyboardType="decimal-pad"
         selectTextOnFocus
         editable={!completed}
       />

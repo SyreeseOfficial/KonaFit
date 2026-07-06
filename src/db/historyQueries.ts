@@ -37,6 +37,7 @@ export type WorkoutDetail = {
   started_at: number;
   finished_at: number;
   duration_seconds: number;
+  location: string | null;
   exercises: ExerciseRecord[];
   totalVolume: number;
 };
@@ -66,9 +67,9 @@ export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail
 
   const workout = await db.getFirstAsync<{
     id: number; name: string; started_at: number;
-    finished_at: number; duration_seconds: number;
+    finished_at: number; duration_seconds: number; location: string | null;
   }>(
-    "SELECT * FROM workouts WHERE id = ?",
+    "SELECT id, name, started_at, finished_at, duration_seconds, location FROM workouts WHERE id = ?",
     [workoutId]
   );
   if (!workout) return null;
@@ -107,6 +108,7 @@ export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail
     started_at: workout.started_at,
     finished_at: workout.finished_at,
     duration_seconds: workout.duration_seconds ?? 0,
+    location: workout.location ?? null,
     exercises,
     totalVolume,
   };

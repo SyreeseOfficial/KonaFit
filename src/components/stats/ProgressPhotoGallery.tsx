@@ -106,15 +106,22 @@ export function ProgressPhotoGallery({ refreshKey }: Props) {
           </Text>
         </View>
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-0">
-          <View className="flex-row gap-1">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View className="flex-row gap-3">
             {photos.map((photo) => (
               <TouchableOpacity key={photo.id} onPress={() => setSelected(photo)} activeOpacity={0.85}>
                 <Image
                   source={{ uri: photo.photo_uri }}
-                  className="w-24 h-24 bg-surface-2 dark:bg-zinc-800 rounded-xl"
+                  style={{ width: 96, height: 116, borderRadius: 12 }}
                   resizeMode="cover"
                 />
+                <Text
+                  className="font-mono text-text-muted dark:text-zinc-500 text-xs text-center mt-1"
+                  style={{ width: 96 }}
+                  numberOfLines={1}
+                >
+                  {formatDate(photo.taken_at)}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>

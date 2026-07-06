@@ -28,12 +28,13 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
   const { elapsed, formattedTime, isPaused, pause, resume, reset, adjustElapsed } = useWorkoutTimer(startedAt);
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [pickerDisplay, setPickerDisplay] = useState(0);
-  const pickerRef = useRef(0);
+  // Track live scroll position so "Set Time" always reads the correct value
+  const scrollYRef = useRef(0);
   const listRef = useRef<FlatList>(null);
 
   const openAdjust = useCallback(() => {
     const mins = Math.min(MAX_MINS, Math.max(0, Math.round(elapsed / 60)));
-    pickerRef.current = mins;
+    scrollYRef.current = mins * ITEM_H;
     setPickerDisplay(mins);
     setAdjustOpen(true);
     setTimeout(() => {
@@ -43,12 +44,12 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
 
   const onScrollEnd = useCallback((e: { nativeEvent: { contentOffset: { y: number } } }) => {
     const idx = Math.max(0, Math.min(MAX_MINS, Math.round(e.nativeEvent.contentOffset.y / ITEM_H)));
-    pickerRef.current = idx;
     setPickerDisplay(idx);
   }, []);
 
   const handleSetTime = useCallback(() => {
-    const targetSecs = pickerRef.current * 60;
+    const snapped = Math.max(0, Math.min(MAX_MINS, Math.round(scrollYRef.current / ITEM_H)));
+    const targetSecs = snapped * 60;
     adjustElapsed(targetSecs - elapsed);
     setAdjustOpen(false);
   }, [elapsed, adjustElapsed]);
@@ -159,6 +160,13 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
                   decelerationRate="fast"
                   showsVerticalScrollIndicator={false}
                   nestedScrollEnabled
+                  onScroll={(e) => {
+                    scrollYRef.current = e.nativeEvent.contentOffset.y;
+                    // Update display label smoothly based on nearest item
+                    const idx = Math.max(0, Math.min(MAX_MINS, Math.round(e.nativeEvent.contentOffset.y / ITEM_H)));
+                    setPickerDisplay(idx);
+                  }}
+                  scrollEventThrottle={32}
                   onMomentumScrollEnd={onScrollEnd}
                   onScrollEndDrag={onScrollEnd}
                   ListHeaderComponent={<View style={{ height: ITEM_H * SIDE_ITEMS }} />}

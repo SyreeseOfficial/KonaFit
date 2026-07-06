@@ -13,6 +13,8 @@ import {
   updateLoggedExerciseNotes,
   swapLoggedExercise,
   updateLoggedExerciseOrder,
+  getExerciseLibraryNote,
+  updateExerciseLibraryNote,
 } from "../db/workoutQueries";
 import { getProgramDayExercises } from "../db/programQueries";
 import { getHistPRs } from "../db/historyQueries";
@@ -149,9 +151,16 @@ export function useWorkoutSession() {
         orderIndex
       );
       const firstSetDbId = await createLoggedSet(dbId, 1);
-      const ghost = await getGhostSets(exerciseId, session.workoutId);
+      const [ghost, histPRs, libraryNote] = await Promise.all([
+        getGhostSets(exerciseId, session.workoutId),
+        getHistPRs(exerciseId, session.workoutId),
+        getExerciseLibraryNote(exerciseId),
+      ]);
 
-      const histPRs = await getHistPRs(exerciseId, session.workoutId);
+      if (libraryNote) {
+        updateLoggedExerciseNotes(dbId, libraryNote).catch(console.error);
+      }
+
       const newExercise: ActiveExercise = {
         localId: uid(),
         dbId,
@@ -159,7 +168,7 @@ export function useWorkoutSession() {
         exerciseName,
         muscleGroup,
         orderIndex,
-        notes: "",
+        notes: libraryNote,
         sets: [{ ...defaultSet(1), dbId: firstSetDbId }],
         ghostSets: ghost,
         histPRs,
@@ -183,8 +192,14 @@ export function useWorkoutSession() {
       const orderIndex = targetIndex + 1;
       const dbId = await createLoggedExercise(session.workoutId, exerciseId, exerciseName, orderIndex);
       const firstSetDbId = await createLoggedSet(dbId, 1);
-      const ghost = await getGhostSets(exerciseId, session.workoutId);
-      const histPRs = await getHistPRs(exerciseId, session.workoutId);
+      const [ghost, histPRs, libraryNote] = await Promise.all([
+        getGhostSets(exerciseId, session.workoutId),
+        getHistPRs(exerciseId, session.workoutId),
+        getExerciseLibraryNote(exerciseId),
+      ]);
+      if (libraryNote) {
+        updateLoggedExerciseNotes(dbId, libraryNote).catch(console.error);
+      }
       const newExercise: ActiveExercise = {
         localId: uid(),
         dbId,
@@ -193,7 +208,7 @@ export function useWorkoutSession() {
         muscleGroup,
         orderIndex,
         supersetId,
-        notes: "",
+        notes: libraryNote,
         sets: [{ ...defaultSet(1), dbId: firstSetDbId }],
         ghostSets: ghost,
         histPRs,
@@ -351,6 +366,7 @@ export function useWorkoutSession() {
         exercises: prev.exercises.map((e) => {
           if (e.localId !== exerciseLocalId) return e;
           if (e.dbId) updateLoggedExerciseNotes(e.dbId, notes).catch(console.error);
+          updateExerciseLibraryNote(e.exerciseId, notes).catch(console.error);
           return { ...e, notes };
         }),
       }));
@@ -427,10 +443,14 @@ export function useWorkoutSession() {
           const setDbId = await createLoggedSet(dbId, i);
           sets.push({ ...defaultSet(i), dbId: setDbId });
         }
-        const [ghost, histPRs] = await Promise.all([
+        const [ghost, histPRs, libraryNote] = await Promise.all([
           getGhostSets(pe.exerciseId, workoutId),
           getHistPRs(pe.exerciseId, workoutId),
+          getExerciseLibraryNote(pe.exerciseId),
         ]);
+        if (libraryNote) {
+          updateLoggedExerciseNotes(dbId, libraryNote).catch(console.error);
+        }
         return {
           localId: uid(),
           dbId,
@@ -438,7 +458,7 @@ export function useWorkoutSession() {
           exerciseName: pe.exerciseName,
           muscleGroup: pe.muscleGroup,
           orderIndex,
-          notes: "",
+          notes: libraryNote,
           sets,
           ghostSets: ghost,
           histPRs,

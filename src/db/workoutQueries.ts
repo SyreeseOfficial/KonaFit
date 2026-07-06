@@ -258,3 +258,17 @@ export async function deleteExercise(id: number): Promise<void> {
   // ponytail: soft-delete keeps FK refs in logged_exercises intact
   await db.runAsync("UPDATE exercises SET is_deleted = 1 WHERE id = ?", [id]);
 }
+
+export async function getExerciseLibraryNote(exerciseId: number): Promise<string> {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ notes: string | null }>(
+    "SELECT notes FROM exercises WHERE id = ?",
+    [exerciseId]
+  );
+  return row?.notes ?? "";
+}
+
+export async function updateExerciseLibraryNote(exerciseId: number, notes: string): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("UPDATE exercises SET notes = ? WHERE id = ?", [notes, exerciseId]);
+}
