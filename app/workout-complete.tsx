@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { CheckCircle, MapPin, Clock, Dumbbell, Zap, TrendingUp } from "lucide-react-native";
 import { getWorkoutDetail, type WorkoutDetail } from "../src/db/historyQueries";
+import { createProgramFromWorkout } from "../src/db/programQueries";
 import { formatDuration, formatShortDate, formatVolume } from "../src/utils/exportUtils";
 import { kvStore } from "../src/utils/kvStore";
 
@@ -51,6 +52,14 @@ export default function WorkoutCompleteScreen() {
   const handleViewHistory = () => {
     router.replace(`/workout/${workoutId}` as never);
   };
+
+  const handleSaveAsProgram = useCallback(async () => {
+    if (!workout) return;
+    const name = `Program · ${formatShortDate(workout.started_at)}`;
+    const programId = await createProgramFromWorkout(workoutId, name);
+    router.dismissAll();
+    router.push(`/programs/${programId}` as never);
+  }, [workout, workoutId]);
 
   return (
     <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">
@@ -183,15 +192,26 @@ export default function WorkoutCompleteScreen() {
         >
           <Text className="font-montserrat-bold text-white text-base">Done</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleViewHistory}
-          className="py-3 items-center"
-          activeOpacity={0.7}
-        >
-          <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">
-            View in History
-          </Text>
-        </TouchableOpacity>
+        <View className="flex-row gap-3">
+          <TouchableOpacity
+            onPress={handleViewHistory}
+            className="flex-1 py-3 items-center"
+            activeOpacity={0.7}
+          >
+            <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">
+              View History
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleSaveAsProgram}
+            className="flex-1 py-3 items-center"
+            activeOpacity={0.7}
+          >
+            <Text className="font-montserrat-semibold text-crimson dark:text-blue-400 text-sm">
+              Save as Program
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );

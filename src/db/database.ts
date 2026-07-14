@@ -151,6 +151,7 @@ export async function initializeDatabase(): Promise<void> {
     `ALTER TABLE goals ADD COLUMN target_reps INTEGER`,
     `ALTER TABLE exercises ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE exercises ADD COLUMN notes TEXT`,
+    `ALTER TABLE workouts ADD COLUMN program_day_id INTEGER REFERENCES program_days(id) ON DELETE SET NULL`,
     // Backfill: mark sets with data as completed for workouts already finished
     `UPDATE logged_sets SET is_completed = 1
      WHERE is_completed = 0

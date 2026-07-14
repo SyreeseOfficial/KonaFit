@@ -30,6 +30,7 @@ import {
   updateProgram,
   deleteProgram,
   cloneProgram,
+  getLastUsedDatesByDay,
 } from "../../src/db/programQueries";
 import { AddExerciseSheet } from "../../src/components/workout/AddExerciseSheet";
 import { ExerciseTargetModal } from "../../src/components/programs/ExerciseTargetModal";
@@ -38,11 +39,21 @@ import type { Exercise } from "../../src/types/workout";
 
 const DAY_NAMES = ["Day A", "Day B", "Day C", "Day D", "Day E", "Day F"];
 
+function lastDoneLabel(ts: number): string {
+  const days = Math.floor((Date.now() / 1000 - ts) / 86400);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
 export default function ProgramDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const programId = parseInt(id, 10);
 
   const [program, setProgram] = useState<Program | null>(null);
+  const [lastUsedDates, setLastUsedDates] = useState<Record<number, number>>({});
   const [addExerciseDayId, setAddExerciseDayId] = useState<number | null>(null);
   const [editExercise, setEditExercise] = useState<ProgramExercise | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -50,8 +61,12 @@ export default function ProgramDetailScreen() {
   const [nameInput, setNameInput] = useState("");
 
   const load = useCallback(async () => {
-    const data = await getProgramWithDays(programId);
+    const [data, dates] = await Promise.all([
+      getProgramWithDays(programId),
+      getLastUsedDatesByDay(programId),
+    ]);
     setProgram(data);
+    setLastUsedDates(dates);
   }, [programId]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -188,9 +203,16 @@ export default function ProgramDetailScreen() {
           <View key={day.id} className="bg-surface dark:bg-zinc-900 rounded-2xl overflow-hidden">
             {/* Day header */}
             <View className="flex-row items-center justify-between px-5 py-4 border-b border-surface-2 dark:border-zinc-800">
-              <Text className="font-montserrat-bold text-text-primary dark:text-white text-base">
-                {day.name}
-              </Text>
+              <View>
+                <Text className="font-montserrat-bold text-text-primary dark:text-white text-base">
+                  {day.name}
+                </Text>
+                {lastUsedDates[day.id] != null && (
+                  <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs mt-0.5">
+                    {lastDoneLabel(lastUsedDates[day.id])}
+                  </Text>
+                )}
+              </View>
               <View className="flex-row items-center gap-3">
                 <TouchableOpacity
                   onPress={() => handleLaunch(day)}

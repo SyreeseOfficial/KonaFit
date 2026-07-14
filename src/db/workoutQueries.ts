@@ -1,10 +1,11 @@
 import { getDatabase } from "./database";
 import type { ActiveSet, Exercise, GhostSet } from "../types/workout";
 
-export async function createWorkout(): Promise<number> {
+export async function createWorkout(programDayId?: number): Promise<number> {
   const db = await getDatabase();
   const result = await db.runAsync(
-    "INSERT INTO workouts (name, started_at) VALUES ('Workout', unixepoch())"
+    "INSERT INTO workouts (name, started_at, program_day_id) VALUES ('Workout', unixepoch(), ?)",
+    [programDayId ?? null]
   );
   return result.lastInsertRowId;
 }

@@ -25,6 +25,7 @@ import {
   updateWorkoutDateTime,
   addExerciseToHistory,
 } from "../../src/db/historyQueries";
+import { deleteWorkout } from "../../src/db/workoutQueries";
 import {
   formatDate,
   formatDuration,
@@ -158,6 +159,20 @@ export default function WorkoutDetailScreen() {
     reload();
   }, [workout, reload]);
 
+  const handleDelete = useCallback(() => {
+    if (!workout) return;
+    Alert.alert("Delete Workout", "Permanently delete this workout? This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete", style: "destructive",
+        onPress: async () => {
+          await deleteWorkout(workout.id);
+          router.back();
+        },
+      },
+    ]);
+  }, [workout]);
+
   const handleShareMarkdown = useCallback(async () => {
     if (!workout) return;
     setSharing(true);
@@ -249,6 +264,9 @@ export default function WorkoutDetailScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setCardVisible(true)} hitSlop={8} activeOpacity={0.7}>
                   <Camera size={20} color="#94A3B8" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleDelete} hitSlop={8} activeOpacity={0.7}>
+                  <Trash2 size={18} color="#EF4444" />
                 </TouchableOpacity>
               </>
             )}
