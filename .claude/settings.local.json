@@ -29,7 +29,8 @@
       "Read(//opt/**)",
       "Bash(adb devices *)",
       "Bash(npx eas *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Skill(claude-api)"
     ]
   }
 }
