@@ -150,7 +150,6 @@ export function useWorkoutSession() {
         exerciseName,
         orderIndex
       );
-      const firstSetDbId = await createLoggedSet(dbId, 1);
       const [ghost, histPRs, libraryNote] = await Promise.all([
         getGhostSets(exerciseId, session.workoutId),
         getHistPRs(exerciseId, session.workoutId),
@@ -161,6 +160,20 @@ export function useWorkoutSession() {
         updateLoggedExerciseNotes(dbId, libraryNote).catch(console.error);
       }
 
+      const setCount = ghost.length > 0 ? ghost.length : 1;
+      const sets: ActiveSet[] = [];
+      for (let i = 1; i <= setCount; i++) {
+        const setDbId = await createLoggedSet(dbId, i);
+        const g = ghost.find((gs) => gs.setNumber === i);
+        sets.push({
+          ...defaultSet(i),
+          dbId: setDbId,
+          ...(g?.weightLbs != null && g?.reps != null
+            ? { weightLbs: String(g.weightLbs), reps: String(g.reps), isGhostFilled: true }
+            : {}),
+        });
+      }
+
       const newExercise: ActiveExercise = {
         localId: uid(),
         dbId,
@@ -169,7 +182,7 @@ export function useWorkoutSession() {
         muscleGroup,
         orderIndex,
         notes: libraryNote,
-        sets: [{ ...defaultSet(1), dbId: firstSetDbId }],
+        sets,
         ghostSets: ghost,
         histPRs,
       };
@@ -191,7 +204,6 @@ export function useWorkoutSession() {
       const targetIndex = session.exercises.findIndex((e) => e.localId === targetLocalId);
       const orderIndex = targetIndex + 1;
       const dbId = await createLoggedExercise(session.workoutId, exerciseId, exerciseName, orderIndex);
-      const firstSetDbId = await createLoggedSet(dbId, 1);
       const [ghost, histPRs, libraryNote] = await Promise.all([
         getGhostSets(exerciseId, session.workoutId),
         getHistPRs(exerciseId, session.workoutId),
@@ -199,6 +211,19 @@ export function useWorkoutSession() {
       ]);
       if (libraryNote) {
         updateLoggedExerciseNotes(dbId, libraryNote).catch(console.error);
+      }
+      const setCount = ghost.length > 0 ? ghost.length : 1;
+      const sets: ActiveSet[] = [];
+      for (let i = 1; i <= setCount; i++) {
+        const setDbId = await createLoggedSet(dbId, i);
+        const g = ghost.find((gs) => gs.setNumber === i);
+        sets.push({
+          ...defaultSet(i),
+          dbId: setDbId,
+          ...(g?.weightLbs != null && g?.reps != null
+            ? { weightLbs: String(g.weightLbs), reps: String(g.reps), isGhostFilled: true }
+            : {}),
+        });
       }
       const newExercise: ActiveExercise = {
         localId: uid(),
@@ -209,7 +234,7 @@ export function useWorkoutSession() {
         orderIndex,
         supersetId,
         notes: libraryNote,
-        sets: [{ ...defaultSet(1), dbId: firstSetDbId }],
+        sets,
         ghostSets: ghost,
         histPRs,
       };
@@ -233,7 +258,7 @@ export function useWorkoutSession() {
       // Copy lbs/reps/rpe from the last set so the user doesn't retype them
       const lastSet = exercise.sets[exercise.sets.length - 1];
       const prefill = lastSet
-        ? { weightLbs: lastSet.weightLbs, reps: lastSet.reps, rpe: lastSet.rpe }
+        ? { weightLbs: lastSet.weightLbs, reps: lastSet.reps, rpe: lastSet.rpe, isGhostFilled: false }
         : {};
       updateSession((prev) => ({
         ...prev,
@@ -285,7 +310,8 @@ export function useWorkoutSession() {
             ...e,
             sets: e.sets.map((s) => {
               if (s.localId !== setLocalId) return s;
-              const updated = { ...s, ...patch };
+              const isEditingValue = "weightLbs" in patch || "reps" in patch;
+              const updated = { ...s, ...patch, ...(isEditingValue ? { isGhostFilled: false } : {}) };
               if (e.dbId) {
                 upsertLoggedSet({ ...updated, loggedExerciseId: e.dbId }).catch(
                   console.error
@@ -320,7 +346,7 @@ export function useWorkoutSession() {
                 prBadges = computePRBadges(e, s.localId, weight, reps, e.histPRs);
               }
 
-              const updated = { ...s, isCompleted: nowComplete, prBadges: nowComplete ? prBadges : undefined };
+              const updated = { ...s, isCompleted: nowComplete, isGhostFilled: false, prBadges: nowComplete ? prBadges : undefined };
               if (e.dbId) {
                 upsertLoggedSet({ ...updated, loggedExerciseId: e.dbId }).catch(console.error);
               }
@@ -430,19 +456,13 @@ export function useWorkoutSession() {
 
   const launchFromProgramDay = useCallback(async (programDayId: number) => {
     const programExercises = await getProgramDayExercises(programDayId);
-    const workoutId = await createWorkout();
+    const workoutId = await createWorkout(programDayId);
 
     const exercises: ActiveExercise[] = await Promise.all(
       programExercises.map(async (pe, orderIndex) => {
         const dbId = await createLoggedExercise(
           workoutId, pe.exerciseId, pe.exerciseName, orderIndex
         );
-        const setCount = pe.targetSets ?? 3;
-        const sets: ActiveSet[] = [];
-        for (let i = 1; i <= setCount; i++) {
-          const setDbId = await createLoggedSet(dbId, i);
-          sets.push({ ...defaultSet(i), dbId: setDbId });
-        }
         const [ghost, histPRs, libraryNote] = await Promise.all([
           getGhostSets(pe.exerciseId, workoutId),
           getHistPRs(pe.exerciseId, workoutId),
@@ -450,6 +470,19 @@ export function useWorkoutSession() {
         ]);
         if (libraryNote) {
           updateLoggedExerciseNotes(dbId, libraryNote).catch(console.error);
+        }
+        const setCount = ghost.length > 0 ? ghost.length : (pe.targetSets ?? 3);
+        const sets: ActiveSet[] = [];
+        for (let i = 1; i <= setCount; i++) {
+          const setDbId = await createLoggedSet(dbId, i);
+          const g = ghost.find((gs) => gs.setNumber === i);
+          sets.push({
+            ...defaultSet(i),
+            dbId: setDbId,
+            ...(g?.weightLbs != null && g?.reps != null
+              ? { weightLbs: String(g.weightLbs), reps: String(g.reps), isGhostFilled: true }
+              : {}),
+          });
         }
         return {
           localId: uid(),

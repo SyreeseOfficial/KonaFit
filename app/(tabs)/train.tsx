@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import * as Haptics from "expo-haptics";
 import {
   View,
   Text,
@@ -201,7 +202,8 @@ export default function TrainScreen() {
 
   const handleSetComplete = useCallback(
     (exerciseLocalId: string, setLocalId: string) => {
-      toggleSetComplete(exerciseLocalId, setLocalId);
+      const completed = toggleSetComplete(exerciseLocalId, setLocalId);
+      if (completed) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
     [toggleSetComplete]
   );

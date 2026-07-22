@@ -16,6 +16,7 @@ export type ActiveSet = {
   isWarmup: boolean;
   isCompleted: boolean;
   prBadges?: PRBadge[];
+  isGhostFilled?: boolean;
 };
 
 export type HistPRs = {

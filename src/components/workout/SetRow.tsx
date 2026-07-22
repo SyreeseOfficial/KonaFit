@@ -16,12 +16,13 @@ type Props = {
 export function SetRow({ set, ghost, onUpdate, onToggleComplete, onToggleWarmup, onRemove }: Props) {
   const completed = set.isCompleted;
 
-  const previousText =
-    ghost?.weightLbs != null && ghost?.reps != null
-      ? `${ghost.weightLbs} × ${ghost.reps}`
-      : ghost?.weightLbs != null
-      ? `${ghost.weightLbs} lb`
-      : "—";
+  const previousText = set.isGhostFilled
+    ? "—"
+    : ghost?.weightLbs != null && ghost?.reps != null
+    ? `${ghost.weightLbs} × ${ghost.reps}`
+    : ghost?.weightLbs != null
+    ? `${ghost.weightLbs} lb`
+    : "—";
 
   const inputBase = "h-10 bg-surface-2 dark:bg-zinc-800 text-center font-mono text-text-primary dark:text-white text-sm rounded-lg";
 
@@ -57,25 +58,27 @@ export function SetRow({ set, ghost, onUpdate, onToggleComplete, onToggleWarmup,
       {/* Lbs */}
       <TextInput
         className={`${inputBase} w-14 mr-1.5`}
-        placeholder={ghost?.weightLbs != null ? String(ghost.weightLbs) : "lbs"}
+        placeholder="lbs"
         placeholderTextColor="#94A3B8"
         value={set.weightLbs}
         onChangeText={(v) => onUpdate({ weightLbs: v })}
         keyboardType="decimal-pad"
         selectTextOnFocus
         editable={!completed}
+        style={set.isGhostFilled ? { opacity: 0.45 } : undefined}
       />
 
       {/* Reps */}
       <TextInput
         className={`${inputBase} w-12 mr-1.5`}
-        placeholder={ghost?.reps != null ? String(ghost.reps) : "reps"}
+        placeholder="reps"
         placeholderTextColor="#94A3B8"
         value={set.reps}
         onChangeText={(v) => onUpdate({ reps: v })}
         keyboardType="number-pad"
         selectTextOnFocus
         editable={!completed}
+        style={set.isGhostFilled ? { opacity: 0.45 } : undefined}
       />
 
       {/* Complete */}

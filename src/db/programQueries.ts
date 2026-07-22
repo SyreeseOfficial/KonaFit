@@ -291,6 +291,57 @@ export async function updateProgramExercise(
   await db.runAsync(`UPDATE program_exercises SET ${sets.join(", ")} WHERE id = ?`, args);
 }
 
+export async function createProgramFromWorkout(
+  workoutId: number,
+  programName: string
+): Promise<number> {
+  const db = await getDatabase();
+  const progResult = await db.runAsync(
+    "INSERT INTO programs (name) VALUES (?)",
+    [programName.trim()]
+  );
+  const programId = progResult.lastInsertRowId;
+
+  const dayResult = await db.runAsync(
+    "INSERT INTO program_days (program_id, name, order_index) VALUES (?, 'Day A', 0)",
+    [programId]
+  );
+  const dayId = dayResult.lastInsertRowId;
+
+  await db.runAsync(
+    `INSERT INTO program_exercises (program_day_id, exercise_id, exercise_name, order_index, target_sets)
+     SELECT
+       ? as program_day_id,
+       le.exercise_id,
+       le.exercise_name,
+       le.order_index,
+       COUNT(CASE WHEN ls.is_completed = 1 AND ls.is_warmup = 0 THEN 1 END) as target_sets
+     FROM logged_exercises le
+     LEFT JOIN logged_sets ls ON ls.logged_exercise_id = le.id
+     WHERE le.workout_id = ?
+     GROUP BY le.id
+     ORDER BY le.order_index`,
+    [dayId, workoutId]
+  );
+
+  return programId;
+}
+
+export async function getLastUsedDatesByDay(
+  programId: number
+): Promise<Record<number, number>> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{ day_id: number; last_used: number }>(
+    `SELECT pd.id as day_id, MAX(w.started_at) as last_used
+     FROM program_days pd
+     JOIN workouts w ON w.program_day_id = pd.id AND w.finished_at IS NOT NULL
+     WHERE pd.program_id = ?
+     GROUP BY pd.id`,
+    [programId]
+  );
+  return Object.fromEntries(rows.map((r) => [r.day_id, r.last_used]));
+}
+
 export async function deleteProgramExercise(id: number): Promise<void> {
   const db = await getDatabase();
   await db.runAsync("DELETE FROM program_exercises WHERE id = ?", [id]);
