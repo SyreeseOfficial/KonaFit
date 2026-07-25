@@ -1,8 +1,24 @@
-import { View, Text, TextInput, TouchableOpacity } from "react-native";
+import { useState, useRef, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, Animated } from "react-native";
 import { Check } from "lucide-react-native";
+import * as Haptics from "expo-haptics";
 import type { ActiveSet, GhostSet, PRBadge } from "../../types/workout";
 
 const PR_LABELS: Record<PRBadge, string> = { W: "WT", R: "REP", V: "VOL" };
+
+function PRBadgeChip({ badge }: { badge: PRBadge }) {
+  const scale = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(scale, { toValue: 1, bounciness: 12, useNativeDriver: true }).start();
+  }, []);
+  return (
+    <Animated.View style={{ transform: [{ scale }] }} className="bg-amber-500 px-1 py-0.5 rounded">
+      <Text className="font-mono text-white" style={{ fontSize: 8, lineHeight: 10 }}>
+        {PR_LABELS[badge]}
+      </Text>
+    </Animated.View>
+  );
+}
 
 type Props = {
   set: ActiveSet;
@@ -15,6 +31,7 @@ type Props = {
 
 export function SetRow({ set, ghost, onUpdate, onToggleComplete, onToggleWarmup, onRemove }: Props) {
   const completed = set.isCompleted;
+  const [focused, setFocused] = useState<"weight" | "reps" | null>(null);
 
   const previousText = set.isGhostFilled
     ? "—"
@@ -25,6 +42,7 @@ export function SetRow({ set, ghost, onUpdate, onToggleComplete, onToggleWarmup,
     : "—";
 
   const inputBase = "h-10 bg-surface-2 dark:bg-zinc-800 text-center font-mono text-text-primary dark:text-white text-sm rounded-lg";
+  const focusBorder = { borderWidth: 1, borderColor: "#2563EB" };
 
   return (
     <View
@@ -36,8 +54,7 @@ export function SetRow({ set, ghost, onUpdate, onToggleComplete, onToggleWarmup,
       <TouchableOpacity
         onPress={onToggleWarmup}
         onLongPress={onRemove}
-        hitSlop={6}
-        className="w-6 items-center"
+        className="w-10 h-10 items-center justify-center"
       >
         <Text
           className={`font-mono-medium text-sm ${
@@ -65,7 +82,9 @@ export function SetRow({ set, ghost, onUpdate, onToggleComplete, onToggleWarmup,
         keyboardType="decimal-pad"
         selectTextOnFocus
         editable={!completed}
-        style={set.isGhostFilled ? { opacity: 0.45 } : undefined}
+        onFocus={() => setFocused("weight")}
+        onBlur={() => setFocused(null)}
+        style={[set.isGhostFilled ? { opacity: 0.45 } : undefined, focused === "weight" ? focusBorder : undefined]}
       />
 
       {/* Reps */}
@@ -78,12 +97,14 @@ export function SetRow({ set, ghost, onUpdate, onToggleComplete, onToggleWarmup,
         keyboardType="number-pad"
         selectTextOnFocus
         editable={!completed}
-        style={set.isGhostFilled ? { opacity: 0.45 } : undefined}
+        onFocus={() => setFocused("reps")}
+        onBlur={() => setFocused(null)}
+        style={[set.isGhostFilled ? { opacity: 0.45 } : undefined, focused === "reps" ? focusBorder : undefined]}
       />
 
       {/* Complete */}
       <TouchableOpacity
-        onPress={onToggleComplete}
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onToggleComplete(); }}
         className={`w-8 h-8 items-center justify-center rounded-full ${
           completed ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"
         }`}
@@ -100,11 +121,7 @@ export function SetRow({ set, ghost, onUpdate, onToggleComplete, onToggleWarmup,
       {set.prBadges && set.prBadges.length > 0 && (
         <View className="flex-row gap-0.5 ml-1.5">
           {set.prBadges.map((badge) => (
-            <View key={badge} className="bg-amber-500 px-1 py-0.5 rounded">
-              <Text className="font-mono text-white" style={{ fontSize: 8, lineHeight: 10 }}>
-                {PR_LABELS[badge]}
-              </Text>
-            </View>
+            <PRBadgeChip key={badge} badge={badge} />
           ))}
         </View>
       )}

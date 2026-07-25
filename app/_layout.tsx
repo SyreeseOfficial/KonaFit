@@ -14,8 +14,12 @@ import {
   JetBrainsMono_500Medium,
 } from "@expo-google-fonts/jetbrains-mono";
 import { initializeDatabase } from "../src/db/database";
-import { View } from "react-native";
+import { Platform, UIManager, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+
+if (Platform.OS === "android") {
+  UIManager.setLayoutAnimationEnabledExperimental?.(true);
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({

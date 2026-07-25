@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { useRef, useEffect } from "react";
+import { View, Text, TouchableOpacity, Animated } from "react-native";
 import { X, Timer } from "lucide-react-native";
 import type { useRestTimer } from "../../hooks/useRestTimer";
 
@@ -17,6 +18,13 @@ function formatSeconds(s: number): string {
 }
 
 export function RestTimerBar({ timer }: Props) {
+  const progress = timer.isRunning ? timer.remaining / timer.totalSeconds : 1;
+  const anim = useRef(new Animated.Value(progress)).current;
+
+  useEffect(() => {
+    Animated.timing(anim, { toValue: progress, duration: 900, useNativeDriver: false }).start();
+  }, [progress]);
+
   if (!timer.isRunning) {
     return (
       <TouchableOpacity
@@ -35,15 +43,13 @@ export function RestTimerBar({ timer }: Props) {
     );
   }
 
-  const progress = timer.remaining / timer.totalSeconds;
-
   return (
     <View className="bg-surface dark:bg-zinc-900 border-t border-surface-2 dark:border-zinc-800">
       {/* Progress bar */}
-      <View className="h-1 bg-surface-2 dark:bg-zinc-800">
-        <View
-          className="h-1 bg-crimson dark:bg-blue-500"
-          style={{ width: `${progress * 100}%` }}
+      <View className="h-1.5 bg-surface-2 dark:bg-zinc-800">
+        <Animated.View
+          className="h-1.5 bg-crimson dark:bg-blue-500"
+          style={{ width: anim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }) }}
         />
       </View>
 

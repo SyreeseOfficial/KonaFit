@@ -114,14 +114,16 @@ export default function StatsScreen() {
         </View>
 
         {/* Stats Grid */}
-        <StatsGrid
-          totalLiftedLbs={stats?.totalLiftedLbs ?? 0}
-          workoutCount={stats?.workoutCount ?? 0}
-          streak={stats?.streak ?? 0}
-          bodyweightLbs={stats?.bodyweightLbs ?? null}
-          totalHours={stats?.totalHours ?? 0}
-          prCount={stats?.prCount ?? 0}
-        />
+        {stats && (
+          <StatsGrid
+            totalLiftedLbs={stats.totalLiftedLbs}
+            workoutCount={stats.workoutCount}
+            streak={stats.streak}
+            bodyweightLbs={stats.bodyweightLbs}
+            totalHours={stats.totalHours}
+            prCount={stats.prCount}
+          />
+        )}
 
         <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
           <SectionHeader title="Lifestyle" subtitle="Daily tracking" />

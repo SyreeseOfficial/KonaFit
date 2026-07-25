@@ -8,7 +8,9 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
+  LayoutAnimation,
 } from "react-native";
+import * as Haptics from "expo-haptics";
 import { MoreHorizontal, X, FileText, PlusCircle, ArrowLeftRight, ChevronDown, ChevronUp, History, ArrowUp, ArrowDown, Link } from "lucide-react-native";
 import { SetRow } from "./SetRow";
 import { ExerciseHistoryModal } from "./ExerciseHistoryModal";
@@ -56,7 +58,10 @@ export function ExerciseBlock({
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    if (reorderMode) setCollapsed(true);
+    if (reorderMode) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setCollapsed(true);
+    }
   }, [reorderMode]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -71,7 +76,7 @@ export function ExerciseBlock({
       {/* ── Exercise header ───────────── */}
       <View className="flex-row items-center justify-between px-4 pt-4 pb-3">
         <TouchableOpacity
-          onPress={() => !reorderMode && setCollapsed((c) => !c)}
+          onPress={() => { if (!reorderMode) { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setCollapsed((c) => !c); } }}
           className="flex-1 flex-row items-center gap-2"
           activeOpacity={reorderMode ? 1 : 0.7}
         >
@@ -127,7 +132,7 @@ export function ExerciseBlock({
         <>
           {/* Column headers */}
           <View className="flex-row items-center px-3 pt-1 pb-2">
-            <Text className="w-6 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Set</Text>
+            <Text className="w-10 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Set</Text>
             <Text className="flex-1 mx-2 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Previous</Text>
             <Text className="w-14 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Lbs</Text>
             <Text className="w-12 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Reps</Text>
@@ -182,7 +187,7 @@ export function ExerciseBlock({
 
             <View className="flex-1" />
 
-            <TouchableOpacity onPress={() => setMenuOpen(true)} hitSlop={8} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => setMenuOpen(true)} className="w-10 h-10 items-center justify-center" activeOpacity={0.7}>
               <MoreHorizontal size={18} color="#94A3B8" />
             </TouchableOpacity>
           </View>
@@ -228,9 +233,9 @@ export function ExerciseBlock({
                 </TouchableOpacity>
               )}
               <TouchableOpacity
-                onPress={() => { setMenuOpen(false); onRemoveExercise(); }}
+                onPress={() => { setMenuOpen(false); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); onRemoveExercise(); }}
                 className="px-5 py-4"
-                activeOpacity={0.7}
+                activeOpacity={0.5}
               >
                 <Text className="font-montserrat-semibold text-rose-500 text-base">Remove Exercise</Text>
               </TouchableOpacity>
@@ -264,7 +269,7 @@ export function ExerciseBlock({
                   autoFocus
                 />
                 <TouchableOpacity
-                  onPress={() => { onUpdateNotes(notesText); setNotesOpen(false); }}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onUpdateNotes(notesText); setNotesOpen(false); }}
                   className="mt-3 bg-crimson dark:bg-blue-500 py-4 items-center rounded-2xl"
                   activeOpacity={0.85}
                 >

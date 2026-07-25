@@ -10,6 +10,7 @@ import { formatDuration, formatShortDate, formatVolume } from "../src/utils/expo
 export default function HistoryScreen() {
   const [workouts, setWorkouts] = useState<WorkoutSummary[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const handleDelete = useCallback((w: WorkoutSummary) => {
     Alert.alert(
@@ -35,6 +36,7 @@ export default function HistoryScreen() {
       setWorkouts(await getWorkoutHistory(500));
     } finally {
       setRefreshing(false);
+      setLoading(false);
     }
   }, []);
 
@@ -52,7 +54,7 @@ export default function HistoryScreen() {
           </Text>
           {workouts.length > 0 && (
             <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5">
-              {workouts.length} workouts
+              {workouts.length} workouts · long-press to delete
             </Text>
           )}
         </View>
@@ -71,11 +73,13 @@ export default function HistoryScreen() {
         }
         contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 20, paddingTop: 12, gap: 8 }}
         ListEmptyComponent={
-          <View className="flex-1 items-center justify-center pt-20">
-            <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-base">
-              No workouts yet
-            </Text>
-          </View>
+          loading ? null : (
+            <View className="flex-1 items-center justify-center pt-20">
+              <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-base">
+                No workouts yet
+              </Text>
+            </View>
+          )
         }
         renderItem={({ item: w }) => (
           <TouchableOpacity
