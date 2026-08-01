@@ -30,7 +30,8 @@
       "Bash(adb devices *)",
       "Bash(npx eas *)",
       "Bash(git *)",
-      "Skill(claude-api)"
+      "Skill(claude-api)",
+      "Bash(grep -E \"\\(package\\\\.json|tsconfig|\\\\.tsx$|\\\\.ts$\\)\")"
     ]
   }
 }
