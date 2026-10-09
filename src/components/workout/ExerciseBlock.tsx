@@ -10,7 +10,7 @@ import {
   Platform,
   LayoutAnimation,
 } from "react-native";
-import * as Haptics from "expo-haptics";
+import { haptics } from "../../utils/haptics";
 import { MoreHorizontal, X, FileText, PlusCircle, ArrowLeftRight, ChevronDown, ChevronUp, History, ArrowUp, ArrowDown, Link } from "lucide-react-native";
 import { SetRow } from "./SetRow";
 import { ExerciseHistoryModal } from "./ExerciseHistoryModal";
@@ -28,6 +28,8 @@ type Props = {
   onAddSet: () => void;
   onRemoveSet: (setLocalId: string) => void;
   onUpdateSet: (setLocalId: string, patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe">>) => void;
+  onCopyLastToAll: () => void;
+  onCommitSetEdit: (setLocalId: string) => void;
   onToggleComplete: (setLocalId: string) => void;
   onToggleWarmup: (setLocalId: string) => void;
   onUpdateNotes: (notes: string) => void;
@@ -48,6 +50,8 @@ export function ExerciseBlock({
   onAddSet,
   onRemoveSet,
   onUpdateSet,
+  onCopyLastToAll,
+  onCommitSetEdit,
   onToggleComplete,
   onToggleWarmup,
   onUpdateNotes,
@@ -132,22 +136,24 @@ export function ExerciseBlock({
         <>
           {/* Column headers */}
           <View className="flex-row items-center px-3 pt-1 pb-2">
-            <Text className="w-10 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Set</Text>
+            <Text className="w-12 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Set</Text>
             <Text className="flex-1 mx-2 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Previous</Text>
             <Text className="w-14 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Lbs</Text>
             <Text className="w-12 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Reps</Text>
-            <View className="w-8 items-center">
+            <View className="w-12 items-center">
               <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">✓</Text>
             </View>
           </View>
 
           {/* Sets */}
-          {exercise.sets.map((set) => (
+          {exercise.sets.map((set, i) => (
             <SetRow
               key={set.localId}
               set={set}
+              prevSet={exercise.sets[i - 1]}
               ghost={exercise.ghostSets.find((g) => g.setNumber === set.setNumber)}
               onUpdate={(patch) => onUpdateSet(set.localId, patch)}
+              onCommitEdit={() => onCommitSetEdit(set.localId)}
               onToggleComplete={() => onToggleComplete(set.localId)}
               onToggleWarmup={() => onToggleWarmup(set.localId)}
               onRemove={() => onRemoveSet(set.localId)}
@@ -222,6 +228,13 @@ export function ExerciseBlock({
               >
                 <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Edit Notes</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => { setMenuOpen(false); onCopyLastToAll(); }}
+                className="px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
+                activeOpacity={0.7}
+              >
+                <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Copy last set to all</Text>
+              </TouchableOpacity>
               {onAddSuperset && (
                 <TouchableOpacity
                   onPress={() => { setMenuOpen(false); onAddSuperset(); }}
@@ -233,7 +246,7 @@ export function ExerciseBlock({
                 </TouchableOpacity>
               )}
               <TouchableOpacity
-                onPress={() => { setMenuOpen(false); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); onRemoveExercise(); }}
+                onPress={() => { setMenuOpen(false); haptics.warn(); onRemoveExercise(); }}
                 className="px-5 py-4"
                 activeOpacity={0.5}
               >
@@ -269,7 +282,7 @@ export function ExerciseBlock({
                   autoFocus
                 />
                 <TouchableOpacity
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onUpdateNotes(notesText); setNotesOpen(false); }}
+                  onPress={() => { haptics.tap(); onUpdateNotes(notesText); setNotesOpen(false); }}
                   className="mt-3 bg-crimson dark:bg-blue-500 py-4 items-center rounded-2xl"
                   activeOpacity={0.85}
                 >

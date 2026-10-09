@@ -17,6 +17,34 @@ function formatSeconds(s: number): string {
   return `${sec}s`;
 }
 
+const PRESETS = [60, 90, 120, 180];
+
+function PresetChips({ timer }: Props) {
+  return (
+    <View className="flex-row gap-2 px-5 pb-3">
+      {PRESETS.map((s) => {
+        const active = timer.isRunning && timer.totalSeconds === s;
+        return (
+          <TouchableOpacity
+            key={s}
+            onPress={() => timer.start(s)}
+            className={`flex-1 h-11 items-center justify-center rounded-xl ${
+              active ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"
+            }`}
+            activeOpacity={0.7}
+          >
+            <Text
+              className={`font-mono-medium text-sm ${active ? "text-white" : "text-text-primary dark:text-white"}`}
+            >
+              {formatSeconds(s)}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 export function RestTimerBar({ timer }: Props) {
   const progress = timer.isRunning ? timer.remaining / timer.totalSeconds : 1;
   const anim = useRef(new Animated.Value(progress)).current;
@@ -27,19 +55,22 @@ export function RestTimerBar({ timer }: Props) {
 
   if (!timer.isRunning) {
     return (
-      <TouchableOpacity
-        onPress={() => timer.start()}
-        activeOpacity={0.7}
-        className="flex-row items-center gap-2 px-5 py-3 border-t border-surface-2 dark:border-zinc-800 bg-surface dark:bg-zinc-900"
-      >
-        <Timer size={15} color="#64748B" />
-        <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">
-          Rest Timer
-        </Text>
-        <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm ml-1">
-          {formatSeconds(timer.totalSeconds)}
-        </Text>
-      </TouchableOpacity>
+      <View className="border-t border-surface-2 dark:border-zinc-800 bg-surface dark:bg-zinc-900">
+        <TouchableOpacity
+          onPress={() => timer.start()}
+          activeOpacity={0.7}
+          className="flex-row items-center gap-2 px-5 py-3"
+        >
+          <Timer size={15} color="#64748B" />
+          <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">
+            Rest Timer
+          </Text>
+          <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm ml-1">
+            {formatSeconds(timer.totalSeconds)}
+          </Text>
+        </TouchableOpacity>
+        <PresetChips timer={timer} />
+      </View>
     );
   }
 
@@ -91,6 +122,7 @@ export function RestTimerBar({ timer }: Props) {
           </TouchableOpacity>
         </View>
       </View>
+      <PresetChips timer={timer} />
     </View>
   );
 }

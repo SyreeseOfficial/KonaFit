@@ -13,10 +13,14 @@ import { kvStore } from "../src/utils/kvStore";
 import { getAllWorkoutDataForExport } from "../src/db/historyQueries";
 import { exportCsvAndShare } from "../src/utils/exportUtils";
 import { getDatabase } from "../src/db/database";
+import { THEME_KEY, loadTheme, setTheme, type ThemePref } from "../src/utils/theme";
+import { HAPTICS_KEY, loadHapticsSetting, setHapticsEnabled } from "../src/utils/haptics";
 
 const REST_TIMER_KEY = "@konafit_default_rest_seconds";
 const WEIGHT_UNIT_KEY = "@konafit_weight_unit";
 export const DEFAULT_REST_SECONDS = 90;
+const WEEKLY_GOAL_KEY = "@konafit_weekly_goal";
+export const DEFAULT_WEEKLY_GOAL = 4;
 const REST_STEP = 15;
 
 export type WeightUnit = "lbs" | "kg";
@@ -24,6 +28,11 @@ export type WeightUnit = "lbs" | "kg";
 export async function getDefaultRestSeconds(): Promise<number> {
   const raw = await kvStore.getItem(REST_TIMER_KEY);
   return raw ? parseInt(raw, 10) : DEFAULT_REST_SECONDS;
+}
+
+export async function getWeeklyGoal(): Promise<number> {
+  const raw = await kvStore.getItem(WEEKLY_GOAL_KEY);
+  return raw ? parseInt(raw, 10) : DEFAULT_WEEKLY_GOAL;
 }
 
 export async function getWeightUnit(): Promise<WeightUnit> {
@@ -111,10 +120,32 @@ function ChipGroup<T extends string>({
 export default function SettingsScreen() {
   const [restSeconds, setRestSeconds] = useState(DEFAULT_REST_SECONDS);
   const [weightUnit, setWeightUnit] = useState<WeightUnit>("lbs");
+  const [hapticsOn, setHapticsOn] = useState(true);
+  const [theme, setThemePref] = useState<ThemePref>("system");
+  const [weeklyGoal, setWeeklyGoal] = useState(DEFAULT_WEEKLY_GOAL);
 
   useEffect(() => {
     getDefaultRestSeconds().then(setRestSeconds);
     getWeightUnit().then(setWeightUnit);
+    loadHapticsSetting().then(setHapticsOn);
+    loadTheme().then(setThemePref);
+    getWeeklyGoal().then(setWeeklyGoal);
+  }, []);
+
+  const handleTheme = useCallback(async (t: ThemePref) => {
+    setThemePref(t);
+    await setTheme(t);
+  }, []);
+
+  const adjustWeeklyGoal = useCallback(async (delta: number) => {
+    const next = Math.min(7, Math.max(1, weeklyGoal + delta));
+    setWeeklyGoal(next);
+    await kvStore.setItem(WEEKLY_GOAL_KEY, String(next));
+  }, [weeklyGoal]);
+
+  const handleHaptics = useCallback(async (v: "on" | "off") => {
+    setHapticsOn(v === "on");
+    await setHapticsEnabled(v === "on");
   }, []);
 
   const adjustRest = useCallback(async (delta: number) => {
@@ -161,7 +192,7 @@ export default function SettingsScreen() {
                 DELETE FROM lifestyle_logs;
                 DELETE FROM progress_photos;
                 DELETE FROM goals;
-                DELETE FROM kv_store WHERE key NOT IN ('${REST_TIMER_KEY}','${WEIGHT_UNIT_KEY}');
+                DELETE FROM kv_store WHERE key NOT IN ('${REST_TIMER_KEY}','${WEIGHT_UNIT_KEY}','${HAPTICS_KEY}','${THEME_KEY}','${WEEKLY_GOAL_KEY}');
               `);
               Alert.alert("Done", "All workout data has been deleted.");
             } catch (e) {
@@ -207,6 +238,61 @@ export default function SettingsScreen() {
               onChange={handleWeightUnit}
             />
           </View>
+        </View>
+
+        {/* ── Preferences ─────────────────────────────────────────────────── */}
+        <SectionLabel title="Preferences" />
+        <View className="bg-surface dark:bg-zinc-900 mx-5 rounded-2xl overflow-hidden">
+          <View className="flex-row items-center justify-between px-5 py-5">
+            <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Haptics</Text>
+            <ChipGroup
+              options={[
+                { key: "on", label: "On" },
+                { key: "off", label: "Off" },
+              ]}
+              value={hapticsOn ? "on" : "off"}
+              onChange={handleHaptics}
+            />
+          </View>
+          <View className="flex-row items-center justify-between px-5 py-5 border-t border-surface-2 dark:border-zinc-800">
+            <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Theme</Text>
+            <ChipGroup
+              options={[
+                { key: "system", label: "System" },
+                { key: "light", label: "Light" },
+                { key: "dark", label: "Dark" },
+              ]}
+              value={theme}
+              onChange={handleTheme}
+            />
+          </View>
+          <Row
+            label="Weekly Goal"
+            sublabel="Workouts per week"
+            right={
+              <View className="flex-row items-center gap-3">
+                <TouchableOpacity
+                  onPress={() => adjustWeeklyGoal(-1)}
+                  className="w-9 h-9 bg-surface-2 dark:bg-zinc-800 rounded-full items-center justify-center"
+                  hitSlop={8}
+                  activeOpacity={0.7}
+                >
+                  <Minus size={14} color="#64748B" />
+                </TouchableOpacity>
+                <Text className="font-mono-medium text-text-primary dark:text-white text-base w-8 text-center">
+                  {weeklyGoal}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => adjustWeeklyGoal(1)}
+                  className="w-9 h-9 bg-surface-2 dark:bg-zinc-800 rounded-full items-center justify-center"
+                  hitSlop={8}
+                  activeOpacity={0.7}
+                >
+                  <Plus size={14} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+            }
+          />
         </View>
 
         {/* ── Workout ─────────────────────────────────────────────────────── */}

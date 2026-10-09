@@ -14,6 +14,8 @@ import {
   JetBrainsMono_500Medium,
 } from "@expo-google-fonts/jetbrains-mono";
 import { initializeDatabase } from "../src/db/database";
+import { loadHapticsSetting } from "../src/utils/haptics";
+import { loadTheme } from "../src/utils/theme";
 import { Platform, UIManager, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -32,7 +34,9 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    initializeDatabase().catch(console.error);
+    initializeDatabase()
+      .then(() => Promise.all([loadHapticsSetting(), loadTheme()]))
+      .catch(console.error);
   }, []);
 
   if (!fontsLoaded) {

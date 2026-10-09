@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { kvStore } from "../utils/kvStore";
+import { haptics } from "../utils/haptics";
 import type { ActiveSession, ActiveExercise, ActiveSet } from "../types/workout";
 import {
   createWorkout,
@@ -17,7 +18,7 @@ import {
   updateExerciseLibraryNote,
 } from "../db/workoutQueries";
 import { getProgramDayExercises } from "../db/programQueries";
-import { getHistPRs } from "../db/historyQueries";
+import { getHistPRs, getLastWorkoutExercises } from "../db/historyQueries";
 import type { PRBadge, HistPRs } from "../types/workout";
 
 const SESSION_KEY = "@kinetic_active_session";
@@ -326,6 +327,53 @@ export function useWorkoutSession() {
     [updateSession]
   );
 
+  // Copy weight/reps/rpe from the last filled set into every other incomplete set.
+  const copyLastSetToAll = useCallback(
+    (exerciseLocalId: string) => {
+      updateSession((prev) => ({
+        ...prev,
+        exercises: prev.exercises.map((e) => {
+          if (e.localId !== exerciseLocalId) return e;
+          const src = [...e.sets].reverse().find((s) => s.weightLbs !== "" && s.reps !== "");
+          if (!src) return e;
+          return {
+            ...e,
+            sets: e.sets.map((s) => {
+              if (s.isCompleted || s.localId === src.localId) return s;
+              const updated = { ...s, weightLbs: src.weightLbs, reps: src.reps, rpe: src.rpe, isGhostFilled: false };
+              if (e.dbId) upsertLoggedSet({ ...updated, loggedExerciseId: e.dbId }).catch(console.error);
+              return updated;
+            }),
+          };
+        }),
+      }));
+    },
+    [updateSession]
+  );
+
+  // Re-evaluate PR badges for an already-completed set after its values were edited.
+  const recheckSetPR = useCallback(
+    (exerciseLocalId: string, setLocalId: string) => {
+      updateSession((prev) => ({
+        ...prev,
+        exercises: prev.exercises.map((e) => {
+          if (e.localId !== exerciseLocalId) return e;
+          return {
+            ...e,
+            sets: e.sets.map((s) => {
+              if (s.localId !== setLocalId || !s.isCompleted) return s;
+              const weight = parseFloat(s.weightLbs);
+              const reps = parseInt(s.reps, 10);
+              const valid = !s.isWarmup && !isNaN(weight) && !isNaN(reps);
+              return { ...s, prBadges: valid ? computePRBadges(e, s.localId, weight, reps, e.histPRs) : undefined };
+            }),
+          };
+        }),
+      }));
+    },
+    [updateSession]
+  );
+
   const toggleSetComplete = useCallback(
     (exerciseLocalId: string, setLocalId: string): boolean => {
       let nowComplete = false;
@@ -344,6 +392,7 @@ export function useWorkoutSession() {
               let prBadges: PRBadge[] | undefined;
               if (nowComplete && !s.isWarmup && weight != null && reps != null) {
                 prBadges = computePRBadges(e, s.localId, weight, reps, e.histPRs);
+                if (prBadges.length > 0) haptics.success();
               }
 
               const updated = { ...s, isCompleted: nowComplete, isGhostFilled: false, prBadges: nowComplete ? prBadges : undefined };
@@ -454,8 +503,10 @@ export function useWorkoutSession() {
     [updateSession]
   );
 
-  const launchFromProgramDay = useCallback(async (programDayId: number) => {
-    const programExercises = await getProgramDayExercises(programDayId);
+  const launchFromExercises = useCallback(async (
+    programExercises: { exerciseId: number; exerciseName: string; muscleGroup: string; targetSets: number | null }[],
+    programDayId?: number
+  ) => {
     const workoutId = await createWorkout(programDayId);
 
     const exercises: ActiveExercise[] = await Promise.all(
@@ -504,6 +555,18 @@ export function useWorkoutSession() {
     await saveToStorage(newSession);
   }, []);
 
+  const launchFromProgramDay = useCallback(
+    async (programDayId: number) =>
+      launchFromExercises(await getProgramDayExercises(programDayId), programDayId),
+    [launchFromExercises]
+  );
+
+  // Start a workout pre-loaded with the last finished workout's exercises (ghost sets fill the numbers).
+  const repeatLastWorkout = useCallback(async () => {
+    const last = await getLastWorkoutExercises();
+    if (last.length > 0) await launchFromExercises(last);
+  }, [launchFromExercises]);
+
   return {
     session,
     startWorkout,
@@ -515,11 +578,14 @@ export function useWorkoutSession() {
     addSet,
     removeSet,
     updateSet,
+    copyLastSetToAll,
+    recheckSetPR,
     toggleSetComplete,
     toggleSetWarmup,
     updateExerciseNotes,
     removeExercise,
     launchFromProgramDay,
+    repeatLastWorkout,
     swapExercise,
     moveExercise,
   };

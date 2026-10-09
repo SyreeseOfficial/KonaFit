@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import * as Haptics from "expo-haptics";
 import {
   View,
   Text,
@@ -27,6 +26,7 @@ import { formatVolume, formatShortDate, formatDuration } from "../../src/utils/e
 import { getPrograms, deleteProgram, cloneProgram, archiveProgram } from "../../src/db/programQueries";
 import { getWorkoutHistory, type WorkoutSummary } from "../../src/db/historyQueries";
 import { kvStore } from "../../src/utils/kvStore";
+import { haptics } from "../../src/utils/haptics";
 import type { Exercise } from "../../src/types/workout";
 import type { ProgramSummary } from "../../src/types/program";
 
@@ -44,11 +44,14 @@ export default function TrainScreen() {
     addSet,
     removeSet,
     updateSet,
+    copyLastSetToAll,
+    recheckSetPR,
     toggleSetComplete,
     toggleSetWarmup,
     updateExerciseNotes,
     removeExercise,
     launchFromProgramDay,
+    repeatLastWorkout,
     swapExercise,
     moveExercise,
   } = useWorkoutSession();
@@ -202,8 +205,7 @@ export default function TrainScreen() {
 
   const handleSetComplete = useCallback(
     (exerciseLocalId: string, setLocalId: string) => {
-      const completed = toggleSetComplete(exerciseLocalId, setLocalId);
-      if (completed) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      toggleSetComplete(exerciseLocalId, setLocalId); // haptics: tap in SetRow, success on PR in the hook
     },
     [toggleSetComplete]
   );
@@ -235,6 +237,7 @@ export default function TrainScreen() {
       } catch {}
 
       await finishWorkout();
+      haptics.success();
 
       router.push({
         pathname: "/workout-complete",
@@ -329,6 +332,15 @@ export default function TrainScreen() {
             >
               <Text className="font-montserrat-bold text-white text-base">Start Empty Workout</Text>
             </TouchableOpacity>
+            {recentWorkouts.length > 0 && (
+              <TouchableOpacity
+                onPress={repeatLastWorkout}
+                className="mt-3 py-4 rounded-2xl items-center bg-surface dark:bg-zinc-900 border border-surface-3 dark:border-zinc-700"
+                activeOpacity={0.85}
+              >
+                <Text className="font-montserrat-bold text-text-primary dark:text-white text-base">Repeat Last Workout</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Programs */}
@@ -528,6 +540,8 @@ export default function TrainScreen() {
             onAddSet={() => addSet(exercise.localId)}
             onRemoveSet={(setLocalId) => removeSet(exercise.localId, setLocalId)}
             onUpdateSet={(setLocalId, patch) => updateSet(exercise.localId, setLocalId, patch)}
+            onCopyLastToAll={() => copyLastSetToAll(exercise.localId)}
+            onCommitSetEdit={(setLocalId) => recheckSetPR(exercise.localId, setLocalId)}
             onToggleComplete={(setLocalId) => handleSetComplete(exercise.localId, setLocalId)}
             onToggleWarmup={(setLocalId) => toggleSetWarmup(exercise.localId, setLocalId)}
             onUpdateNotes={(notes) => updateExerciseNotes(exercise.localId, notes)}

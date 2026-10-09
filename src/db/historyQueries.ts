@@ -62,6 +62,27 @@ export async function getWorkoutHistory(limit = 20): Promise<WorkoutSummary[]> {
   );
 }
 
+// Exercises of the most recent finished workout, in order, for "Repeat last workout".
+export async function getLastWorkoutExercises(): Promise<
+  { exerciseId: number; exerciseName: string; muscleGroup: string; targetSets: number }[]
+> {
+  const db = await getDatabase();
+  return db.getAllAsync(
+    `SELECT le.exercise_id as exerciseId, le.exercise_name as exerciseName,
+            COALESCE(e.muscle_group, '') as muscleGroup,
+            MAX(1, COALESCE(SUM(CASE WHEN ls.is_warmup = 0 THEN 1 ELSE 0 END), 0)) as targetSets
+     FROM logged_exercises le
+     LEFT JOIN exercises e ON e.id = le.exercise_id
+     LEFT JOIN logged_sets ls ON ls.logged_exercise_id = le.id
+     WHERE le.exercise_id IS NOT NULL
+       AND le.workout_id = (
+         SELECT id FROM workouts WHERE finished_at IS NOT NULL ORDER BY started_at DESC LIMIT 1
+       )
+     GROUP BY le.id
+     ORDER BY le.order_index ASC`
+  );
+}
+
 export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail | null> {
   const db = await getDatabase();
 
