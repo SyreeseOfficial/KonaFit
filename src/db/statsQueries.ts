@@ -102,19 +102,20 @@ export async function getWorkoutDatesForStreak(): Promise<string[]> {
 export function calculateStreak(dates: string[]): number {
   if (dates.length === 0) return 0;
   const set = new Set(dates);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  // Local-date keys to match SQLite DATE(..., 'localtime'); toISOString() would be UTC.
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const yesterday = new Date(today.getTime() - 86400_000);
-
-  if (!set.has(fmt(today)) && !set.has(fmt(yesterday))) return 0;
-
-  let cursor = set.has(fmt(today)) ? today : yesterday;
+  // setDate steps calendar days, so DST shifts can't skip or repeat a day.
+  const cursor = new Date();
+  if (!set.has(fmt(cursor))) {
+    cursor.setDate(cursor.getDate() - 1);
+    if (!set.has(fmt(cursor))) return 0;
+  }
   let streak = 0;
   while (set.has(fmt(cursor))) {
     streak++;
-    cursor = new Date(cursor.getTime() - 86400_000);
+    cursor.setDate(cursor.getDate() - 1);
   }
   return streak;
 }

@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { ScrollView, View, Text, RefreshControl, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Download, Settings } from "lucide-react-native";
 import {
   getTotalLifted,
@@ -63,9 +63,8 @@ export default function StatsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    refresh();
-  }, []);
+  // Tabs stay mounted, so refetch on focus (e.g. after Settings > Wipe All Data).
+  useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   const handleExportCsv = useCallback(async () => {
     try {

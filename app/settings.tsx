@@ -17,13 +17,10 @@ import { THEME_KEY, loadTheme, setTheme, type ThemePref } from "../src/utils/the
 import { HAPTICS_KEY, loadHapticsSetting, setHapticsEnabled } from "../src/utils/haptics";
 
 const REST_TIMER_KEY = "@konafit_default_rest_seconds";
-const WEIGHT_UNIT_KEY = "@konafit_weight_unit";
 export const DEFAULT_REST_SECONDS = 90;
 const WEEKLY_GOAL_KEY = "@konafit_weekly_goal";
 export const DEFAULT_WEEKLY_GOAL = 4;
 const REST_STEP = 15;
-
-export type WeightUnit = "lbs" | "kg";
 
 export async function getDefaultRestSeconds(): Promise<number> {
   const raw = await kvStore.getItem(REST_TIMER_KEY);
@@ -33,11 +30,6 @@ export async function getDefaultRestSeconds(): Promise<number> {
 export async function getWeeklyGoal(): Promise<number> {
   const raw = await kvStore.getItem(WEEKLY_GOAL_KEY);
   return raw ? parseInt(raw, 10) : DEFAULT_WEEKLY_GOAL;
-}
-
-export async function getWeightUnit(): Promise<WeightUnit> {
-  const v = await kvStore.getItem(WEIGHT_UNIT_KEY);
-  return (v as WeightUnit) ?? "lbs";
 }
 
 function Row({
@@ -119,14 +111,12 @@ function ChipGroup<T extends string>({
 
 export default function SettingsScreen() {
   const [restSeconds, setRestSeconds] = useState(DEFAULT_REST_SECONDS);
-  const [weightUnit, setWeightUnit] = useState<WeightUnit>("lbs");
   const [hapticsOn, setHapticsOn] = useState(true);
   const [theme, setThemePref] = useState<ThemePref>("system");
   const [weeklyGoal, setWeeklyGoal] = useState(DEFAULT_WEEKLY_GOAL);
 
   useEffect(() => {
     getDefaultRestSeconds().then(setRestSeconds);
-    getWeightUnit().then(setWeightUnit);
     loadHapticsSetting().then(setHapticsOn);
     loadTheme().then(setThemePref);
     getWeeklyGoal().then(setWeeklyGoal);
@@ -154,11 +144,6 @@ export default function SettingsScreen() {
     await kvStore.setItem(REST_TIMER_KEY, String(next));
   }, [restSeconds]);
 
-  const handleWeightUnit = useCallback(async (u: WeightUnit) => {
-    setWeightUnit(u);
-    await kvStore.setItem(WEIGHT_UNIT_KEY, u);
-  }, []);
-
   const handleExport = useCallback(async () => {
     try {
       const rows = await getAllWorkoutDataForExport();
@@ -175,7 +160,7 @@ export default function SettingsScreen() {
   const handleWipeData = useCallback(() => {
     Alert.alert(
       "Wipe All Data",
-      "This will permanently delete all workouts, exercises, and stats. This cannot be undone.",
+      "This will permanently delete all workouts, programs, custom exercises, goals, and records. This cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -184,16 +169,25 @@ export default function SettingsScreen() {
           onPress: async () => {
             try {
               const db = await getDatabase();
-              await db.execAsync(`
-                DELETE FROM logged_sets;
-                DELETE FROM logged_exercises;
-                DELETE FROM workouts;
-                DELETE FROM bodyweight_logs;
-                DELETE FROM lifestyle_logs;
-                DELETE FROM progress_photos;
-                DELETE FROM goals;
-                DELETE FROM kv_store WHERE key NOT IN ('${REST_TIMER_KEY}','${WEIGHT_UNIT_KEY}','${HAPTICS_KEY}','${THEME_KEY}','${WEEKLY_GOAL_KEY}');
-              `);
+              // One transaction: either everything is wiped or nothing is.
+              await db.withTransactionAsync(async () => {
+                await db.execAsync(`
+                  DELETE FROM logged_sets;
+                  DELETE FROM logged_exercises;
+                  DELETE FROM progress_photos;
+                  DELETE FROM workouts;
+                  DELETE FROM program_exercises;
+                  DELETE FROM program_days;
+                  DELETE FROM programs;
+                  DELETE FROM bodyweight_logs;
+                  DELETE FROM lifestyle_logs;
+                  DELETE FROM locations;
+                  DELETE FROM goals;
+                  DELETE FROM exercises WHERE is_custom = 1;
+                  UPDATE exercises SET use_count = 0;
+                  DELETE FROM kv_store WHERE key NOT IN ('${REST_TIMER_KEY}','${HAPTICS_KEY}','${THEME_KEY}','${WEEKLY_GOAL_KEY}');
+                `);
+              });
               Alert.alert("Done", "All workout data has been deleted.");
             } catch (e) {
               Alert.alert("Error", String(e));
@@ -223,22 +217,6 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 64 }}>
-
-        {/* ── Units ───────────────────────────────────────────────────────── */}
-        <SectionLabel title="Units" />
-        <View className="bg-surface dark:bg-zinc-900 mx-5 rounded-2xl overflow-hidden">
-          <View className="flex-row items-center justify-between px-5 py-5">
-            <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Weight</Text>
-            <ChipGroup
-              options={[
-                { key: "lbs", label: "lbs" },
-                { key: "kg", label: "kg" },
-              ]}
-              value={weightUnit}
-              onChange={handleWeightUnit}
-            />
-          </View>
-        </View>
 
         {/* ── Preferences ─────────────────────────────────────────────────── */}
         <SectionLabel title="Preferences" />

@@ -37,6 +37,11 @@ export async function deleteWorkout(workoutId: number): Promise<void> {
   await db.runAsync("DELETE FROM workouts WHERE id = ?", [workoutId]);
 }
 
+export async function workoutExists(workoutId: number): Promise<boolean> {
+  const db = await getDatabase();
+  return (await db.getFirstAsync("SELECT 1 FROM workouts WHERE id = ?", [workoutId])) != null;
+}
+
 export async function createLoggedExercise(
   workoutId: number,
   exerciseId: number,

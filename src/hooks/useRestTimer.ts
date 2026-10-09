@@ -1,14 +1,24 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useFocusEffect } from "expo-router";
 import { formatTime } from "../utils/time";
+import { DEFAULT_REST_SECONDS, getDefaultRestSeconds } from "../../app/settings";
 
-const DEFAULT_SECONDS = 90;
 const STEP = 15;
 
 export function useRestTimer() {
   const [remaining, setRemaining] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  const [totalSeconds, setTotalSeconds] = useState(DEFAULT_SECONDS);
+  const [totalSeconds, setTotalSeconds] = useState(DEFAULT_REST_SECONDS);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Reload the Settings default on focus (Train stays mounted while Settings is open).
+  // Skipped while running; the cleanup drops a late result if a run starts first.
+  useFocusEffect(useCallback(() => {
+    if (isRunning) return;
+    let cancelled = false;
+    getDefaultRestSeconds().then((s) => { if (!cancelled) setTotalSeconds(s); });
+    return () => { cancelled = true; };
+  }, [isRunning]));
 
   const stop = useCallback(() => {
     setIsRunning(false);

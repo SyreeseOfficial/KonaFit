@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { useFocusEffect } from "expo-router";
 import { kvStore } from "../utils/kvStore";
 import { haptics } from "../utils/haptics";
 import type { ActiveSession, ActiveExercise, ActiveSet } from "../types/workout";
@@ -6,6 +7,7 @@ import {
   createWorkout,
   finalizeWorkout,
   deleteWorkout,
+  workoutExists,
   createLoggedExercise,
   createLoggedSet,
   upsertLoggedSet,
@@ -90,6 +92,15 @@ export function useWorkoutSession() {
   const [session, setSession] = useState<ActiveSession | null>(null);
   const saveRef = useRef(saveToStorage);
   saveRef.current = saveToStorage;
+
+  // The workout can be deleted behind our back (Settings > Wipe All Data); drop the stale session.
+  const activeWorkoutId = session?.workoutId;
+  useFocusEffect(useCallback(() => {
+    if (activeWorkoutId == null) return;
+    workoutExists(activeWorkoutId).then((ok) => {
+      if (!ok) setSession((cur) => (cur?.workoutId === activeWorkoutId ? null : cur));
+    });
+  }, [activeWorkoutId]));
 
   const updateSession = useCallback(
     (updater: (prev: ActiveSession) => ActiveSession) => {
