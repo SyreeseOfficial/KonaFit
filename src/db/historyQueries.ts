@@ -1,4 +1,5 @@
 import { getDatabase } from "./database";
+import { localDateKey } from "../utils/time";
 
 export type WorkoutSummary = {
   id: number;
@@ -175,7 +176,7 @@ export async function getAllWorkoutDataForExport(): Promise<CsvRow[]> {
   return rows.map((r) => {
     const d = new Date(r.started_at * 1000);
     return {
-      date: d.toISOString().slice(0, 10),
+      date: localDateKey(d),
       time: d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       duration_min: Math.round((r.duration_seconds ?? 0) / 60),
       workout_id: r.workout_id,
@@ -261,6 +262,8 @@ export type ExercisePRs = {
   maxWeight: PRSet;
   maxReps: PRSet;
   maxVolume: PRSet;
+  lastTrainedAt: number | null; // unix ms
+  maxOneRM: PRSet; // heaviest estimated 1RM (Epley); weightLbs/reps are the set that produced it
 };
 
 const PR_BASE = `
@@ -320,6 +323,17 @@ export async function getExercisePRs(exerciseId: number): Promise<ExercisePRs> {
     [exerciseId]
   );
 
+  const maxOneRMRow = await db.getFirstAsync<{ weight_lbs: number; reps: number; started_at: number }>(
+    `SELECT ls.weight_lbs, ls.reps, w.started_at ${PR_BASE} AND ls.reps > 0
+     ORDER BY ls.weight_lbs * (1.0 + ls.reps / 30.0) DESC LIMIT 1`,
+    [exerciseId]
+  );
+
+  const lastRow = await db.getFirstAsync<{ t: number | null }>(
+    `SELECT MAX(w.started_at) AS t ${PR_BASE}`,
+    [exerciseId]
+  );
+
   const toSet = (row: { weight_lbs: number; reps: number; started_at: number } | null): PRSet => ({
     weightLbs: row?.weight_lbs ?? null,
     reps: row?.reps ?? null,
@@ -330,6 +344,8 @@ export async function getExercisePRs(exerciseId: number): Promise<ExercisePRs> {
     maxWeight: toSet(maxWeightRow ?? null),
     maxReps: toSet(maxRepsRow ?? null),
     maxVolume: toSet(maxVolumeRow ?? null),
+    maxOneRM: toSet(maxOneRMRow ?? null),
+    lastTrainedAt: lastRow?.t ? lastRow.t * 1000 : null,
   };
 }
 

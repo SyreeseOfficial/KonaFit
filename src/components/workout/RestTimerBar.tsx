@@ -1,5 +1,6 @@
-import { useRef, useEffect } from "react";
-import { View, Text, TouchableOpacity, Animated } from "react-native";
+import { useEffect } from "react";
+import { View, Text, TouchableOpacity } from "react-native";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
 import { X, Timer } from "lucide-react-native";
 import type { useRestTimer } from "../../hooks/useRestTimer";
 
@@ -47,10 +48,11 @@ function PresetChips({ timer }: Props) {
 
 export function RestTimerBar({ timer }: Props) {
   const progress = timer.isRunning ? timer.remaining / timer.totalSeconds : 1;
-  const anim = useRef(new Animated.Value(progress)).current;
+  const anim = useSharedValue(progress);
+  const barStyle = useAnimatedStyle(() => ({ width: `${anim.value * 100}%` }));
 
   useEffect(() => {
-    Animated.timing(anim, { toValue: progress, duration: 900, useNativeDriver: false }).start();
+    anim.value = withTiming(progress, { duration: 900 });
   }, [progress]);
 
   if (!timer.isRunning) {
@@ -80,7 +82,7 @@ export function RestTimerBar({ timer }: Props) {
       <View className="h-1.5 bg-surface-2 dark:bg-zinc-800">
         <Animated.View
           className="h-1.5 bg-crimson dark:bg-blue-500"
-          style={{ width: anim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }) }}
+          style={barStyle}
         />
       </View>
 

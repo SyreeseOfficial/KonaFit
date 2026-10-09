@@ -6,7 +6,7 @@ export const THEME_KEY = "@konafit_theme";
 
 // Overrides the OS color scheme; NativeWind's `dark:` classes follow Appearance on native.
 function applyTheme(pref: ThemePref) {
-  Appearance.setColorScheme(pref === "system" ? null : pref);
+  Appearance.setColorScheme(pref === "system" ? "unspecified" : pref);
 }
 
 export async function loadTheme(): Promise<ThemePref> {

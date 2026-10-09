@@ -1,4 +1,5 @@
 import { View, Text } from "react-native";
+import { localDateKey } from "../../utils/time";
 
 const WEEKS = 13;
 const CELL = 13;
@@ -8,12 +9,10 @@ const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
 type Props = { workoutDays: Set<string> };
 
-function fmt(d: Date): string { return d.toISOString().slice(0, 10); }
-
 export function HabitCalendar({ workoutDays }: Props) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const todayStr = fmt(today);
+  const todayStr = localDateKey(today);
 
   const dayOfWeek = today.getDay();
   const daysToSat = (6 - dayOfWeek + 7) % 7;
@@ -24,7 +23,7 @@ export function HabitCalendar({ workoutDays }: Props) {
     for (let d = 0; d < 7; d++) {
       const daysBack = (WEEKS - 1 - w) * 7 + (6 - d);
       const date = new Date(endSat.getTime() - daysBack * 86400_000);
-      cells.push({ date: fmt(date), week: w, day: d });
+      cells.push({ date: localDateKey(date), week: w, day: d });
     }
   }
 

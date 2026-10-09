@@ -1,4 +1,4 @@
-# 🖤 KINETIC
+# 🖤 KonaFit
 
 An ultra-modern, minimal, and high-performance workout tracking application built entirely for personal use. This app consolidates advanced tracking metrics, smart training calculators, and comprehensive analytics into a unified, zero-bloat system without premium paywalls.
 
@@ -27,12 +27,12 @@ This repository utilizes a multi-file documentation context strategy to keep bui
 
 When building or modifying components, refer to these specialized context files in the directory:
 
-* 📄 **UI_UX_SPEC.md** — Defines the "Kinetic" visual design token system (Obsidian backgrounds, Crimson accents, geometric typography) and navigation layouts.
-* 📄 **FEATURES_LOGGING.md** — Detailed requirements for the Active Workout workspace, exercise row layouts, ghost-text pre-filling, superset UI logic, and per-set notes.
-* 📄 **FEATURES_CALCULATORS.md** — Logic, math configurations, smart rounding algorithms, and CSS/HTML proportional rendering for the Plate and Set percentage calculators.
-* 📄 **FEATURES_STATS_PROGRAMS.md** — Specifications for the Program Builder, monthly Habit Calendar grid, data analytics dashboard, anatomical volume heatmaps, and export sheets.
-* 📄 **SYSTEM_ARCHITECTURE.md** — Explicit coding conventions, database schemas, and state management guidelines.
-* 📄 **DEVELOPER_DIRECTIONS.md** — Engineer persona, multi-file context protocol, and update logging requirements.
+* 📄 **docs/UI_UX_SPEC.md** — Defines the "KonaFit" visual design token system (light and dark themes with a blue accent, geometric typography) and navigation layouts.
+* 📄 **docs/FEATURES_LOGGING.md** — Detailed requirements for the Active Workout workspace, exercise row layouts, ghost-text pre-filling, superset UI logic, and per-set notes.
+* 📄 **docs/FEATURES_CALCULATORS.md** — Logic, math configurations, smart rounding algorithms, and CSS/HTML proportional rendering for the Plate and Set percentage calculators.
+* 📄 **docs/FEATURES_STATS_PROGRAMS.md** — Specifications for the Program Builder, monthly Habit Calendar grid, data analytics dashboard, anatomical volume heatmaps, and export sheets.
+* 📄 **docs/SYSTEM_ARCHITECTURE.md** — Explicit coding conventions, database schemas, and state management guidelines.
+* 📄 **docs/DEVELOPER_DIRECTIONS.md** — Engineer persona, multi-file context protocol, and update logging requirements.
 
 ---
 
@@ -71,6 +71,6 @@ When building or modifying components, refer to these specialized context files 
 ## 🛑 Coding Conventions for AI Contributors
 
 1. **Read the Spec First:** Always reference the dedicated `.md` spec sheets before generating or modifying code blocks.
-2. **Preserve Visual Theme:** Never deviate from the core Crimson Red (#FF0000) and Deep Obsidian (#0A0A0A) design system tokens mapped in `UI_UX_SPEC.md`.
+2. **Preserve Visual Theme:** Never deviate from the light and dark design tokens (blue accent) mapped in `docs/UI_UX_SPEC.md`.
 3. **No Decorative Fluff:** Code features with high utility, minimal micro-interactions, and tight data density.
-4. **Update the Log:** Every major feature or architecture change must be documented in `UPDATE_LOG.md` with date, scope, changes, and reasoning.
+4. **Update the Log:** Every major feature or architecture change must be documented in `docs/UPDATE_LOG.md` with date, scope, changes, and reasoning.

@@ -1,6 +1,6 @@
 # 📊 FEATURES: PROGRAMS, STATS & HABIT TRACKING
 
-This document defines the functional requirements, data views, and tracking logic for the **Programs** and **Stats** tabs within Kinetic.
+This document defines the functional requirements, data views, and tracking logic for the **Programs** and **Stats** tabs within KonaFit.
 
 ---
 

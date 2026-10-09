@@ -1,6 +1,6 @@
 # 🧮 FEATURES: CALCULATORS & TACTICAL TOOLS
 
-This document defines the mathematical logic, algorithmic parameters, and visual rendering specifications for the calculation engines inside Kinetic.
+This document defines the mathematical logic, algorithmic parameters, and visual rendering specifications for the calculation engines inside KonaFit.
 
 ---
 
@@ -67,7 +67,7 @@ These backend mathematical functions run locally off-main-thread to power the st
 
 ### Estimated 1-Rep Max (1RM) Engine
 
-Kinetic utilizes the **Epley Formula** to project max strength metrics without requiring absolute structural failure testing. Run this calculation on any completed set where reps are greater than 1:
+KonaFit utilizes the **Epley Formula** to project max strength metrics without requiring absolute structural failure testing. Run this calculation on any completed set where reps are greater than 1:
 
 ```
 1RM = w × (1 + r/30)

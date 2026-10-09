@@ -4,10 +4,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Download, Settings } from "lucide-react-native";
 import {
-  getTotalLifted,
-  getTotalHours,
+  getStatsTotals,
   getTotalPRCount,
-  getWorkoutCount,
   getWorkoutDatesForStreak,
   calculateStreak,
   getLatestBodyweight,
@@ -29,20 +27,18 @@ type StatsData = {
 };
 
 async function loadStats(): Promise<StatsData> {
-  const [total, hours, prs, count, dates, bw] = await Promise.all([
-    getTotalLifted(),
-    getTotalHours(),
+  const [totals, prs, dates, bw] = await Promise.all([
+    getStatsTotals(),
     getTotalPRCount(),
-    getWorkoutCount(),
     getWorkoutDatesForStreak(),
     getLatestBodyweight(),
   ]);
   return {
-    totalLiftedLbs: total,
-    workoutCount: count,
+    totalLiftedLbs: totals.totalLifted,
+    workoutCount: totals.workoutCount,
     streak: calculateStreak(dates),
     bodyweightLbs: bw,
-    totalHours: hours,
+    totalHours: totals.hours,
     prCount: prs,
   };
 }

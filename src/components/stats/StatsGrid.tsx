@@ -1,4 +1,5 @@
-import { View, Text } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
+import { router } from "expo-router";
 
 type Props = {
   totalLiftedLbs: number;
@@ -15,9 +16,10 @@ function formatLbs(lbs: number): string {
   return String(Math.round(lbs));
 }
 
-function StatCell({ label, value, unit }: { label: string; value: string; unit?: string }) {
+function StatCell({ label, value, unit, onPress }: { label: string; value: string; unit?: string; onPress?: () => void }) {
+  const Wrapper = onPress ? TouchableOpacity : View;
   return (
-    <View className="flex-1 bg-surface dark:bg-zinc-900 p-5">
+    <Wrapper className="flex-1 bg-surface dark:bg-zinc-900 p-5" {...(onPress ? { onPress, activeOpacity: 0.7 } : {})}>
       <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs uppercase tracking-widest mb-3">
         {label}
       </Text>
@@ -29,7 +31,7 @@ function StatCell({ label, value, unit }: { label: string; value: string; unit?:
           <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs mb-0.5">{unit}</Text>
         )}
       </View>
-    </View>
+    </Wrapper>
   );
 }
 
@@ -45,7 +47,7 @@ export function StatsGrid({ totalLiftedLbs, workoutCount, streak, bodyweightLbs,
         <View className="flex-row gap-px">
           <StatCell label="Streak" value={String(streak)} unit={streak === 1 ? "day" : "days"} />
           <StatCell label="Bodyweight" value={bodyweightLbs != null ? String(bodyweightLbs) : "—"} unit={bodyweightLbs != null ? "lbs" : undefined} />
-          <StatCell label="PRs" value={String(prCount)} />
+          <StatCell label="PRs" value={String(prCount)} onPress={() => router.push("/prs")} />
         </View>
       </View>
     </View>

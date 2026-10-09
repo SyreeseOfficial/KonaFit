@@ -7,7 +7,7 @@ import Svg, { Rect, Text as SvgText } from "react-native-svg";
 import { Settings2, Plus, X, Check } from "lucide-react-native";
 import { kvStore } from "../../utils/kvStore";
 import {
-  PLATES, BAR_OPTIONS, calculatePlates, CUSTOM_PLATE_COLORS,
+  PLATES, OPTIONAL_PLATES, BAR_OPTIONS, calculatePlates, CUSTOM_PLATE_COLORS,
   type PlateConfig, type PlateResult,
 } from "../../utils/plateCalc";
 
@@ -156,12 +156,12 @@ export function PlateCalculator({ initialWeight }: Props) {
   const [targetInput, setTargetInput] = useState(initialWeight ? String(initialWeight) : "");
   const [barIdx, setBarIdx] = useState(0);
   const [configOpen, setConfigOpen] = useState(false);
-  const [enabled, setEnabled] = useState<Record<string, boolean>>({});
+  const [enabled, setEnabled] = useState<Record<string, boolean>>(OPTIONAL_PLATES);
   const [customPlates, setCustomPlates] = useState<PlateConfig[]>([]);
 
   useEffect(() => {
     Promise.all([kvStore.getItem(ENABLED_KEY), kvStore.getItem(CUSTOM_KEY)]).then(([e, c]) => {
-      if (e) setEnabled(JSON.parse(e));
+      if (e) setEnabled({ ...OPTIONAL_PLATES, ...JSON.parse(e) });
       if (c) setCustomPlates(JSON.parse(c));
     });
   }, []);

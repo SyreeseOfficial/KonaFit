@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, Animated } from "react-native";
+import { useState, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, useColorScheme } from "react-native";
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { Check } from "lucide-react-native";
 import { haptics } from "../../utils/haptics";
 import type { ActiveSet, GhostSet, PRBadge } from "../../types/workout";
@@ -7,12 +8,13 @@ import type { ActiveSet, GhostSet, PRBadge } from "../../types/workout";
 const PR_LABELS: Record<PRBadge, string> = { W: "PR WT", R: "PR REP", V: "PR VOL" };
 
 function PRBadgeChip({ badge }: { badge: PRBadge }) {
-  const scale = useRef(new Animated.Value(0)).current;
+  const scale = useSharedValue(0);
   useEffect(() => {
-    Animated.spring(scale, { toValue: 1, bounciness: 12, useNativeDriver: true }).start();
+    scale.value = withSpring(1, { damping: 8, stiffness: 180 });
   }, []);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
-    <Animated.View style={{ transform: [{ scale }] }} className="bg-amber-500 px-1.5 py-0.5 rounded">
+    <Animated.View style={style} className="bg-amber-500 px-1.5 py-0.5 rounded">
       <Text className="font-mono-medium text-white" style={{ fontSize: 11, lineHeight: 14 }}>
         {PR_LABELS[badge]}
       </Text>
@@ -46,7 +48,7 @@ export function SetRow({ set, ghost, prevSet, onUpdate, onCommitEdit, onToggleCo
     : "—";
 
   const inputBase = "h-11 bg-surface-2 dark:bg-zinc-800 text-center font-mono text-text-primary dark:text-white text-sm rounded-lg";
-  const focusBorder = { borderWidth: 1, borderColor: "#2563EB" };
+  const focusBorder = { borderWidth: 1, borderColor: useColorScheme() === "dark" ? "#3B82F6" : "#2563EB" };
 
   // Completed sets stay editable; re-run the PR check once the user leaves the field.
   const handleBlur = () => {

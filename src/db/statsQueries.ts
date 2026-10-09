@@ -1,4 +1,5 @@
 import { getDatabase } from "./database";
+import { localDateKey } from "../utils/time";
 
 export type StatsGrid = {
   totalLiftedLbs: number;
@@ -33,14 +34,6 @@ export type LifestyleLog = {
 
 // ─── Stats Grid ───────────────────────────────────────────────────────────────
 
-export async function getTotalHours(): Promise<number> {
-  const db = await getDatabase();
-  const row = await db.getFirstAsync<{ total: number }>(
-    "SELECT COALESCE(SUM(duration_seconds), 0) as total FROM workouts WHERE finished_at IS NOT NULL"
-  );
-  return Math.round((row?.total ?? 0) / 3600);
-}
-
 export async function getTotalPRCount(): Promise<number> {
   const db = await getDatabase();
   const row = await db.getFirstAsync<{ pr_count: number }>(
@@ -70,30 +63,31 @@ export async function getTotalPRCount(): Promise<number> {
   return row?.pr_count ?? 0;
 }
 
-export async function getTotalLifted(): Promise<number> {
+/** Hours, workout count and total lifted in one round trip. */
+export async function getStatsTotals(): Promise<{ hours: number; workoutCount: number; totalLifted: number }> {
   const db = await getDatabase();
-  const row = await db.getFirstAsync<{ total: number }>(
-    `SELECT COALESCE(SUM(CAST(weight_lbs AS REAL) * CAST(reps AS INTEGER)), 0) as total
-     FROM logged_sets
-     WHERE is_completed = 1 AND weight_lbs IS NOT NULL AND reps IS NOT NULL`
+  const row = await db.getFirstAsync<{ secs: number; n: number; lifted: number }>(
+    `SELECT
+       (SELECT COALESCE(SUM(duration_seconds), 0) FROM workouts WHERE finished_at IS NOT NULL) AS secs,
+       (SELECT COUNT(*) FROM workouts WHERE finished_at IS NOT NULL) AS n,
+       (SELECT COALESCE(SUM(weight_lbs * reps), 0) FROM logged_sets
+         WHERE is_completed = 1 AND weight_lbs IS NOT NULL AND reps IS NOT NULL) AS lifted`
   );
-  return row?.total ?? 0;
+  return {
+    hours: Math.round((row?.secs ?? 0) / 3600),
+    workoutCount: row?.n ?? 0,
+    totalLifted: row?.lifted ?? 0,
+  };
 }
 
-export async function getWorkoutCount(): Promise<number> {
-  const db = await getDatabase();
-  const row = await db.getFirstAsync<{ count: number }>(
-    "SELECT COUNT(*) as count FROM workouts WHERE finished_at IS NOT NULL"
-  );
-  return row?.count ?? 0;
-}
-
+// ponytail: streaks cap at ~400 days; widen the window if anyone gets there.
 export async function getWorkoutDatesForStreak(): Promise<string[]> {
   const db = await getDatabase();
   const rows = await db.getAllAsync<{ d: string }>(
     `SELECT DISTINCT DATE(started_at, 'unixepoch', 'localtime') as d
      FROM workouts
      WHERE finished_at IS NOT NULL
+       AND started_at >= unixepoch() - 400 * 86400
      ORDER BY d DESC`
   );
   return rows.map((r) => r.d);
@@ -102,9 +96,7 @@ export async function getWorkoutDatesForStreak(): Promise<string[]> {
 export function calculateStreak(dates: string[]): number {
   if (dates.length === 0) return 0;
   const set = new Set(dates);
-  // Local-date keys to match SQLite DATE(..., 'localtime'); toISOString() would be UTC.
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const fmt = localDateKey; // local-date keys match SQLite DATE(..., 'localtime')
 
   // setDate steps calendar days, so DST shifts can't skip or repeat a day.
   const cursor = new Date();
@@ -220,7 +212,7 @@ export async function getOneRMHistory(exerciseId: number): Promise<OneRMDataPoin
   return rows.map((r) => ({ date: r.started_at * 1000, oneRM: Math.round(r.one_rm) }));
 }
 
-export async function getTrackedExercises(): Promise<{ id: number; name: string }[]> {
+export async function getTrackedExercises(limit = 20): Promise<{ id: number; name: string }[]> {
   const db = await getDatabase();
   return db.getAllAsync<{ id: number; name: string }>(
     `SELECT DISTINCT e.id, e.name
@@ -229,7 +221,8 @@ export async function getTrackedExercises(): Promise<{ id: number; name: string 
      JOIN workouts w ON le.workout_id = w.id
      WHERE w.finished_at IS NOT NULL
      ORDER BY e.use_count DESC
-     LIMIT 20`
+     LIMIT ?`,
+    [limit]
   );
 }
 

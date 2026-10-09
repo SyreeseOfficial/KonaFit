@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity } from "react-native";
 import Svg, { Polygon, Line, Circle, Text as SvgText } from "react-native-svg";
 import { getAllExercise1RMs } from "../../db/statsQueries";
 import { getLatestBodyweight } from "../../db/statsQueries";
-import { getProfileSettings } from "../../../app/settings";
 import {
   computeStrengthScore,
   CATEGORY_ORDER,
@@ -11,6 +10,7 @@ import {
   LEVEL_CONFIG,
   getNextLevel,
   type StrengthScoreResult,
+  type Gender,
 } from "../../utils/strengthScore";
 
 const CHART_SIZE = 180;
@@ -76,6 +76,9 @@ function LevelBadge({ name, color, small }: { name: string; color: string; small
 type Tab = "score" | "level" | "balance";
 type Props = { refreshKey?: number };
 
+// Profile settings UI was removed from Settings; this component is currently unused.
+const DEFAULT_PROFILE: { gender: Gender; age: number } = { gender: "male", age: 25 };
+
 export function StrengthScore({ refreshKey }: Props) {
   const [result, setResult] = useState<StrengthScoreResult | null>(null);
   const [bodyweight, setBodyweight] = useState<number | null>(null);
@@ -83,7 +86,7 @@ export function StrengthScore({ refreshKey }: Props) {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const [oneRMs, bw, profile] = await Promise.all([getAllExercise1RMs(), getLatestBodyweight(), getProfileSettings()]);
+    const [oneRMs, bw, profile] = await Promise.all([getAllExercise1RMs(), getLatestBodyweight(), Promise.resolve(DEFAULT_PROFILE)]);
     setBodyweight(bw);
     if (bw && oneRMs.length > 0) setResult(computeStrengthScore(oneRMs, bw, profile.gender, profile.age));
     else setResult(null);

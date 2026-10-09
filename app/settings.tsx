@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react-native";
 import { router } from "expo-router";
+import Constants from "expo-constants";
 import { kvStore } from "../src/utils/kvStore";
 import { getAllWorkoutDataForExport } from "../src/db/historyQueries";
 import { exportCsvAndShare } from "../src/utils/exportUtils";
@@ -188,6 +189,7 @@ export default function SettingsScreen() {
                   DELETE FROM kv_store WHERE key NOT IN ('${REST_TIMER_KEY}','${HAPTICS_KEY}','${THEME_KEY}','${WEEKLY_GOAL_KEY}');
                 `);
               });
+              kvStore.clearCache(); // wipe edited kv_store with raw SQL
               Alert.alert("Done", "All workout data has been deleted.");
             } catch (e) {
               Alert.alert("Error", String(e));
@@ -349,7 +351,7 @@ export default function SettingsScreen() {
               KonaFit
             </Text>
             <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm tracking-widest">
-              Version 1.0.0 · Local-first · Completely free
+              Version {Constants.expoConfig?.version ?? "1.0.0"} · Local-first · Completely free
             </Text>
           </View>
 

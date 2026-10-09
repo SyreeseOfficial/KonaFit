@@ -1,6 +1,6 @@
 # ⚙️ SYSTEM ARCHITECTURE & TECH STACK
 
-This document defines the technical execution, database schemas, and state management rules for the **Kinetic** application. Stick to these primitives to maintain a fast, local-first mobile environment.
+This document defines the technical execution, database schemas, and state management rules for the **KonaFit** application. Stick to these primitives to maintain a fast, local-first mobile environment.
 
 ---
 

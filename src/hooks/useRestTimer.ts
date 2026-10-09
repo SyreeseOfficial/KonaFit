@@ -9,7 +9,8 @@ export function useRestTimer() {
   const [remaining, setRemaining] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [totalSeconds, setTotalSeconds] = useState(DEFAULT_REST_SECONDS);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Wall-clock end time, so backgrounding or a late tick can't make the countdown drift.
+  const endTimeRef = useRef(0);
 
   // Reload the Settings default on focus (Train stays mounted while Settings is open).
   // Skipped while running; the cleanup drops a late result if a run starts first.
@@ -23,36 +24,34 @@ export function useRestTimer() {
   const stop = useCallback(() => {
     setIsRunning(false);
     setRemaining(0);
-    if (intervalRef.current) clearInterval(intervalRef.current);
   }, []);
 
   const start = useCallback((seconds?: number) => {
     const duration = seconds ?? totalSeconds;
+    endTimeRef.current = Date.now() + duration * 1000;
     setTotalSeconds(duration);
     setRemaining(duration);
     setIsRunning(true);
   }, [totalSeconds]);
 
   const adjust = useCallback((delta: number) => {
-    setRemaining((prev) => Math.max(0, prev + delta));
+    endTimeRef.current = Math.max(Date.now(), endTimeRef.current + delta * 1000);
+    setRemaining(Math.ceil((endTimeRef.current - Date.now()) / 1000));
     setTotalSeconds((prev) => Math.max(STEP, prev + delta));
   }, []);
 
   useEffect(() => {
     if (!isRunning) return;
-    intervalRef.current = setInterval(() => {
-      setRemaining((prev) => {
-        if (prev <= 1) {
-          setIsRunning(false);
-          clearInterval(intervalRef.current!);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    const id = setInterval(() => {
+      const left = Math.ceil((endTimeRef.current - Date.now()) / 1000);
+      if (left <= 0) {
+        setRemaining(0);
+        setIsRunning(false);
+      } else {
+        setRemaining(left);
+      }
+    }, 250);
+    return () => clearInterval(id);
   }, [isRunning]);
 
   return {

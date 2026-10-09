@@ -11,10 +11,15 @@ export const PLATES: PlateConfig[] = [
   { weight: 45,  color: "#1565C0", textColor: "#FFFFFF", label: "45",  heightPx: 64 },
   { weight: 35,  color: "#E6AC00", textColor: "#000000", label: "35",  heightPx: 56 },
   { weight: 25,  color: "#2E7D32", textColor: "#FFFFFF", label: "25",  heightPx: 48 },
+  { weight: 15,  color: "#6A1B9A", textColor: "#FFFFFF", label: "15",  heightPx: 42 },
   { weight: 10,  color: "#DEDEDE", textColor: "#000000", label: "10",  heightPx: 36 },
   { weight: 5,   color: "#555555", textColor: "#FFFFFF", label: "5",   heightPx: 26 },
   { weight: 2.5, color: "#333333", textColor: "#A0A0A0", label: "2.5", heightPx: 18 },
+  { weight: 1.25, color: "#444444", textColor: "#A0A0A0", label: "1.25", heightPx: 14 },
 ];
+
+// Not every gym stocks these, so they start disabled (toggle in Plate Config).
+export const OPTIONAL_PLATES: Record<string, boolean> = { "15": false, "1.25": false };
 
 export type PlateResult = { plate: PlateConfig; count: number };
 
@@ -77,5 +82,6 @@ export const REP_RANGES: Record<number, string> = {
 export const BAR_OPTIONS = [
   { label: "45 lb", weight: 45 },
   { label: "35 lb", weight: 35 },
-  { label: "15 kg", weight: 33 },
+  { label: "33 lb (15 kg)", weight: 33 },
+  { label: "44 lb (20 kg)", weight: 44 },
 ] as const;

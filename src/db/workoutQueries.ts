@@ -189,12 +189,6 @@ export async function createCustomExercise(
     "INSERT INTO exercises (name, muscle_group, equipment_type, target_type, is_custom) VALUES (?, ?, ?, ?, 1)",
     [name.trim(), muscle_group, equipment_type, targetType]
   );
-  try {
-    await db.runAsync(
-      "INSERT INTO exercises_fts (rowid, name) VALUES (?, ?)",
-      [result.lastInsertRowId, name.trim()]
-    );
-  } catch { /* FTS optional */ }
   return {
     id: result.lastInsertRowId,
     name: name.trim(),

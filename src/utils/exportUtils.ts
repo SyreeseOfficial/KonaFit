@@ -1,16 +1,11 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { Share, Platform } from "react-native";
 import type { WorkoutDetail, CsvRow } from "../db/historyQueries";
+import { localDateKey, formatTime } from "./time";
 
 // ─── Formatting helpers ───────────────────────────────────────────────────────
 
-export function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
+export const formatDuration = formatTime;
 
 export function formatDate(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toLocaleDateString("en-US", {
@@ -120,7 +115,7 @@ export async function exportCsvAndShare(rows: CsvRow[]): Promise<void> {
   if (rows.length === 0) throw new Error("No workout data to export");
 
   const csv = buildCsv(rows);
-  const filename = `konafit_export_${new Date().toISOString().slice(0, 10)}.csv`;
+  const filename = `konafit_export_${localDateKey(new Date())}.csv`;
 
   // On iOS share the file directly; on Android share as text (no FileProvider needed)
   if (Platform.OS === "ios") {

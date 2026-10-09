@@ -1,6 +1,6 @@
 # 🏋️ FEATURES: TRAINING LOGGER & WORKOUT WORKSPACE
 
-This document details the functional specifications, layout behaviors, and state logic for the active training logger workspace in Kinetic. This is the primary engine of the application.
+This document details the functional specifications, layout behaviors, and state logic for the active training logger workspace in KonaFit. This is the primary engine of the application.
 
 ---
 

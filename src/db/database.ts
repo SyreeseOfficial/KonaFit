@@ -8,6 +8,65 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   return db;
 }
 
+// Numbered migrations, tracked by PRAGMA user_version. Append only; never edit a shipped one.
+// Installs that predate versioning already have these columns, so ALTERs check table_info first.
+async function addColumn(database: SQLite.SQLiteDatabase, table: string, column: string, def: string) {
+  const cols = await database.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
+  if (!cols.some((c) => c.name === column)) {
+    await database.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${def}`);
+  }
+}
+
+const MIGRATIONS: ((database: SQLite.SQLiteDatabase) => Promise<void>)[] = [
+  // 1: columns added after the initial schema + one-time backfill of is_completed
+  async (database) => {
+    await addColumn(database, "exercises", "target_type", "TEXT NOT NULL DEFAULT 'reps'");
+    await addColumn(database, "lifestyle_logs", "caffeine_mg", "INTEGER NOT NULL DEFAULT 0");
+    await addColumn(database, "programs", "program_type", "TEXT NOT NULL DEFAULT 'weekly'");
+    await addColumn(database, "programs", "workout_duration_min", "INTEGER");
+    await addColumn(database, "programs", "focus_tags", "TEXT");
+    await addColumn(database, "programs", "equipment", "TEXT");
+    await addColumn(database, "programs", "difficulty", "TEXT");
+    await addColumn(database, "programs", "archived", "INTEGER NOT NULL DEFAULT 0");
+    await addColumn(database, "exercises", "is_custom", "INTEGER NOT NULL DEFAULT 0");
+    await addColumn(database, "goals", "target_reps", "INTEGER");
+    await addColumn(database, "exercises", "is_deleted", "INTEGER NOT NULL DEFAULT 0");
+    await addColumn(database, "exercises", "notes", "TEXT");
+    await addColumn(database, "workouts", "program_day_id", "INTEGER REFERENCES program_days(id) ON DELETE SET NULL");
+    // Backfill runs once here; running it every launch re-completed sets users had un-checked.
+    await database.execAsync(
+      `UPDATE logged_sets SET is_completed = 1
+       WHERE is_completed = 0
+         AND weight_lbs IS NOT NULL AND reps IS NOT NULL AND reps > 0
+         AND logged_exercise_id IN (
+           SELECT le.id FROM logged_exercises le
+           JOIN workouts w ON le.workout_id = w.id
+           WHERE w.finished_at IS NOT NULL
+         )`
+    );
+  },
+  // 2: exercises_fts was never queried (search uses LIKE)
+  async (database) => {
+    await database.execAsync("DROP TABLE IF EXISTS exercises_fts");
+  },
+];
+
+async function runMigrations(database: SQLite.SQLiteDatabase) {
+  const row = await database.getFirstAsync<{ user_version: number }>("PRAGMA user_version");
+  const current = row?.user_version ?? 0;
+  for (let v = current; v < MIGRATIONS.length; v++) {
+    try {
+      await database.withTransactionAsync(async () => {
+        await MIGRATIONS[v](database);
+        await database.execAsync(`PRAGMA user_version = ${v + 1}`);
+      });
+    } catch (e) {
+      console.error(`DB migration ${v + 1} failed`, e);
+      throw e;
+    }
+  }
+}
+
 export async function initializeDatabase(): Promise<void> {
   const database = await getDatabase();
 
@@ -27,12 +86,6 @@ export async function initializeDatabase(): Promise<void> {
       equipment_type TEXT NOT NULL DEFAULT 'barbell',
       use_count INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL DEFAULT (unixepoch())
-    );
-
-    CREATE VIRTUAL TABLE IF NOT EXISTS exercises_fts USING fts5(
-      name,
-      content=exercises,
-      content_rowid=id
     );
 
     CREATE TABLE IF NOT EXISTS workouts (
@@ -137,34 +190,7 @@ export async function initializeDatabase(): Promise<void> {
     );
   `);
 
-  // Migrations — each wrapped in try/catch so re-runs are safe
-  const migrations = [
-    `ALTER TABLE exercises ADD COLUMN target_type TEXT NOT NULL DEFAULT 'reps'`,
-    `ALTER TABLE lifestyle_logs ADD COLUMN caffeine_mg INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE programs ADD COLUMN program_type TEXT NOT NULL DEFAULT 'weekly'`,
-    `ALTER TABLE programs ADD COLUMN workout_duration_min INTEGER`,
-    `ALTER TABLE programs ADD COLUMN focus_tags TEXT`,
-    `ALTER TABLE programs ADD COLUMN equipment TEXT`,
-    `ALTER TABLE programs ADD COLUMN difficulty TEXT`,
-    `ALTER TABLE programs ADD COLUMN archived INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE exercises ADD COLUMN is_custom INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE goals ADD COLUMN target_reps INTEGER`,
-    `ALTER TABLE exercises ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE exercises ADD COLUMN notes TEXT`,
-    `ALTER TABLE workouts ADD COLUMN program_day_id INTEGER REFERENCES program_days(id) ON DELETE SET NULL`,
-    // Backfill: mark sets with data as completed for workouts already finished
-    `UPDATE logged_sets SET is_completed = 1
-     WHERE is_completed = 0
-       AND weight_lbs IS NOT NULL AND reps IS NOT NULL AND reps > 0
-       AND logged_exercise_id IN (
-         SELECT le.id FROM logged_exercises le
-         JOIN workouts w ON le.workout_id = w.id
-         WHERE w.finished_at IS NOT NULL
-       )`,
-  ];
-  for (const m of migrations) {
-    try { await database.execAsync(m); } catch { /* already applied */ }
-  }
+  await runMigrations(database);
 
   await seedDefaultExercises(database);
   await seedExpandedExercises(database);
