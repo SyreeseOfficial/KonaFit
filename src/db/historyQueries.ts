@@ -19,6 +19,7 @@ export type SetRecord = {
   weight_lbs: number | null;
   reps: number | null;
   rpe: number | null;
+  notes: string | null;
   is_warmup: number;
   is_completed: number;
 };
@@ -111,7 +112,7 @@ export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail
   const exercises: ExerciseRecord[] = await Promise.all(
     exerciseRows.map(async (ex) => {
       const sets = await db.getAllAsync<SetRecord>(
-        `SELECT id, set_number, weight_lbs, reps, rpe, is_warmup, is_completed
+        `SELECT id, set_number, weight_lbs, reps, rpe, notes, is_warmup, is_completed
          FROM logged_sets WHERE logged_exercise_id = ? ORDER BY set_number ASC`,
         [ex.id]
       );
@@ -147,6 +148,7 @@ export type CsvRow = {
   weight_lbs: number | null;
   reps: number | null;
   rpe: number | null;
+  notes: string | null;
   is_warmup: string;
   is_completed: string;
 };
@@ -157,13 +159,13 @@ export async function getAllWorkoutDataForExport(): Promise<CsvRow[]> {
     started_at: number; duration_seconds: number | null; workout_id: number;
     exercise_name: string; muscle_group: string;
     set_number: number; weight_lbs: number | null; reps: number | null;
-    rpe: number | null; is_warmup: number; is_completed: number;
+    rpe: number | null; notes: string | null; is_warmup: number; is_completed: number;
   }>(
     `SELECT
        w.started_at, w.duration_seconds, w.id as workout_id,
        le.exercise_name,
        COALESCE(e.muscle_group, '') as muscle_group,
-       ls.set_number, ls.weight_lbs, ls.reps, ls.rpe,
+       ls.set_number, ls.weight_lbs, ls.reps, ls.rpe, ls.notes,
        ls.is_warmup, ls.is_completed
      FROM logged_sets ls
      JOIN logged_exercises le ON ls.logged_exercise_id = le.id
@@ -186,6 +188,7 @@ export async function getAllWorkoutDataForExport(): Promise<CsvRow[]> {
       weight_lbs: r.weight_lbs,
       reps: r.reps,
       rpe: r.rpe,
+      notes: r.notes,
       is_warmup: r.is_warmup ? "Yes" : "No",
       is_completed: r.is_completed ? "Yes" : "No",
     };

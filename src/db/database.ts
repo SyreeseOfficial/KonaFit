@@ -49,6 +49,10 @@ const MIGRATIONS: ((database: SQLite.SQLiteDatabase) => Promise<void>)[] = [
   async (database) => {
     await database.execAsync("DROP TABLE IF EXISTS exercises_fts");
   },
+  // 3: per-set notes
+  async (database) => {
+    await addColumn(database, "logged_sets", "notes", "TEXT");
+  },
 ];
 
 async function runMigrations(database: SQLite.SQLiteDatabase) {

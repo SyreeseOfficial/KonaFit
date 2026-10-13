@@ -13,6 +13,7 @@ export type ActiveSet = {
   weightLbs: string;
   reps: string;
   rpe: string;
+  notes?: string; // optional: sessions cached before per-set notes lack it
   isWarmup: boolean;
   isCompleted: boolean;
   prBadges?: PRBadge[];

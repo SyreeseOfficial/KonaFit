@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus, Settings, ChevronRight, MoreHorizontal, Copy, Archive, Trash2 } from "lucide-react-native";
 import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
 import * as FileSystem from "expo-file-system/legacy";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { saveProgressPhoto } from "../../src/db/photoQueries";
 import { useWorkoutSession, loadCachedSession } from "../../src/hooks/useWorkoutSession";
 import { useRestTimer } from "../../src/hooks/useRestTimer";
@@ -60,6 +61,14 @@ export default function TrainScreen() {
   const launchedDayRef = useRef<string | null>(null);
 
   const restTimer = useRestTimer();
+
+  // Keep the screen on for the whole workout so the timer doesn't vanish mid-set.
+  const workoutActive = !!session;
+  useEffect(() => {
+    if (!workoutActive) return;
+    activateKeepAwakeAsync("workout").catch(() => {});
+    return () => { deactivateKeepAwake("workout"); };
+  }, [workoutActive]);
   const [exerciseSheetOpen, setExerciseSheetOpen] = useState(false);
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
 

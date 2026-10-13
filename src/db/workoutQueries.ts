@@ -89,19 +89,20 @@ export async function upsertLoggedSet(set: ActiveSet & { loggedExerciseId: numbe
   const weight = set.weightLbs === "" ? null : parseFloat(set.weightLbs);
   const reps = set.reps === "" ? null : parseInt(set.reps, 10);
   const rpe = set.rpe === "" ? null : parseFloat(set.rpe);
+  const notes = set.notes?.trim() ? set.notes.trim() : null;
 
   if (set.dbId) {
     await db.runAsync(
       `UPDATE logged_sets
-       SET weight_lbs = ?, reps = ?, rpe = ?, is_warmup = ?, is_completed = ?
+       SET weight_lbs = ?, reps = ?, rpe = ?, notes = ?, is_warmup = ?, is_completed = ?
        WHERE id = ?`,
-      [weight, reps, rpe, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.dbId]
+      [weight, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.dbId]
     );
   } else {
     await db.runAsync(
-      `INSERT INTO logged_sets (logged_exercise_id, set_number, weight_lbs, reps, rpe, is_warmup, is_completed)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [set.loggedExerciseId, set.setNumber, weight, reps, rpe, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0]
+      `INSERT INTO logged_sets (logged_exercise_id, set_number, weight_lbs, reps, rpe, notes, is_warmup, is_completed)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [set.loggedExerciseId, set.setNumber, weight, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0]
     );
   }
 }

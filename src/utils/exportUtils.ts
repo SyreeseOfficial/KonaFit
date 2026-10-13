@@ -63,7 +63,8 @@ export function buildWorkoutMarkdown(workout: WorkoutDetail): string {
       const r = s.reps != null ? `${s.reps} reps` : "—";
       const rpe = s.rpe != null ? ` @ RPE ${s.rpe}` : "";
       const done = s.is_completed ? " ✓" : "";
-      lines.push(`- Set ${s.set_number}: ${w} × ${r}${rpe}${done}`);
+      const note = s.notes ? ` — ${s.notes}` : "";
+      lines.push(`- Set ${s.set_number}: ${w} × ${r}${rpe}${done}${note}`);
     });
     lines.push("");
   }
@@ -86,12 +87,14 @@ export async function shareWorkoutMarkdown(workout: WorkoutDetail): Promise<void
 const CSV_HEADERS = [
   "Date", "Time", "Duration (min)", "Workout ID",
   "Exercise", "Muscle Group",
-  "Set", "Weight (lbs)", "Reps", "RPE", "Warmup", "Completed",
+  "Set", "Weight (lbs)", "Reps", "RPE", "Notes", "Warmup", "Completed",
 ];
 
 function escapeCsv(val: string | number | null): string {
   if (val === null || val === undefined) return "";
-  const str = String(val);
+  let str = String(val);
+  // Neutralise spreadsheet formulas in user-entered text (numbers are never strings here).
+  if (typeof val === "string" && /^[=+\-@\t\r]/.test(str)) str = `'${str}`;
   if (str.includes(",") || str.includes('"') || str.includes("\n")) {
     return `"${str.replace(/"/g, '""')}"`;
   }
@@ -104,7 +107,7 @@ export function buildCsv(rows: CsvRow[]): string {
     lines.push([
       r.date, r.time, r.duration_min, r.workout_id,
       r.exercise, r.muscle_group,
-      r.set_number, r.weight_lbs, r.reps, r.rpe,
+      r.set_number, r.weight_lbs, r.reps, r.rpe, r.notes,
       r.is_warmup, r.is_completed,
     ].map(escapeCsv).join(","));
   }

@@ -66,6 +66,7 @@ function defaultSet(setNumber: number): ActiveSet {
     weightLbs: "",
     reps: "",
     rpe: "",
+    notes: "",
     isWarmup: false,
     isCompleted: false,
   };
@@ -312,7 +313,7 @@ export function useWorkoutSession() {
     (
       exerciseLocalId: string,
       setLocalId: string,
-      patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe" | "isWarmup" | "isCompleted">>
+      patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe" | "notes" | "isWarmup" | "isCompleted">>
     ) => {
       updateSession((prev) => ({
         ...prev,

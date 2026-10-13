@@ -304,10 +304,11 @@ export default function WorkoutDetailScreen() {
               return (
                 <View
                   key={s.id}
-                  className={`flex-row items-center px-5 py-3 border-t border-surface-2 dark:border-zinc-800 ${
+                  className={`border-t border-surface-2 dark:border-zinc-800 ${
                     !s.is_completed && !editMode ? "opacity-40" : ""
                   }`}
                 >
+                <View className="flex-row items-center px-5 py-3">
                   <Text className={`w-8 font-mono text-sm ${s.is_warmup ? "text-amber-500" : "text-text-secondary dark:text-zinc-400"}`}>
                     {s.is_warmup ? "W" : s.set_number}
                   </Text>
@@ -358,6 +359,10 @@ export default function WorkoutDetailScreen() {
                       </Text>
                     </>
                   )}
+                </View>
+                {s.notes ? (
+                  <Text className="font-mono text-text-secondary dark:text-zinc-400 text-xs italic px-5 pb-3">{s.notes}</Text>
+                ) : null}
                 </View>
               );
             })}

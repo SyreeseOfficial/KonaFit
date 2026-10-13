@@ -6,7 +6,6 @@ Reviewed 2026-10-08. **Not repeated here:** everything already in `TODO_CODE_REV
 - [ ] **[M]** Strength score `categorizeExercise` mismatches (`src/utils/strengthScore.ts:82-86`): `row` matches "Upright Row" (delts); `fly` matches "Reverse Fly" (rear delts); `leg press` counts as squat (1RM is often 2-3x squat, inflating the score); `hip thrust`/`good morning` count as deadlift; `dip` also matches substrings. Use an explicit exercise-id/name map, or a `lift_category` column on `exercises`.
 - [ ] **[M]** 1RM estimate uses Epley for any rep count (`statsQueries.ts:186,205`, `goalQueries.ts:86`). At 15+ reps it overstates badly. Cap input at 10 reps (ignore higher), or use Brzycki below 10.
 - [ ] **[M]** Overall strength score averages only categories you have logged (`strengthScore.ts:141`), so one great lift = "Elite". Show overall as "N of 5 lifts tracked" or count missing lifts as 0.
-- [ ] **[L]** CSV formula injection: custom exercise/location names starting with `= + - @` run as formulas in Excel/Sheets (`exportUtils.ts:380`). Prefix with `'`.
 
 ## Data safety (biggest product risk)
 - [ ] **[H]** No backup or restore. The app is local-only, so a lost/broken phone loses all history. Export is CSV only and cannot be imported back. Add: "Back up database" (copy `konafit.db` via `expo-file-system` + `expo-sharing` to Drive/Files) and "Restore from backup". JSON export of all tables is the portable alternative.
@@ -17,8 +16,6 @@ Reviewed 2026-10-08. **Not repeated here:** everything already in `TODO_CODE_REV
 ## Performance / efficiency
 
 ## UI / UX
-- [ ] **[H]** Keep screen awake during an active workout (`expo-keep-awake`, not installed). The phone locks mid-set at the gym and the timer view disappears.
-- [ ] **[M]** RPE is stored, exported, and used in goals (`statsQueries.ts:360`), but `SetRow` has no RPE input. Add an optional RPE chip row or drop the column from export. README claims "sets, reps, weight, and RPE", and per-set notes (SetRow has none; only exercise-level notes exist).
 
 ## New features
 - [ ] **[H]** Progressive overload hints: on each exercise show "last time 135 x 8: try 140 x 8 or 135 x 9" using existing ghost data.
@@ -36,6 +33,9 @@ Reviewed 2026-10-08. **Not repeated here:** everything already in `TODO_CODE_REV
 - [ ] **[M]** Rest timer end has no cue: no haptic, sound, or notification when it hits 0 (README promises vibration + crimson flash). Add `Haptics.notificationAsync(Success)` on completion; add `expo-notifications` local notification so it still fires with the screen locked.
 
 ## Completed
+- [x] **[L]** CSV formula injection: custom exercise/location names starting with `= + - @` run as formulas in Excel/Sheets (`exportUtils.ts:380`). Prefix with `'`. Done: `escapeCsv` prefixes text cells starting with `= + - @` (or tab/CR) with `'`; test added.
+- [x] **[H]** Keep screen awake during an active workout (`expo-keep-awake`, not installed). The phone locks mid-set at the gym and the timer view disappears. Done: `train.tsx` holds an `expo-keep-awake` lock ("workout") while a session exists; released on finish/discard.
+- [x] **[M]** RPE is stored, exported, and used in goals (`statsQueries.ts:360`), but `SetRow` has no RPE input. Add an optional RPE chip row or drop the column from export. README claims "sets, reps, weight, and RPE", and per-set notes (SetRow has none; only exercise-level notes exist). Done (RPE only): focusing a set shows RPE 6-10 chips (tap again to clear); the value shows under the set when not editing. Per-set notes: migration 3 adds `logged_sets.notes`; the "Note" chip in the set toolbar opens a one-line input, the note shows under the set, in workout history, Markdown share and a new CSV "Notes" column. Notes are not editable from the history edit screen (display only).
 - [x] **[H]** Set-complete button is 32 px and set-number button 40 px (`SetRow.tsx:57,108`). Gym use with chalky/sweaty hands needs 44-48 px targets. Done: both are now 48 px hit areas, inputs 44 px, column headers realigned.
 - [x] **[M]** Add +/- stepper (±2.5 / ±5) next to weight, and "repeat previous set" / "copy last set to all" action. Done: focusing a set shows a chip toolbar (-5 / -2.5 / +2.5 / +5 on weight, "Same as prev"); "Copy last set to all" is in the exercise ⋯ menu (`copyLastSetToAll` in `useWorkoutSession`).
 - [x] **[M]** Completed sets are locked (`editable={!completed}`). Done: inputs stay editable after completion; blur re-runs the PR check via `recheckSetPR` (no haptics).
