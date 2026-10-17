@@ -4,7 +4,7 @@ export type GhostSet = {
   reps: number | null;
 };
 
-export type PRBadge = "W" | "R" | "V"; // Weight, Reps, Volume
+export type PRBadge = "W" | "R" | "V" | "F"; // Weight, Reps, Volume, First time
 
 export type ActiveSet = {
   localId: string;
@@ -24,6 +24,7 @@ export type HistPRs = {
   maxWeight: number | null;
   maxReps: number | null;
   maxVolume: number | null;
+  repsByWeight?: { weight: number; reps: number }[]; // best reps at each weight; missing in older cached sessions
 };
 
 export type ActiveExercise = {

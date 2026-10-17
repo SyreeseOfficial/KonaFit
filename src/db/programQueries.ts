@@ -216,11 +216,6 @@ export async function createProgramDay(
   return result.lastInsertRowId;
 }
 
-export async function updateProgramDay(id: number, name: string): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync("UPDATE program_days SET name = ? WHERE id = ?", [name.trim(), id]);
-}
-
 export async function deleteProgramDay(id: number): Promise<void> {
   const db = await getDatabase();
   await db.runAsync("DELETE FROM program_days WHERE id = ?", [id]);

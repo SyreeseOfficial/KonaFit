@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { AppState } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { kvStore } from "../utils/kvStore";
 import { haptics } from "../utils/haptics";
@@ -15,49 +16,24 @@ import {
   getGhostSets,
   updateLoggedExerciseNotes,
   swapLoggedExercise,
-  updateLoggedExerciseOrder,
+  setLoggedExerciseOrder,
+  deleteLoggedExercise,
   getExerciseLibraryNote,
   updateExerciseLibraryNote,
 } from "../db/workoutQueries";
 import { getProgramDayExercises } from "../db/programQueries";
 import { getHistPRs, getLastWorkoutExercises } from "../db/historyQueries";
-import type { PRBadge, HistPRs } from "../types/workout";
+import { computePRBadges, isRealPR } from "../utils/prBadges";
+import type { PRBadge } from "../types/workout";
 
 const SESSION_KEY = "@kinetic_active_session";
 let localIdCounter = 0;
 const uid = () => `local_${++localIdCounter}_${Date.now()}`;
 
-function computePRBadges(
-  exercise: ActiveExercise,
-  excludeSetLocalId: string,
-  weight: number,
-  reps: number,
-  hist: HistPRs
-): PRBadge[] {
-  const otherCompleted = exercise.sets.filter(
-    (s) => s.localId !== excludeSetLocalId && s.isCompleted && !s.isWarmup &&
-    s.weightLbs !== "" && s.reps !== ""
-  );
-  const sessionMaxWeight = otherCompleted.length > 0
-    ? Math.max(...otherCompleted.map((s) => parseFloat(s.weightLbs)))
-    : null;
-  const sessionMaxReps = otherCompleted.length > 0
-    ? Math.max(...otherCompleted.map((s) => parseInt(s.reps, 10)))
-    : null;
-  const sessionMaxVolume = otherCompleted.length > 0
-    ? Math.max(...otherCompleted.map((s) => parseFloat(s.weightLbs) * parseInt(s.reps, 10)))
-    : null;
-
-  const allTimeWeight = Math.max(hist.maxWeight ?? 0, sessionMaxWeight ?? 0);
-  const allTimeReps = Math.max(hist.maxReps ?? 0, sessionMaxReps ?? 0);
-  const allTimeVolume = Math.max(hist.maxVolume ?? 0, sessionMaxVolume ?? 0);
-
-  const badges: PRBadge[] = [];
-  if (weight > allTimeWeight) badges.push("W");
-  if (reps > allTimeReps) badges.push("R");
-  if (weight * reps > allTimeVolume) badges.push("V");
-  return badges;
-}
+// Write the order the user sees (array position) to the DB in one transaction.
+const persistOrder = (exercises: ActiveExercise[]) =>
+  setLoggedExerciseOrder(exercises.flatMap((e) => (e.dbId != null ? [e.dbId] : []))).catch(console.error);
+const reindex = (exercises: ActiveExercise[]) => exercises.map((e, i) => ({ ...e, orderIndex: i }));
 
 function defaultSet(setNumber: number): ActiveSet {
   return {
@@ -91,8 +67,24 @@ export async function loadCachedSession(): Promise<ActiveSession | null> {
 
 export function useWorkoutSession() {
   const [session, setSession] = useState<ActiveSession | null>(null);
-  const saveRef = useRef(saveToStorage);
-  saveRef.current = saveToStorage;
+
+  // The snapshot in kv_store is debounced (trailing 500 ms) and flushed when the app leaves the foreground.
+  const pendingRef = useRef<ActiveSession | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelPending = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    pendingRef.current = null;
+  }, []);
+  const flushPending = useCallback(() => {
+    const pending = pendingRef.current;
+    cancelPending();
+    if (pending) saveToStorage(pending).catch(console.error);
+  }, [cancelPending]);
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => { if (state !== "active") flushPending(); });
+    return () => { sub.remove(); flushPending(); };
+  }, [flushPending]);
 
   // The workout can be deleted behind our back (Settings > Wipe All Data); drop the stale session.
   const activeWorkoutId = session?.workoutId;
@@ -108,11 +100,13 @@ export function useWorkoutSession() {
       setSession((prev) => {
         if (!prev) return prev;
         const next = updater(prev);
-        saveRef.current(next).catch(console.error);
+        pendingRef.current = next;
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(flushPending, 500);
         return next;
       });
     },
-    []
+    [flushPending]
   );
 
   const startWorkout = useCallback(async () => {
@@ -142,16 +136,18 @@ export function useWorkoutSession() {
   const finishWorkout = useCallback(async (location?: string) => {
     if (!session) return;
     await finalizeWorkout(session.workoutId, location);
+    cancelPending();
     await saveToStorage(null);
     setSession(null);
-  }, [session]);
+  }, [session, cancelPending]);
 
   const discardWorkout = useCallback(async () => {
     if (!session) return;
     await deleteWorkout(session.workoutId);
+    cancelPending();
     await saveToStorage(null);
     setSession(null);
-  }, [session]);
+  }, [session, cancelPending]);
 
   const addExercise = useCallback(
     async (exerciseId: number, exerciseName: string, muscleGroup: string) => {
@@ -256,7 +252,9 @@ export function useWorkoutSession() {
         const tIdx = exercises.findIndex((e) => e.localId === targetLocalId);
         exercises[tIdx] = { ...exercises[tIdx], supersetId };
         exercises.splice(tIdx + 1, 0, newExercise);
-        return { ...prev, exercises };
+        const ordered = reindex(exercises);
+        persistOrder(ordered);
+        return { ...prev, exercises: ordered };
       });
     },
     [session, updateSession]
@@ -404,7 +402,7 @@ export function useWorkoutSession() {
               let prBadges: PRBadge[] | undefined;
               if (nowComplete && !s.isWarmup && weight != null && reps != null) {
                 prBadges = computePRBadges(e, s.localId, weight, reps, e.histPRs);
-                if (prBadges.length > 0) haptics.success();
+                if (isRealPR(prBadges)) haptics.success();
               }
 
               const updated = { ...s, isCompleted: nowComplete, isGhostFilled: false, prBadges: nowComplete ? prBadges : undefined };
@@ -447,13 +445,14 @@ export function useWorkoutSession() {
   );
 
   const updateExerciseNotes = useCallback(
-    (exerciseLocalId: string, notes: string) => {
+    // The note belongs to this workout; only `saveAsDefault` also makes it the prefilled note for future workouts.
+    (exerciseLocalId: string, notes: string, saveAsDefault = false) => {
       updateSession((prev) => ({
         ...prev,
         exercises: prev.exercises.map((e) => {
           if (e.localId !== exerciseLocalId) return e;
           if (e.dbId) updateLoggedExerciseNotes(e.dbId, notes).catch(console.error);
-          updateExerciseLibraryNote(e.exerciseId, notes).catch(console.error);
+          if (saveAsDefault) updateExerciseLibraryNote(e.exerciseId, notes).catch(console.error);
           return { ...e, notes };
         }),
       }));
@@ -472,11 +471,9 @@ export function useWorkoutSession() {
       updateSession((prev) => {
         const exercises = [...prev.exercises];
         [exercises[idx], exercises[newIdx]] = [exercises[newIdx], exercises[idx]];
-        exercises[idx] = { ...exercises[idx], orderIndex: idx };
-        exercises[newIdx] = { ...exercises[newIdx], orderIndex: newIdx };
-        if (exercises[idx].dbId) updateLoggedExerciseOrder(exercises[idx].dbId!, idx).catch(console.error);
-        if (exercises[newIdx].dbId) updateLoggedExerciseOrder(exercises[newIdx].dbId!, newIdx).catch(console.error);
-        return { ...prev, exercises };
+        const ordered = reindex(exercises);
+        persistOrder(ordered);
+        return { ...prev, exercises: ordered };
       });
     },
     [session, updateSession]
@@ -504,15 +501,17 @@ export function useWorkoutSession() {
   );
 
   const removeExercise = useCallback(
-    (exerciseLocalId: string) => {
-      updateSession((prev) => ({
-        ...prev,
-        exercises: prev.exercises
-          .filter((e) => e.localId !== exerciseLocalId)
-          .map((e, i) => ({ ...e, orderIndex: i })),
-      }));
+    async (exerciseLocalId: string) => {
+      const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
+      if (!exercise) return;
+      if (exercise.dbId) await deleteLoggedExercise(exercise.dbId);
+      updateSession((prev) => {
+        const exercises = reindex(prev.exercises.filter((e) => e.localId !== exerciseLocalId));
+        persistOrder(exercises);
+        return { ...prev, exercises };
+      });
     },
-    [updateSession]
+    [session, updateSession]
   );
 
   const launchFromExercises = useCallback(async (

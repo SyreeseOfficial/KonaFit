@@ -3,9 +3,10 @@ import { View, Text, TextInput, TouchableOpacity, useColorScheme } from "react-n
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { Check } from "lucide-react-native";
 import { haptics } from "../../utils/haptics";
+import { cleanDecimal, cleanInt, MAX_WEIGHT, MAX_REPS } from "../../utils/numberInput";
 import type { ActiveSet, GhostSet, PRBadge } from "../../types/workout";
 
-const PR_LABELS: Record<PRBadge, string> = { W: "PR WT", R: "PR REP", V: "PR VOL" };
+const PR_LABELS: Record<PRBadge, string> = { W: "PR WT", R: "PR REP", V: "PR VOL", F: "FIRST TIME" };
 
 function PRBadgeChip({ badge }: { badge: PRBadge }) {
   const scale = useSharedValue(0);
@@ -14,7 +15,7 @@ function PRBadgeChip({ badge }: { badge: PRBadge }) {
   }, []);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
-    <Animated.View style={style} className="bg-amber-500 px-1.5 py-0.5 rounded">
+    <Animated.View style={style} className={`${badge === "F" ? "bg-zinc-500" : "bg-amber-500"} px-1.5 py-0.5 rounded`}>
       <Text className="font-mono-medium text-white" style={{ fontSize: 11, lineHeight: 14 }}>
         {PR_LABELS[badge]}
       </Text>
@@ -60,7 +61,7 @@ export function SetRow({ set, ghost, prevSet, onUpdate, onCommitEdit, onToggleCo
   };
 
   const stepWeight =(delta: number) => {
-    const next = Math.max(0, (parseFloat(set.weightLbs) || 0) + delta);
+    const next = Math.min(MAX_WEIGHT, Math.max(0, (parseFloat(set.weightLbs) || 0) + delta));
     onUpdate({ weightLbs: String(Math.round(next * 100) / 100) });
   };
 
@@ -100,7 +101,7 @@ export function SetRow({ set, ghost, prevSet, onUpdate, onCommitEdit, onToggleCo
         placeholder="lbs"
         placeholderTextColor="#94A3B8"
         value={set.weightLbs}
-        onChangeText={(v) => onUpdate({ weightLbs: v })}
+        onChangeText={(v) => { const c = cleanDecimal(v, MAX_WEIGHT); if (c !== null) onUpdate({ weightLbs: c }); }}
         keyboardType="decimal-pad"
         selectTextOnFocus
         onFocus={() => setFocused("weight")}
@@ -114,7 +115,7 @@ export function SetRow({ set, ghost, prevSet, onUpdate, onCommitEdit, onToggleCo
         placeholder="reps"
         placeholderTextColor="#94A3B8"
         value={set.reps}
-        onChangeText={(v) => onUpdate({ reps: v })}
+        onChangeText={(v) => { const c = cleanInt(v, MAX_REPS); if (c !== null) onUpdate({ reps: c }); }}
         keyboardType="number-pad"
         selectTextOnFocus
         onFocus={() => setFocused("reps")}

@@ -283,6 +283,7 @@ export type RawHistPRs = {
   maxWeight: number | null;
   maxReps: number | null;
   maxVolume: number | null;
+  repsByWeight: { weight: number; reps: number }[];
 };
 
 export async function getHistPRs(exerciseId: number, excludeWorkoutId: number): Promise<RawHistPRs> {
@@ -302,7 +303,20 @@ export async function getHistPRs(exerciseId: number, excludeWorkoutId: number): 
        AND ls.weight_lbs IS NOT NULL AND ls.reps IS NOT NULL`,
     [exerciseId, excludeWorkoutId]
   );
-  return { maxWeight: row?.mw ?? null, maxReps: row?.mr ?? null, maxVolume: row?.mv ?? null };
+  const repsByWeight = await db.getAllAsync<{ weight: number; reps: number }>(
+    `SELECT ls.weight_lbs AS weight, MAX(ls.reps) AS reps
+     FROM logged_sets ls
+     JOIN logged_exercises le ON ls.logged_exercise_id = le.id
+     JOIN workouts w ON le.workout_id = w.id
+     WHERE le.exercise_id = ?
+       AND w.id != ?
+       AND w.finished_at IS NOT NULL
+       AND ls.is_completed = 1 AND ls.is_warmup = 0
+       AND ls.weight_lbs IS NOT NULL AND ls.reps IS NOT NULL
+     GROUP BY ls.weight_lbs`,
+    [exerciseId, excludeWorkoutId]
+  );
+  return { maxWeight: row?.mw ?? null, maxReps: row?.mr ?? null, maxVolume: row?.mv ?? null, repsByWeight };
 }
 
 export async function getExercisePRs(exerciseId: number): Promise<ExercisePRs> {
@@ -353,40 +367,3 @@ export async function getExercisePRs(exerciseId: number): Promise<ExercisePRs> {
 }
 
 // kept for potential future use — not used by ExerciseHistoryModal anymore
-export async function getRecentExerciseSessions(
-  exerciseId: number,
-  limit = 5
-): Promise<{ startedAt: number; bestWeightLbs: number | null; totalReps: number; sets: number; volume: number }[]> {
-  const db = await getDatabase();
-  const rows = await db.getAllAsync<{
-    started_at: number;
-    best_weight: number | null;
-    total_reps: number;
-    sets: number;
-    volume: number;
-  }>(
-    `SELECT
-       w.started_at,
-       MAX(ls.weight_lbs) as best_weight,
-       SUM(ls.reps) as total_reps,
-       COUNT(ls.id) as sets,
-       COALESCE(SUM(ls.weight_lbs * ls.reps), 0) as volume
-     FROM logged_sets ls
-     JOIN logged_exercises le ON ls.logged_exercise_id = le.id
-     JOIN workouts w ON le.workout_id = w.id
-     WHERE le.exercise_id = ?
-       AND ls.is_completed = 1 AND ls.is_warmup = 0
-       AND w.finished_at IS NOT NULL
-     GROUP BY le.workout_id
-     ORDER BY w.started_at DESC
-     LIMIT ?`,
-    [exerciseId, limit]
-  );
-  return rows.map((r) => ({
-    startedAt: r.started_at * 1000,
-    bestWeightLbs: r.best_weight,
-    totalReps: r.total_reps,
-    sets: r.sets,
-    volume: r.volume,
-  }));
-}

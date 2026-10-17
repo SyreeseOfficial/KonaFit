@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   LayoutAnimation,
+  Switch,
 } from "react-native";
 import { haptics } from "../../utils/haptics";
 import { MoreHorizontal, X, FileText, PlusCircle, ArrowLeftRight, ChevronDown, ChevronUp, History, ArrowUp, ArrowDown, Link } from "lucide-react-native";
@@ -32,7 +33,7 @@ type Props = {
   onCommitSetEdit: (setLocalId: string) => void;
   onToggleComplete: (setLocalId: string) => void;
   onToggleWarmup: (setLocalId: string) => void;
-  onUpdateNotes: (notes: string) => void;
+  onUpdateNotes: (notes: string, saveAsDefault: boolean) => void;
   onRemoveExercise: () => void;
   onSwap: () => void;
   onAddSuperset?: () => void;
@@ -71,6 +72,7 @@ export function ExerciseBlock({
   const [notesOpen, setNotesOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [notesText, setNotesText] = useState(exercise.notes);
+  const [saveAsDefault, setSaveAsDefault] = useState(false);
 
   return (
     <View
@@ -163,7 +165,7 @@ export function ExerciseBlock({
           {/* Notes preview */}
           {exercise.notes !== "" && (
             <TouchableOpacity
-              onPress={() => { setNotesText(exercise.notes); setNotesOpen(true); }}
+              onPress={() => { setNotesText(exercise.notes); setSaveAsDefault(false); setNotesOpen(true); }}
               className="flex-row items-center gap-1.5 px-4 py-3 border-t border-surface-2 dark:border-zinc-800"
               activeOpacity={0.7}
             >
@@ -222,7 +224,7 @@ export function ExerciseBlock({
                 </TouchableOpacity>
               </View>
               <TouchableOpacity
-                onPress={() => { setMenuOpen(false); setNotesText(exercise.notes); setNotesOpen(true); }}
+                onPress={() => { setMenuOpen(false); setNotesText(exercise.notes); setSaveAsDefault(false); setNotesOpen(true); }}
                 className="px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
                 activeOpacity={0.7}
               >
@@ -269,9 +271,7 @@ export function ExerciseBlock({
                 <Text className="font-montserrat-bold text-text-primary dark:text-white text-base mb-3">
                   Notes — {exercise.exerciseName}
                 </Text>
-                <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-xs mb-3">
-                  Saved to this exercise for all future workouts
-                </Text>
+
                 <TextInput
                   className="bg-surface-2 dark:bg-zinc-800 text-text-primary dark:text-white font-montserrat text-base p-4 min-h-24 rounded-xl"
                   placeholder="Cues, form reminders, substitutions…"
@@ -281,8 +281,14 @@ export function ExerciseBlock({
                   multiline
                   autoFocus
                 />
+                <View className="flex-row items-center justify-between mt-3">
+                  <Text className="font-montserrat text-text-secondary dark:text-zinc-400 text-sm flex-1 mr-3">
+                    Also prefill this note in future workouts
+                  </Text>
+                  <Switch value={saveAsDefault} onValueChange={setSaveAsDefault} />
+                </View>
                 <TouchableOpacity
-                  onPress={() => { haptics.tap(); onUpdateNotes(notesText); setNotesOpen(false); }}
+                  onPress={() => { haptics.tap(); onUpdateNotes(notesText, saveAsDefault); setNotesOpen(false); }}
                   className="mt-3 bg-crimson dark:bg-blue-500 py-4 items-center rounded-2xl"
                   activeOpacity={0.85}
                 >

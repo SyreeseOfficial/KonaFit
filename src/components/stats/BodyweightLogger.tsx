@@ -1,26 +1,25 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { Scale } from "lucide-react-native";
-import { logBodyweight, getLatestBodyweight } from "../../db/statsQueries";
+import { logBodyweight } from "../../db/statsQueries";
+import { cleanDecimal, MIN_BODYWEIGHT, MAX_BODYWEIGHT } from "../../utils/numberInput";
 
 type Props = { onSaved: () => void };
 
 export function BodyweightLogger({ onSaved }: Props) {
-  const [weight, setWeight] = useState("");
-  const [latest, setLatest] = useState<number | null>(null);
+  const [bodyweight, setBodyweight] = useState("");
   const [saving, setSaving] = useState(false);
+  const [bwSaved, setBwSaved] = useState(false);
 
-  useEffect(() => { getLatestBodyweight().then(setLatest); }, []);
-
-  const handleLog = async () => {
-    const val = parseFloat(weight);
-    if (isNaN(val) || val <= 0) return;
+  const handleSaveBodyweight = async () => {
+    const val = parseFloat(bodyweight);
+    if (!(val >= MIN_BODYWEIGHT)) return;
     setSaving(true);
     try {
       await logBodyweight(val);
-      setWeight("");
-      const updated = await getLatestBodyweight();
-      setLatest(updated);
+      setBodyweight("");
+      setBwSaved(true);
+      setTimeout(() => setBwSaved(false), 2000);
       onSaved();
     } finally { setSaving(false); }
   };
@@ -32,31 +31,28 @@ export function BodyweightLogger({ onSaved }: Props) {
         <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm uppercase tracking-widest">
           Bodyweight
         </Text>
-        {latest != null && (
-          <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs ml-auto">
-            Last: {latest} lbs
-          </Text>
-        )}
       </View>
       <View className="flex-row items-center gap-2">
         <TextInput
           className="flex-1 h-11 bg-surface-2 dark:bg-zinc-800 px-4 font-mono text-text-primary dark:text-white text-base rounded-xl"
           placeholder="lbs"
           placeholderTextColor="#94A3B8"
-          value={weight}
-          onChangeText={setWeight}
+          value={bodyweight}
+          onChangeText={(v) => { const c = cleanDecimal(v, MAX_BODYWEIGHT); if (c !== null) setBodyweight(c); }}
           keyboardType="decimal-pad"
           returnKeyType="done"
-          onSubmitEditing={handleLog}
+          onSubmitEditing={handleSaveBodyweight}
         />
         <TouchableOpacity
-          onPress={handleLog}
-          disabled={saving || weight === ""}
-          className={`h-11 px-5 items-center justify-center rounded-xl ${weight !== "" ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
+          onPress={handleSaveBodyweight}
+          disabled={saving || !(parseFloat(bodyweight) >= MIN_BODYWEIGHT)}
+          className={`h-11 px-5 items-center justify-center rounded-xl ${
+            bwSaved ? "bg-emerald-50 dark:bg-emerald-950" : parseFloat(bodyweight) >= MIN_BODYWEIGHT ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"
+          }`}
           activeOpacity={0.85}
         >
-          <Text className={`font-montserrat-bold text-sm ${weight !== "" ? "text-white" : "text-text-muted dark:text-zinc-500"}`}>
-            Log
+          <Text className={`font-montserrat-bold text-sm ${bwSaved ? "text-emerald-600 dark:text-emerald-400" : "text-white"}`}>
+            {bwSaved ? "Saved ✓" : "Log"}
           </Text>
         </TouchableOpacity>
       </View>

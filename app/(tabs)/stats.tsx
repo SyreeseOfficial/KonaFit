@@ -14,7 +14,7 @@ import { getAllWorkoutDataForExport } from "../../src/db/historyQueries";
 import { exportCsvAndShare } from "../../src/utils/exportUtils";
 import { StatsGrid } from "../../src/components/stats/StatsGrid";
 import { SectionHeader } from "../../src/components/stats/SectionHeader";
-import { LifestyleLogger } from "../../src/components/stats/LifestyleLogger";
+import { BodyweightLogger } from "../../src/components/stats/BodyweightLogger";
 import { ProgressPhotoGallery } from "../../src/components/stats/ProgressPhotoGallery";
 
 type StatsData = {
@@ -22,7 +22,7 @@ type StatsData = {
   workoutCount: number;
   streak: number;
   bodyweightLbs: number | null;
-  totalHours: number;
+  totalSeconds: number;
   prCount: number;
 };
 
@@ -38,7 +38,7 @@ async function loadStats(): Promise<StatsData> {
     workoutCount: totals.workoutCount,
     streak: calculateStreak(dates),
     bodyweightLbs: bw,
-    totalHours: totals.hours,
+    totalSeconds: totals.seconds,
     prCount: prs,
   };
 }
@@ -115,14 +115,14 @@ export default function StatsScreen() {
             workoutCount={stats.workoutCount}
             streak={stats.streak}
             bodyweightLbs={stats.bodyweightLbs}
-            totalHours={stats.totalHours}
+            totalSeconds={stats.totalSeconds}
             prCount={stats.prCount}
           />
         )}
 
         <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
           <SectionHeader title="Lifestyle" subtitle="Daily tracking" />
-          <LifestyleLogger onSaved={() => refresh()} />
+          <BodyweightLogger onSaved={() => refresh()} />
         </View>
 
         <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>

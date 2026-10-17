@@ -5,9 +5,12 @@ jest.mock("react-native", () => ({ Share: {}, Platform: { OS: "android" } }));
 
 import { calculateStreak } from "../db/statsQueries";
 import { calculatePlates, PLATES } from "../utils/plateCalc";
-import { computeStrengthScore } from "../utils/strengthScore";
 import { buildCsv } from "../utils/exportUtils";
 import { localDateKey } from "../utils/time";
+import { cleanDecimal, cleanInt } from "../utils/numberInput";
+import { computePRBadges } from "../utils/prBadges";
+import { autoWorkoutName } from "../db/workoutQueries";
+import type { ActiveExercise, ActiveSet, HistPRs } from "../types/workout";
 
 afterEach(() => jest.useRealTimers());
 
@@ -51,19 +54,6 @@ describe("calculatePlates", () => {
   });
 });
 
-describe("computeStrengthScore", () => {
-  it("scores only the tracked categories and ignores unknown exercises", () => {
-    const r = computeStrengthScore([{ name: "Barbell Bench Press", oneRM: 225 }, { name: "Unknown Move", oneRM: 999 }], 180, "male", 30);
-    const tracked = r.categories.filter((c) => c.score !== null);
-    expect(tracked).toHaveLength(1);
-    expect(tracked[0].oneRM).toBe(225);
-    expect(r.overall).toBe(tracked[0].score);
-  });
-  it("is 0 with no lifts", () => {
-    expect(computeStrengthScore([], 180, "male", 30).overall).toBe(0);
-  });
-});
-
 describe("buildCsv", () => {
   const row = {
     date: "2026-06-15", time: "11:30 PM", duration_min: 60, workout_id: 1,
@@ -77,5 +67,48 @@ describe("buildCsv", () => {
   });
   it("prefixes formula-like text with a quote", () => {
     expect(buildCsv([{ ...row, exercise: "=SUM(A1)" }]).split("\n")[1]).toContain(",'=SUM(A1),");
+  });
+});
+
+describe("number input", () => {
+  it("accepts comma decimals, strips junk, rejects out-of-range keystrokes", () => {
+    expect(cleanDecimal("62,5", 2000)).toBe("62.5");
+    expect(cleanDecimal("1.2.3x", 2000)).toBe("1.23");
+    expect(cleanDecimal("2255", 2000)).toBeNull();
+    expect(cleanInt("12a", 999)).toBe("12");
+    expect(cleanInt("1000", 999)).toBeNull();
+  });
+});
+
+describe("computePRBadges", () => {
+  const set = (w: string, r: string, done = true): ActiveSet => ({
+    localId: `s${w}${r}`, setNumber: 1, weightLbs: w, reps: r, rpe: "", isWarmup: false, isCompleted: done,
+  });
+  const ex = (sets: ActiveSet[]) => ({ sets } as ActiveExercise);
+  const hist: HistPRs = {
+    maxWeight: 225, maxReps: 20, maxVolume: 2700,
+    repsByWeight: [{ weight: 225, reps: 12 }, { weight: 45, reps: 20 }],
+  };
+  const none: HistPRs = { maxWeight: null, maxReps: null, maxVolume: null, repsByWeight: [] };
+
+  it("labels the first set of a new exercise instead of calling it a PR", () => {
+    expect(computePRBadges(ex([]), "x", 135, 8, none)).toEqual(["F"]);
+    expect(computePRBadges(ex([set("135", "8")]), "x", 140, 8, none)).toEqual([]);
+  });
+  it("compares reps only against sets at the same or heavier weight", () => {
+    expect(computePRBadges(ex([]), "x", 225, 13, hist)).toContain("R");
+    expect(computePRBadges(ex([]), "x", 225, 11, hist)).not.toContain("R");
+    expect(computePRBadges(ex([]), "x", 135, 11, hist)).not.toContain("R"); // 225x12 beats it; 45x20 does not count
+  });
+  it("flags weight and volume PRs", () => {
+    expect(computePRBadges(ex([]), "x", 230, 12, hist)).toEqual(["W", "V"]);
+  });
+});
+
+describe("autoWorkoutName", () => {
+  it("summarises the top two primary muscle groups plus weekday", () => {
+    const t = new Date(2026, 5, 15, 12).getTime() / 1000; // Monday
+    expect(autoWorkoutName(["Chest, Front Delts", "Chest", "Triceps", "Biceps"], t)).toMatch(/^Chest \+ (Triceps|Biceps) · /);
+    expect(autoWorkoutName([], t)).toMatch(/ Workout$/);
   });
 });

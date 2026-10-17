@@ -28,6 +28,7 @@ import { getPrograms, deleteProgram, cloneProgram, archiveProgram } from "../../
 import { getWorkoutHistory, type WorkoutSummary } from "../../src/db/historyQueries";
 import { kvStore } from "../../src/utils/kvStore";
 import { haptics } from "../../src/utils/haptics";
+import { isRealPR } from "../../src/utils/prBadges";
 import type { Exercise } from "../../src/types/workout";
 import type { ProgramSummary } from "../../src/types/program";
 
@@ -221,8 +222,16 @@ export default function TrainScreen() {
 
   const handleFinish = useCallback(() => {
     if (!session) return;
+    // An empty workout would count toward streak, history and hours; offer to discard it instead.
+    if (!session.exercises.some((e) => e.sets.some((s) => s.isCompleted))) {
+      Alert.alert("No sets completed", "Tick at least one set to log this workout, or discard it.", [
+        { text: "Keep Going", style: "cancel" },
+        { text: "Discard Workout", style: "destructive", onPress: discardWorkout },
+      ]);
+      return;
+    }
     setLocationSheetOpen(true);
-  }, [session]);
+  }, [session, discardWorkout]);
 
   const handleSaveWorkout = useCallback(
     async (location: string | null) => {
@@ -239,7 +248,7 @@ export default function TrainScreen() {
 
       // Capture PRs before session is cleared
       const prs = session.exercises
-        .filter((e) => e.sets.some((s) => s.prBadges && s.prBadges.length > 0))
+        .filter((e) => e.sets.some((s) => isRealPR(s.prBadges)))
         .map((e) => e.exerciseName);
       try {
         await kvStore.setItem(LAST_PRS_KEY, JSON.stringify(prs));
@@ -553,8 +562,13 @@ export default function TrainScreen() {
             onCommitSetEdit={(setLocalId) => recheckSetPR(exercise.localId, setLocalId)}
             onToggleComplete={(setLocalId) => handleSetComplete(exercise.localId, setLocalId)}
             onToggleWarmup={(setLocalId) => toggleSetWarmup(exercise.localId, setLocalId)}
-            onUpdateNotes={(notes) => updateExerciseNotes(exercise.localId, notes)}
-            onRemoveExercise={() => removeExercise(exercise.localId)}
+            onUpdateNotes={(notes, saveAsDefault) => updateExerciseNotes(exercise.localId, notes, saveAsDefault)}
+            onRemoveExercise={() =>
+              Alert.alert("Remove Exercise", `Remove ${exercise.exerciseName} and its sets from this workout?`, [
+                { text: "Cancel", style: "cancel" },
+                { text: "Remove", style: "destructive", onPress: () => removeExercise(exercise.localId) },
+              ])
+            }
             onSwap={() => setSwappingExerciseLocalId(exercise.localId)}
             onAddSuperset={() => setSupersetTargetLocalId(exercise.localId)}
           />

@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Modal,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react-native";
@@ -115,6 +117,8 @@ export default function SettingsScreen() {
   const [hapticsOn, setHapticsOn] = useState(true);
   const [theme, setThemePref] = useState<ThemePref>("system");
   const [weeklyGoal, setWeeklyGoal] = useState(DEFAULT_WEEKLY_GOAL);
+  const [wipeOpen, setWipeOpen] = useState(false);
+  const [wipeText, setWipeText] = useState("");
 
   useEffect(() => {
     getDefaultRestSeconds().then(setRestSeconds);
@@ -158,46 +162,35 @@ export default function SettingsScreen() {
     }
   }, []);
 
-  const handleWipeData = useCallback(() => {
-    Alert.alert(
-      "Wipe All Data",
-      "This will permanently delete all workouts, programs, custom exercises, goals, and records. This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete Everything",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const db = await getDatabase();
-              // One transaction: either everything is wiped or nothing is.
-              await db.withTransactionAsync(async () => {
-                await db.execAsync(`
-                  DELETE FROM logged_sets;
-                  DELETE FROM logged_exercises;
-                  DELETE FROM progress_photos;
-                  DELETE FROM workouts;
-                  DELETE FROM program_exercises;
-                  DELETE FROM program_days;
-                  DELETE FROM programs;
-                  DELETE FROM bodyweight_logs;
-                  DELETE FROM lifestyle_logs;
-                  DELETE FROM locations;
-                  DELETE FROM goals;
-                  DELETE FROM exercises WHERE is_custom = 1;
-                  UPDATE exercises SET use_count = 0;
-                  DELETE FROM kv_store WHERE key NOT IN ('${REST_TIMER_KEY}','${HAPTICS_KEY}','${THEME_KEY}','${WEEKLY_GOAL_KEY}');
-                `);
-              });
-              kvStore.clearCache(); // wipe edited kv_store with raw SQL
-              Alert.alert("Done", "All workout data has been deleted.");
-            } catch (e) {
-              Alert.alert("Error", String(e));
-            }
-          },
-        },
-      ]
-    );
+  const handleWipeData = useCallback(async () => {
+    setWipeOpen(false);
+    setWipeText("");
+    try {
+      const db = await getDatabase();
+      // One transaction: either everything is wiped or nothing is.
+      await db.withTransactionAsync(async () => {
+        await db.execAsync(`
+          DELETE FROM logged_sets;
+          DELETE FROM logged_exercises;
+          DELETE FROM progress_photos;
+          DELETE FROM workouts;
+          DELETE FROM program_exercises;
+          DELETE FROM program_days;
+          DELETE FROM programs;
+          DELETE FROM bodyweight_logs;
+          DELETE FROM lifestyle_logs;
+          DELETE FROM locations;
+          DELETE FROM goals;
+          DELETE FROM exercises WHERE is_custom = 1;
+          UPDATE exercises SET use_count = 0;
+          DELETE FROM kv_store WHERE key NOT IN ('${REST_TIMER_KEY}','${HAPTICS_KEY}','${THEME_KEY}','${WEEKLY_GOAL_KEY}');
+        `);
+      });
+      kvStore.clearCache(); // wipe edited kv_store with raw SQL
+      Alert.alert("Done", "All workout data has been deleted.");
+    } catch (e) {
+      Alert.alert("Error", String(e));
+    }
   }, []);
 
   const formatRestTime = (secs: number) => {
@@ -339,7 +332,7 @@ export default function SettingsScreen() {
             label="Wipe All Data"
             sublabel="Permanently delete all workouts, goals, and records"
             danger
-            onPress={handleWipeData}
+            onPress={() => setWipeOpen(true)}
           />
         </View>
 
@@ -383,6 +376,51 @@ export default function SettingsScreen() {
           </View>
         </View>
       </ScrollView>
+      {/* Typing DELETE guards against a mis-tap; Export first is one tap away. */}
+      <Modal visible={wipeOpen} transparent animationType="fade" onRequestClose={() => setWipeOpen(false)}>
+        <View className="flex-1 bg-black/60 items-center justify-center px-6">
+          <View className="bg-surface dark:bg-zinc-900 w-full p-6 rounded-2xl">
+            <Text className="font-montserrat-bold text-text-primary dark:text-white text-xl mb-2">Wipe All Data</Text>
+            <Text className="font-montserrat text-text-secondary dark:text-zinc-400 text-sm mb-4">
+              This permanently deletes all workouts, programs, custom exercises, goals and records. There is no backup.
+            </Text>
+            <TouchableOpacity
+              onPress={handleExport}
+              className="bg-surface-2 dark:bg-zinc-800 py-3 items-center rounded-xl mb-4"
+              activeOpacity={0.8}
+            >
+              <Text className="font-montserrat-semibold text-text-primary dark:text-white text-sm">Export first (CSV)</Text>
+            </TouchableOpacity>
+            <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-xs mb-2">Type DELETE to confirm</Text>
+            <TextInput
+              className="h-11 bg-surface-2 dark:bg-zinc-800 px-4 font-mono text-text-primary dark:text-white text-base rounded-xl mb-4"
+              value={wipeText}
+              onChangeText={setWipeText}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              placeholder="DELETE"
+              placeholderTextColor="#94A3B8"
+            />
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={() => { setWipeOpen(false); setWipeText(""); }}
+                className="flex-1 bg-surface-2 dark:bg-zinc-800 py-4 items-center rounded-xl"
+                activeOpacity={0.8}
+              >
+                <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleWipeData}
+                disabled={wipeText !== "DELETE"}
+                className={`flex-1 py-4 items-center rounded-xl bg-rose-500 ${wipeText !== "DELETE" ? "opacity-40" : ""}`}
+                activeOpacity={0.8}
+              >
+                <Text className="font-montserrat-bold text-white text-sm">Delete Everything</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

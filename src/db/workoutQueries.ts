@@ -4,10 +4,25 @@ import type { ActiveSet, Exercise, GhostSet } from "../types/workout";
 export async function createWorkout(programDayId?: number): Promise<number> {
   const db = await getDatabase();
   const result = await db.runAsync(
-    "INSERT INTO workouts (name, started_at, program_day_id) VALUES ('Workout', unixepoch(), ?)",
-    [programDayId ?? null]
+    `INSERT INTO workouts (name, started_at, program_day_id)
+     VALUES (COALESCE((SELECT name FROM program_days WHERE id = ?), 'Workout'), unixepoch(), ?)`,
+    [programDayId ?? null, programDayId ?? null]
   );
   return result.lastInsertRowId;
+}
+
+/** "Chest + Triceps · Thu" from each exercise's primary muscle group (top two by count), else "Thursday Workout". */
+export function autoWorkoutName(muscleGroups: string[], startedAtSecs: number): string {
+  const counts = new Map<string, number>();
+  for (const g of muscleGroups) {
+    const primary = g.split(",")[0].trim();
+    if (primary) counts.set(primary, (counts.get(primary) ?? 0) + 1);
+  }
+  const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([g]) => g);
+  const day = new Date(startedAtSecs * 1000);
+  return top.length > 0
+    ? `${top.join(" + ")} · ${day.toLocaleDateString(undefined, { weekday: "short" })}`
+    : `${day.toLocaleDateString(undefined, { weekday: "long" })} Workout`;
 }
 
 export async function finalizeWorkout(workoutId: number, location?: string): Promise<void> {
@@ -30,6 +45,22 @@ export async function finalizeWorkout(workoutId: number, location?: string): Pro
      WHERE id = ?`,
     [location ?? null, workoutId]
   );
+  // Still the default name (not launched from a program day, not renamed): describe what was trained.
+  const w = await db.getFirstAsync<{ name: string; started_at: number }>(
+    "SELECT name, started_at FROM workouts WHERE id = ?", [workoutId]
+  );
+  if (w?.name === "Workout") {
+    const groups = await db.getAllAsync<{ mg: string }>(
+      `SELECT e.muscle_group AS mg FROM logged_exercises le
+       JOIN exercises e ON e.id = le.exercise_id
+       WHERE le.workout_id = ? ORDER BY le.order_index`,
+      [workoutId]
+    );
+    await db.runAsync("UPDATE workouts SET name = ? WHERE id = ?", [
+      autoWorkoutName(groups.map((g) => g.mg), w.started_at),
+      workoutId,
+    ]);
+  }
 }
 
 export async function deleteWorkout(workoutId: number): Promise<void> {
@@ -107,15 +138,27 @@ export async function upsertLoggedSet(set: ActiveSet & { loggedExerciseId: numbe
   }
 }
 
-export async function updateLoggedExerciseOrder(
-  loggedExerciseId: number,
-  orderIndex: number
-): Promise<void> {
+/** Persist the full exercise order (position in `ids` becomes order_index) in one transaction. */
+export async function setLoggedExerciseOrder(ids: number[]): Promise<void> {
   const db = await getDatabase();
-  await db.runAsync(
-    "UPDATE logged_exercises SET order_index = ? WHERE id = ?",
-    [orderIndex, loggedExerciseId]
-  );
+  await db.withTransactionAsync(async () => {
+    for (let i = 0; i < ids.length; i++) {
+      await db.runAsync("UPDATE logged_exercises SET order_index = ? WHERE id = ?", [i, ids[i]]);
+    }
+  });
+}
+
+/** Removes the exercise and (via cascade) its sets, and undoes the use_count bump from adding it. */
+export async function deleteLoggedExercise(loggedExerciseId: number): Promise<void> {
+  const db = await getDatabase();
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      `UPDATE exercises SET use_count = MAX(0, use_count - 1)
+       WHERE id = (SELECT exercise_id FROM logged_exercises WHERE id = ?)`,
+      [loggedExerciseId]
+    );
+    await db.runAsync("DELETE FROM logged_exercises WHERE id = ?", [loggedExerciseId]);
+  });
 }
 
 export async function swapLoggedExercise(
@@ -201,6 +244,10 @@ export async function createCustomExercise(
   };
 }
 
+const SEARCH_ALIASES: Record<string, string> = {
+  db: "dumbbell", dbs: "dumbbell", bb: "barbell", kb: "kettlebell", rdl: "romanian deadlift", ohp: "overhead press",
+};
+
 export async function searchExercises(
   query: string,
   muscleGroup?: string,
@@ -210,9 +257,12 @@ export async function searchExercises(
   const conditions: string[] = [];
   const params: (string | number)[] = [];
 
-  if (query.trim()) {
-    conditions.push("LOWER(name) LIKE '%' || LOWER(?) || '%'");
-    params.push(query.trim());
+  // Every word must match name or equipment, in any order; abbreviations expand ("db press" finds dumbbell presses).
+  const tokens = query.toLowerCase().replace(/[%_]/g, "").split(/\s+/).filter(Boolean);
+  for (const t of tokens) {
+    const terms = [t, ...(SEARCH_ALIASES[t] ? [SEARCH_ALIASES[t]] : [])];
+    conditions.push(`(${terms.map(() => "LOWER(name || ' ' || equipment_type) LIKE ?").join(" OR ")})`);
+    params.push(...terms.map((x) => `%${x}%`));
   }
   if (muscleGroup) {
     conditions.push("LOWER(muscle_group) LIKE '%' || LOWER(?) || '%'");
@@ -225,9 +275,11 @@ export async function searchExercises(
 
   conditions.push("is_deleted = 0");
   const where = `WHERE ${conditions.join(" AND ")}`;
+  // Name starting with the first word ranks first, then most used.
+  const rank = tokens.length > 0 ? "(LOWER(name) LIKE ?) DESC, " : "";
   return db.getAllAsync<Exercise>(
-    `SELECT * FROM exercises ${where} ORDER BY use_count DESC, name ASC`,
-    params
+    `SELECT * FROM exercises ${where} ORDER BY ${rank}use_count DESC, name ASC`,
+    tokens.length > 0 ? [...params, `${tokens[0]}%`] : params
   );
 }
 

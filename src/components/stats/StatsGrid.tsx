@@ -6,7 +6,7 @@ type Props = {
   workoutCount: number;
   streak: number;
   bodyweightLbs: number | null;
-  totalHours: number;
+  totalSeconds: number;
   prCount: number;
 };
 
@@ -35,14 +35,21 @@ function StatCell({ label, value, unit, onPress }: { label: string; value: strin
   );
 }
 
-export function StatsGrid({ totalLiftedLbs, workoutCount, streak, bodyweightLbs, totalHours, prCount }: Props) {
+// Under an hour show minutes; under 10 h one decimal, so a first 29-minute workout doesn't read "0".
+function formatHours(secs: number): { value: string; unit?: string } {
+  if (secs < 3600) return { value: String(Math.round(secs / 60)), unit: "min" };
+  const h = secs / 3600;
+  return { value: h < 10 ? h.toFixed(1) : String(Math.round(h)) };
+}
+
+export function StatsGrid({ totalLiftedLbs, workoutCount, streak, bodyweightLbs, totalSeconds, prCount }: Props) {
   return (
     <View className="mx-5 rounded-2xl overflow-hidden">
       <View className="gap-px">
         <View className="flex-row gap-px">
           <StatCell label="Total Lifted" value={formatLbs(totalLiftedLbs)} unit="lbs" />
           <StatCell label="Workouts" value={String(workoutCount)} />
-          <StatCell label="Hours" value={String(totalHours)} />
+          <StatCell label="Hours" {...formatHours(totalSeconds)} />
         </View>
         <View className="flex-row gap-px">
           <StatCell label="Streak" value={String(streak)} unit={streak === 1 ? "day" : "days"} />

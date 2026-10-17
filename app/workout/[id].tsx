@@ -34,6 +34,7 @@ import {
 } from "../../src/utils/exportUtils";
 import { WorkoutShareCard } from "../../src/components/export/WorkoutShareCard";
 import { AddExerciseSheet } from "../../src/components/workout/AddExerciseSheet";
+import { cleanDecimal, cleanInt, MAX_WEIGHT, MAX_REPS } from "../../src/utils/numberInput";
 import type { Exercise } from "../../src/types/workout";
 
 type InfoEdits = {
@@ -317,7 +318,7 @@ export default function WorkoutDetailScreen() {
                       <TextInput
                         className="flex-1 font-mono-medium text-text-primary dark:text-white text-sm text-right bg-surface-2 dark:bg-zinc-800 h-9 px-2 rounded-lg"
                         value={buf.weight}
-                        onChangeText={(v) => setSetEdits((prev) => ({ ...prev, [s.id]: { ...prev[s.id], weight: v } }))}
+                        onChangeText={(v) => setSetEdits((prev) => ({ ...prev, [s.id]: { ...prev[s.id], weight: cleanDecimal(v, MAX_WEIGHT) ?? prev[s.id].weight } }))}
                         keyboardType="decimal-pad"
                         placeholder="—"
                         placeholderTextColor="#94A3B8"
@@ -325,7 +326,7 @@ export default function WorkoutDetailScreen() {
                       <TextInput
                         className="w-16 font-mono text-text-primary dark:text-white text-sm text-right bg-surface-2 dark:bg-zinc-800 h-9 px-2 ml-1.5 rounded-lg"
                         value={buf.reps}
-                        onChangeText={(v) => setSetEdits((prev) => ({ ...prev, [s.id]: { ...prev[s.id], reps: v } }))}
+                        onChangeText={(v) => setSetEdits((prev) => ({ ...prev, [s.id]: { ...prev[s.id], reps: cleanInt(v, MAX_REPS) ?? prev[s.id].reps } }))}
                         keyboardType="number-pad"
                         placeholder="—"
                         placeholderTextColor="#94A3B8"
