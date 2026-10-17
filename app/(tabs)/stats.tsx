@@ -122,7 +122,7 @@ export default function StatsScreen() {
 
         <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
           <SectionHeader title="Lifestyle" subtitle="Daily tracking" />
-          <BodyweightLogger onSaved={() => refresh()} />
+          <BodyweightLogger onSaved={() => refresh()} refreshKey={refreshKey} />
         </View>
 
         <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>

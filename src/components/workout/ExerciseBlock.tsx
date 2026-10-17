@@ -152,6 +152,7 @@ export function ExerciseBlock({
             <SetRow
               key={set.localId}
               set={set}
+              bodyweight={exercise.isBodyweight}
               prevSet={exercise.sets[i - 1]}
               ghost={exercise.ghostSets.find((g) => g.setNumber === set.setNumber)}
               onUpdate={(patch) => onUpdateSet(set.localId, patch)}

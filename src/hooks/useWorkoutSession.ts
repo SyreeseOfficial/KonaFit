@@ -18,13 +18,14 @@ import {
   swapLoggedExercise,
   setLoggedExerciseOrder,
   deleteLoggedExercise,
-  getExerciseLibraryNote,
+  getExerciseInfo,
   updateExerciseLibraryNote,
 } from "../db/workoutQueries";
 import { getProgramDayExercises } from "../db/programQueries";
 import { getHistPRs, getLastWorkoutExercises } from "../db/historyQueries";
 import { computePRBadges, isRealPR } from "../utils/prBadges";
 import type { PRBadge } from "../types/workout";
+import * as R from "../utils/sessionReducers";
 
 const SESSION_KEY = "@kinetic_active_session";
 let localIdCounter = 0;
@@ -33,7 +34,6 @@ const uid = () => `local_${++localIdCounter}_${Date.now()}`;
 // Write the order the user sees (array position) to the DB in one transaction.
 const persistOrder = (exercises: ActiveExercise[]) =>
   setLoggedExerciseOrder(exercises.flatMap((e) => (e.dbId != null ? [e.dbId] : []))).catch(console.error);
-const reindex = (exercises: ActiveExercise[]) => exercises.map((e, i) => ({ ...e, orderIndex: i }));
 
 function defaultSet(setNumber: number): ActiveSet {
   return {
@@ -67,6 +67,14 @@ export async function loadCachedSession(): Promise<ActiveSession | null> {
 
 export function useWorkoutSession() {
   const [session, setSession] = useState<ActiveSession | null>(null);
+  // Last destructive action, restorable until the snackbar's 5 s run out or something newer replaces it.
+  const [pendingUndo, setPendingUndo] = useState<{ id: string; label: string; run: () => Promise<void> } | null>(null);
+  const clearUndo = useCallback(() => setPendingUndo(null), []);
+  const runUndo = useCallback(async () => {
+    const undo = pendingUndo;
+    setPendingUndo(null);
+    await undo?.run().catch(console.error);
+  }, [pendingUndo]);
 
   // The snapshot in kv_store is debounced (trailing 500 ms) and flushed when the app leaves the foreground.
   const pendingRef = useRef<ActiveSession | null>(null);
@@ -136,6 +144,7 @@ export function useWorkoutSession() {
   const finishWorkout = useCallback(async (location?: string) => {
     if (!session) return;
     await finalizeWorkout(session.workoutId, location);
+    setPendingUndo(null);
     cancelPending();
     await saveToStorage(null);
     setSession(null);
@@ -144,6 +153,7 @@ export function useWorkoutSession() {
   const discardWorkout = useCallback(async () => {
     if (!session) return;
     await deleteWorkout(session.workoutId);
+    setPendingUndo(null);
     cancelPending();
     await saveToStorage(null);
     setSession(null);
@@ -159,11 +169,12 @@ export function useWorkoutSession() {
         exerciseName,
         orderIndex
       );
-      const [ghost, histPRs, libraryNote] = await Promise.all([
+      const [ghost, histPRs, info] = await Promise.all([
         getGhostSets(exerciseId, session.workoutId),
         getHistPRs(exerciseId, session.workoutId),
-        getExerciseLibraryNote(exerciseId),
+        getExerciseInfo(exerciseId),
       ]);
+      const libraryNote = info.note;
 
       if (libraryNote) {
         updateLoggedExerciseNotes(dbId, libraryNote).catch(console.error);
@@ -194,6 +205,7 @@ export function useWorkoutSession() {
         sets,
         ghostSets: ghost,
         histPRs,
+        isBodyweight: info.isBodyweight,
       };
 
       updateSession((prev) => ({
@@ -213,11 +225,12 @@ export function useWorkoutSession() {
       const targetIndex = session.exercises.findIndex((e) => e.localId === targetLocalId);
       const orderIndex = targetIndex + 1;
       const dbId = await createLoggedExercise(session.workoutId, exerciseId, exerciseName, orderIndex);
-      const [ghost, histPRs, libraryNote] = await Promise.all([
+      const [ghost, histPRs, info] = await Promise.all([
         getGhostSets(exerciseId, session.workoutId),
         getHistPRs(exerciseId, session.workoutId),
-        getExerciseLibraryNote(exerciseId),
+        getExerciseInfo(exerciseId),
       ]);
+      const libraryNote = info.note;
       if (libraryNote) {
         updateLoggedExerciseNotes(dbId, libraryNote).catch(console.error);
       }
@@ -246,15 +259,12 @@ export function useWorkoutSession() {
         sets,
         ghostSets: ghost,
         histPRs,
+        isBodyweight: info.isBodyweight,
       };
       updateSession((prev) => {
-        const exercises = [...prev.exercises];
-        const tIdx = exercises.findIndex((e) => e.localId === targetLocalId);
-        exercises[tIdx] = { ...exercises[tIdx], supersetId };
-        exercises.splice(tIdx + 1, 0, newExercise);
-        const ordered = reindex(exercises);
-        persistOrder(ordered);
-        return { ...prev, exercises: ordered };
+        const next = R.addSupersetAfter(prev, targetLocalId, newExercise, supersetId);
+        persistOrder(next.exercises);
+        return next;
       });
     },
     [session, updateSession]
@@ -286,23 +296,25 @@ export function useWorkoutSession() {
   const removeSet = useCallback(
     async (exerciseLocalId: string, setLocalId: string) => {
       const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
-      if (!exercise) return;
-      const set = exercise.sets.find((s) => s.localId === setLocalId);
-      if (set?.dbId) await deleteLoggedSet(set.dbId);
+      const index = exercise ? exercise.sets.findIndex((s) => s.localId === setLocalId) : -1;
+      if (!exercise || index === -1) return;
+      const set = exercise.sets[index];
+      if (set.dbId) await deleteLoggedSet(set.dbId);
+      updateSession((prev) => R.removeSet(prev, exerciseLocalId, setLocalId));
 
-      updateSession((prev) => ({
-        ...prev,
-        exercises: prev.exercises.map((e) =>
-          e.localId === exerciseLocalId
-            ? {
-                ...e,
-                sets: e.sets
-                  .filter((s) => s.localId !== setLocalId)
-                  .map((s, i) => ({ ...s, setNumber: i + 1 })),
-              }
-            : e
-        ),
-      }));
+      setPendingUndo({
+        id: uid(),
+        label: "Set removed",
+        run: async () => {
+          let restored = set;
+          if (exercise.dbId) {
+            const dbId = await createLoggedSet(exercise.dbId, index + 1);
+            restored = { ...set, dbId, setNumber: index + 1 };
+            await upsertLoggedSet({ ...restored, loggedExerciseId: exercise.dbId });
+          }
+          updateSession((prev) => R.insertSet(prev, exerciseLocalId, restored, index));
+        },
+      });
     },
     [session, updateSession]
   );
@@ -340,23 +352,17 @@ export function useWorkoutSession() {
   // Copy weight/reps/rpe from the last filled set into every other incomplete set.
   const copyLastSetToAll = useCallback(
     (exerciseLocalId: string) => {
-      updateSession((prev) => ({
-        ...prev,
-        exercises: prev.exercises.map((e) => {
-          if (e.localId !== exerciseLocalId) return e;
-          const src = [...e.sets].reverse().find((s) => s.weightLbs !== "" && s.reps !== "");
-          if (!src) return e;
-          return {
-            ...e,
-            sets: e.sets.map((s) => {
-              if (s.isCompleted || s.localId === src.localId) return s;
-              const updated = { ...s, weightLbs: src.weightLbs, reps: src.reps, rpe: src.rpe, isGhostFilled: false };
-              if (e.dbId) upsertLoggedSet({ ...updated, loggedExerciseId: e.dbId }).catch(console.error);
-              return updated;
-            }),
-          };
-        }),
-      }));
+      updateSession((prev) => {
+        const next = R.copyLastSetToAll(prev, exerciseLocalId);
+        const before = prev.exercises.find((e) => e.localId === exerciseLocalId);
+        const after = next.exercises.find((e) => e.localId === exerciseLocalId);
+        if (after?.dbId) {
+          after.sets.forEach((s, i) => {
+            if (s !== before?.sets[i]) upsertLoggedSet({ ...s, loggedExerciseId: after.dbId! }).catch(console.error);
+          });
+        }
+        return next;
+      });
     },
     [updateSession]
   );
@@ -372,7 +378,7 @@ export function useWorkoutSession() {
             ...e,
             sets: e.sets.map((s) => {
               if (s.localId !== setLocalId || !s.isCompleted) return s;
-              const weight = parseFloat(s.weightLbs);
+              const weight = s.weightLbs === "" && e.isBodyweight ? 0 : parseFloat(s.weightLbs);
               const reps = parseInt(s.reps, 10);
               const valid = !s.isWarmup && !isNaN(weight) && !isNaN(reps);
               return { ...s, prBadges: valid ? computePRBadges(e, s.localId, weight, reps, e.histPRs) : undefined };
@@ -396,7 +402,7 @@ export function useWorkoutSession() {
             sets: e.sets.map((s) => {
               if (s.localId !== setLocalId) return s;
               nowComplete = !s.isCompleted;
-              const weight = s.weightLbs === "" ? null : parseFloat(s.weightLbs);
+              const weight = s.weightLbs === "" ? (e.isBodyweight ? 0 : null) : parseFloat(s.weightLbs);
               const reps = s.reps === "" ? null : parseInt(s.reps, 10);
 
               let prBadges: PRBadge[] | undefined;
@@ -461,22 +467,14 @@ export function useWorkoutSession() {
   );
 
   const moveExercise = useCallback(
-    async (exerciseLocalId: string, direction: "up" | "down") => {
-      if (!session) return;
-      const idx = session.exercises.findIndex((e) => e.localId === exerciseLocalId);
-      if (idx === -1) return;
-      const newIdx = direction === "up" ? idx - 1 : idx + 1;
-      if (newIdx < 0 || newIdx >= session.exercises.length) return;
-
+    (exerciseLocalId: string, direction: "up" | "down") => {
       updateSession((prev) => {
-        const exercises = [...prev.exercises];
-        [exercises[idx], exercises[newIdx]] = [exercises[newIdx], exercises[idx]];
-        const ordered = reindex(exercises);
-        persistOrder(ordered);
-        return { ...prev, exercises: ordered };
+        const next = R.moveExercise(prev, exerciseLocalId, direction);
+        if (next !== prev) persistOrder(next.exercises);
+        return next;
       });
     },
-    [session, updateSession]
+    [updateSession]
   );
 
   const swapExercise = useCallback(
@@ -484,31 +482,56 @@ export function useWorkoutSession() {
       const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
       if (!exercise?.dbId) return;
       await swapLoggedExercise(exercise.dbId, newExerciseId, newExerciseName);
-      const [ghost, histPRs] = await Promise.all([
+      const [ghost, histPRs, info] = await Promise.all([
         getGhostSets(newExerciseId, session!.workoutId),
         getHistPRs(newExerciseId, session!.workoutId),
+        getExerciseInfo(newExerciseId),
       ]);
-      updateSession((prev) => ({
-        ...prev,
-        exercises: prev.exercises.map((e) =>
-          e.localId === exerciseLocalId
-            ? { ...e, exerciseId: newExerciseId, exerciseName: newExerciseName, muscleGroup: newMuscleGroup, ghostSets: ghost, histPRs }
-            : e
-        ),
-      }));
+      updateSession((prev) =>
+        R.swapExercise(prev, exerciseLocalId, {
+          exerciseId: newExerciseId,
+          exerciseName: newExerciseName,
+          muscleGroup: newMuscleGroup,
+          ghostSets: ghost,
+          histPRs,
+          isBodyweight: info.isBodyweight,
+        })
+      );
     },
     [session, updateSession]
   );
 
   const removeExercise = useCallback(
     async (exerciseLocalId: string) => {
-      const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
-      if (!exercise) return;
+      const index = session ? session.exercises.findIndex((e) => e.localId === exerciseLocalId) : -1;
+      if (!session || index === -1) return;
+      const exercise = session.exercises[index];
+      const workoutId = session.workoutId;
       if (exercise.dbId) await deleteLoggedExercise(exercise.dbId);
       updateSession((prev) => {
-        const exercises = reindex(prev.exercises.filter((e) => e.localId !== exerciseLocalId));
-        persistOrder(exercises);
-        return { ...prev, exercises };
+        const next = R.removeExercise(prev, exerciseLocalId);
+        persistOrder(next.exercises);
+        return next;
+      });
+
+      setPendingUndo({
+        id: uid(),
+        label: `${exercise.exerciseName} removed`,
+        run: async () => {
+          const dbId = await createLoggedExercise(workoutId, exercise.exerciseId, exercise.exerciseName, index);
+          if (exercise.notes) await updateLoggedExerciseNotes(dbId, exercise.notes);
+          const sets: ActiveSet[] = [];
+          for (const s of exercise.sets) {
+            const restored = { ...s, dbId: await createLoggedSet(dbId, s.setNumber) };
+            await upsertLoggedSet({ ...restored, loggedExerciseId: dbId });
+            sets.push(restored);
+          }
+          updateSession((prev) => {
+            const next = R.insertExercise(prev, { ...exercise, dbId, sets }, index);
+            persistOrder(next.exercises);
+            return next;
+          });
+        },
       });
     },
     [session, updateSession]
@@ -525,11 +548,12 @@ export function useWorkoutSession() {
         const dbId = await createLoggedExercise(
           workoutId, pe.exerciseId, pe.exerciseName, orderIndex
         );
-        const [ghost, histPRs, libraryNote] = await Promise.all([
+        const [ghost, histPRs, info] = await Promise.all([
           getGhostSets(pe.exerciseId, workoutId),
           getHistPRs(pe.exerciseId, workoutId),
-          getExerciseLibraryNote(pe.exerciseId),
+          getExerciseInfo(pe.exerciseId),
         ]);
+        const libraryNote = info.note;
         if (libraryNote) {
           updateLoggedExerciseNotes(dbId, libraryNote).catch(console.error);
         }
@@ -557,6 +581,7 @@ export function useWorkoutSession() {
           sets,
           ghostSets: ghost,
           histPRs,
+          isBodyweight: info.isBodyweight,
         };
       })
     );
@@ -580,6 +605,9 @@ export function useWorkoutSession() {
 
   return {
     session,
+    pendingUndo,
+    runUndo,
+    clearUndo,
     startWorkout,
     resumeSession,
     finishWorkout,

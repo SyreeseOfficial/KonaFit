@@ -17,23 +17,17 @@ import { getAllWorkoutDataForExport } from "../src/db/historyQueries";
 import { exportCsvAndShare } from "../src/utils/exportUtils";
 import { getDatabase } from "../src/db/database";
 import { THEME_KEY, loadTheme, setTheme, type ThemePref } from "../src/utils/theme";
+import {
+  REST_TIMER_KEY,
+  DEFAULT_REST_SECONDS,
+  WEEKLY_GOAL_KEY,
+  DEFAULT_WEEKLY_GOAL,
+  getDefaultRestSeconds,
+  getWeeklyGoal,
+} from "../src/utils/settings";
 import { HAPTICS_KEY, loadHapticsSetting, setHapticsEnabled } from "../src/utils/haptics";
 
-const REST_TIMER_KEY = "@konafit_default_rest_seconds";
-export const DEFAULT_REST_SECONDS = 90;
-const WEEKLY_GOAL_KEY = "@konafit_weekly_goal";
-export const DEFAULT_WEEKLY_GOAL = 4;
 const REST_STEP = 15;
-
-export async function getDefaultRestSeconds(): Promise<number> {
-  const raw = await kvStore.getItem(REST_TIMER_KEY);
-  return raw ? parseInt(raw, 10) : DEFAULT_REST_SECONDS;
-}
-
-export async function getWeeklyGoal(): Promise<number> {
-  const raw = await kvStore.getItem(WEEKLY_GOAL_KEY);
-  return raw ? parseInt(raw, 10) : DEFAULT_WEEKLY_GOAL;
-}
 
 function Row({
   label,

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useFocusEffect } from "expo-router";
 import { formatTime } from "../utils/time";
-import { DEFAULT_REST_SECONDS, getDefaultRestSeconds } from "../../app/settings";
+import { DEFAULT_REST_SECONDS, getDefaultRestSeconds } from "../utils/settings";
 
 const STEP = 15;
 

@@ -39,6 +39,7 @@ export type ActiveExercise = {
   sets: ActiveSet[];
   ghostSets: GhostSet[];
   histPRs: HistPRs;
+  isBodyweight?: boolean; // weight is added load on top of bodyweight and may be negative (assisted); absent in older cached sessions
 };
 
 export type ActiveSession = {

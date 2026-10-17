@@ -25,6 +25,7 @@ function PRBadgeChip({ badge }: { badge: PRBadge }) {
 
 type Props = {
   set: ActiveSet;
+  bodyweight?: boolean; // weight is added load: may be negative (assisted)
   ghost?: GhostSet;
   prevSet?: ActiveSet;
   onUpdate: (patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe" | "notes">>) => void;
@@ -37,7 +38,7 @@ type Props = {
 const WEIGHT_STEPS = [-5, -2.5, 2.5, 5];
 const RPE_VALUES = ["6", "7", "8", "9", "10"];
 
-export function SetRow({ set, ghost, prevSet, onUpdate, onCommitEdit, onToggleComplete, onToggleWarmup, onRemove }: Props) {
+export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit, onToggleComplete, onToggleWarmup, onRemove }: Props) {
   const completed = set.isCompleted;
   const [focused, setFocused] = useState<"weight" | "reps" | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
@@ -61,7 +62,7 @@ export function SetRow({ set, ghost, prevSet, onUpdate, onCommitEdit, onToggleCo
   };
 
   const stepWeight =(delta: number) => {
-    const next = Math.min(MAX_WEIGHT, Math.max(0, (parseFloat(set.weightLbs) || 0) + delta));
+    const next = Math.min(MAX_WEIGHT, Math.max(bodyweight ? -MAX_WEIGHT : 0, (parseFloat(set.weightLbs) || 0) + delta));
     onUpdate({ weightLbs: String(Math.round(next * 100) / 100) });
   };
 
@@ -98,11 +99,11 @@ export function SetRow({ set, ghost, prevSet, onUpdate, onCommitEdit, onToggleCo
       {/* Lbs */}
       <TextInput
         className={`${inputBase} w-14 mr-1.5`}
-        placeholder="lbs"
+        placeholder={bodyweight ? "+lbs" : "lbs"}
         placeholderTextColor="#94A3B8"
         value={set.weightLbs}
-        onChangeText={(v) => { const c = cleanDecimal(v, MAX_WEIGHT); if (c !== null) onUpdate({ weightLbs: c }); }}
-        keyboardType="decimal-pad"
+        onChangeText={(v) => { const c = cleanDecimal(v, MAX_WEIGHT, bodyweight); if (c !== null) onUpdate({ weightLbs: c }); }}
+        keyboardType={bodyweight ? "numbers-and-punctuation" : "decimal-pad"}
         selectTextOnFocus
         onFocus={() => setFocused("weight")}
         onBlur={handleBlur}

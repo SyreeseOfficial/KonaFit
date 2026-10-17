@@ -1,5 +1,6 @@
 import { getDatabase } from "./database";
 import { localDateKey } from "../utils/time";
+import { setLoadSql, isBodyweightSql, LATEST_BODYWEIGHT_SQL } from "./sqlFragments";
 
 export type WorkoutSummary = {
   id: number;
@@ -30,6 +31,7 @@ export type ExerciseRecord = {
   muscle_group: string;
   order_index: number;
   notes: string | null;
+  is_bodyweight: boolean; // weight is added load; may be negative (assisted)
   sets: SetRecord[];
 };
 
@@ -44,23 +46,28 @@ export type WorkoutDetail = {
   totalVolume: number;
 };
 
-export async function getWorkoutHistory(limit = 20): Promise<WorkoutSummary[]> {
+/** Newest first. `exerciseQuery` keeps only workouts with an exercise whose name contains every word. */
+export async function getWorkoutHistory(limit = 20, offset = 0, exerciseQuery = ""): Promise<WorkoutSummary[]> {
   const db = await getDatabase();
+  const words = exerciseQuery.toLowerCase().replace(/[%_]/g, "").split(/\s+/).filter(Boolean);
+  const filter = words.length
+    ? `AND EXISTS (SELECT 1 FROM logged_exercises f WHERE f.workout_id = w.id ${words.map(() => "AND LOWER(f.exercise_name) LIKE ?").join(" ")})`
+    : "";
   return db.getAllAsync<WorkoutSummary>(
     `SELECT
        w.id, w.name, w.started_at, w.finished_at, w.location,
        COALESCE(w.duration_seconds, 0) as duration_seconds,
        COUNT(DISTINCT le.id) as exercise_count,
        COUNT(DISTINCT ls.id) as set_count,
-       COALESCE(SUM(CASE WHEN ls.is_completed = 1 THEN ls.weight_lbs * ls.reps ELSE 0 END), 0) as total_volume
+       COALESCE(SUM(CASE WHEN ls.is_completed = 1 THEN ${setLoadSql()} * ls.reps ELSE 0 END), 0) as total_volume
      FROM workouts w
      LEFT JOIN logged_exercises le ON le.workout_id = w.id
      LEFT JOIN logged_sets ls ON ls.logged_exercise_id = le.id
-     WHERE w.finished_at IS NOT NULL
+     WHERE w.finished_at IS NOT NULL ${filter}
      GROUP BY w.id
-     ORDER BY w.started_at DESC
-     LIMIT ?`,
-    [limit]
+     ORDER BY w.started_at DESC, w.id DESC
+     LIMIT ? OFFSET ?`,
+    [...words.map((w) => `%${w}%`), limit, offset]
   );
 }
 
@@ -99,8 +106,11 @@ export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail
 
   const exerciseRows = await db.getAllAsync<{
     id: number; exercise_name: string; muscle_group: string; order_index: number; notes: string | null;
+    bw_lbs: number; is_bodyweight: number;
   }>(
-    `SELECT le.id, le.exercise_name, COALESCE(e.muscle_group, '') as muscle_group, le.order_index, le.notes
+    `SELECT le.id, le.exercise_name, COALESCE(e.muscle_group, '') as muscle_group, le.order_index, le.notes,
+            CASE WHEN ${isBodyweightSql()} THEN COALESCE(${LATEST_BODYWEIGHT_SQL}, 0) ELSE 0 END AS bw_lbs,
+            ${isBodyweightSql()} AS is_bodyweight
      FROM logged_exercises le
      LEFT JOIN exercises e ON le.exercise_id = e.id
      WHERE le.workout_id = ?
@@ -117,11 +127,12 @@ export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail
         [ex.id]
       );
       sets.forEach((s) => {
-        if (s.is_completed && s.weight_lbs && s.reps) {
-          totalVolume += s.weight_lbs * s.reps;
+        if (s.is_completed && s.weight_lbs != null && s.reps) {
+          totalVolume += Math.max(0, s.weight_lbs + ex.bw_lbs) * s.reps;
         }
       });
-      return { ...ex, notes: ex.notes ?? null, sets };
+      const { bw_lbs: _bw, ...exercise } = ex;
+      return { ...exercise, is_bodyweight: !!ex.is_bodyweight, notes: ex.notes ?? null, sets };
     })
   );
 
@@ -334,15 +345,16 @@ export async function getExercisePRs(exerciseId: number): Promise<ExercisePRs> {
     [exerciseId]
   );
 
+  // Volume and 1RM rank by effective load (bodyweight exercises add the lifter's bodyweight), and report it as weight_lbs.
   const maxVolumeRow = await db.getFirstAsync<{ weight_lbs: number; reps: number; started_at: number }>(
-    `SELECT ls.weight_lbs, ls.reps, w.started_at ${PR_BASE}
-     ORDER BY (ls.weight_lbs * ls.reps) DESC LIMIT 1`,
+    `SELECT ${setLoadSql()} AS weight_lbs, ls.reps, w.started_at ${PR_BASE}
+     ORDER BY (${setLoadSql()} * ls.reps) DESC LIMIT 1`,
     [exerciseId]
   );
 
   const maxOneRMRow = await db.getFirstAsync<{ weight_lbs: number; reps: number; started_at: number }>(
-    `SELECT ls.weight_lbs, ls.reps, w.started_at ${PR_BASE} AND ls.reps > 0
-     ORDER BY ls.weight_lbs * (1.0 + ls.reps / 30.0) DESC LIMIT 1`,
+    `SELECT ${setLoadSql()} AS weight_lbs, ls.reps, w.started_at ${PR_BASE} AND ls.reps > 0
+     ORDER BY ${setLoadSql()} * (1.0 + ls.reps / 30.0) DESC LIMIT 1`,
     [exerciseId]
   );
 

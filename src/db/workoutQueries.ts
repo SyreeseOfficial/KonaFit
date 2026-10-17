@@ -1,5 +1,6 @@
 import { getDatabase } from "./database";
 import type { ActiveSet, Exercise, GhostSet } from "../types/workout";
+import { isBodyweightSql } from "./sqlFragments";
 
 export async function createWorkout(programDayId?: number): Promise<number> {
   const db = await getDatabase();
@@ -117,7 +118,10 @@ export async function createLoggedSet(
 
 export async function upsertLoggedSet(set: ActiveSet & { loggedExerciseId: number }): Promise<void> {
   const db = await getDatabase();
-  const weight = set.weightLbs === "" ? null : parseFloat(set.weightLbs);
+  const parsed = parseFloat(set.weightLbs); // "" and a lone "-" give NaN
+  const weight = Number.isFinite(parsed) ? parsed : null;
+  // A blank weight on a bodyweight exercise means "no added load", stored as 0 so the set counts.
+  const blankWeight = `COALESCE(?, (SELECT 0 FROM logged_exercises le WHERE le.id = ? AND ${isBodyweightSql()}))`;
   const reps = set.reps === "" ? null : parseInt(set.reps, 10);
   const rpe = set.rpe === "" ? null : parseFloat(set.rpe);
   const notes = set.notes?.trim() ? set.notes.trim() : null;
@@ -125,15 +129,15 @@ export async function upsertLoggedSet(set: ActiveSet & { loggedExerciseId: numbe
   if (set.dbId) {
     await db.runAsync(
       `UPDATE logged_sets
-       SET weight_lbs = ?, reps = ?, rpe = ?, notes = ?, is_warmup = ?, is_completed = ?
+       SET weight_lbs = ${blankWeight}, reps = ?, rpe = ?, notes = ?, is_warmup = ?, is_completed = ?
        WHERE id = ?`,
-      [weight, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.dbId]
+      [weight, set.loggedExerciseId, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.dbId]
     );
   } else {
     await db.runAsync(
       `INSERT INTO logged_sets (logged_exercise_id, set_number, weight_lbs, reps, rpe, notes, is_warmup, is_completed)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [set.loggedExerciseId, set.setNumber, weight, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0]
+       VALUES (?, ?, ${blankWeight}, ?, ?, ?, ?, ?)`,
+      [set.loggedExerciseId, set.setNumber, weight, set.loggedExerciseId, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0]
     );
   }
 }
@@ -312,13 +316,14 @@ export async function deleteExercise(id: number): Promise<void> {
   await db.runAsync("UPDATE exercises SET is_deleted = 1 WHERE id = ?", [id]);
 }
 
-export async function getExerciseLibraryNote(exerciseId: number): Promise<string> {
+/** Library note plus whether the exercise is logged as added load on bodyweight. */
+export async function getExerciseInfo(exerciseId: number): Promise<{ note: string; isBodyweight: boolean }> {
   const db = await getDatabase();
-  const row = await db.getFirstAsync<{ notes: string | null }>(
-    "SELECT notes FROM exercises WHERE id = ?",
+  const row = await db.getFirstAsync<{ notes: string | null; equipment_type: string }>(
+    "SELECT notes, equipment_type FROM exercises WHERE id = ?",
     [exerciseId]
   );
-  return row?.notes ?? "";
+  return { note: row?.notes ?? "", isBodyweight: /bodyweight/i.test(row?.equipment_type ?? "") };
 }
 
 export async function updateExerciseLibraryNote(exerciseId: number, notes: string): Promise<void> {

@@ -1,4 +1,5 @@
 import { getDatabase } from "./database";
+import { setLoadSql } from "./sqlFragments";
 
 export type GoalType = "lift_pr" | "bodyweight" | "custom";
 
@@ -83,7 +84,7 @@ export async function getGoalProgress(goal: Goal): Promise<number | null> {
       return row?.best_reps ?? null;
     }
     const row = await db.getFirstAsync<{ one_rm: number }>(
-      `SELECT MAX(ls.weight_lbs * (1.0 + ls.reps / 30.0)) AS one_rm
+      `SELECT MAX(${setLoadSql()} * (1.0 + ls.reps / 30.0)) AS one_rm
        FROM logged_sets ls
        JOIN logged_exercises le ON ls.logged_exercise_id = le.id
        JOIN workouts w ON le.workout_id = w.id
@@ -96,7 +97,7 @@ export async function getGoalProgress(goal: Goal): Promise<number | null> {
   }
   if (goal.type === "bodyweight") {
     const row = await db.getFirstAsync<{ weight_lbs: number }>(
-      "SELECT weight_lbs FROM bodyweight_logs ORDER BY logged_at DESC LIMIT 1"
+      "SELECT weight_lbs FROM bodyweight_logs ORDER BY logged_at DESC, id DESC LIMIT 1"
     );
     return row?.weight_lbs ?? null;
   }

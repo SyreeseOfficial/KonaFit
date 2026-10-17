@@ -53,6 +53,18 @@ const MIGRATIONS: ((database: SQLite.SQLiteDatabase) => Promise<void>)[] = [
   async (database) => {
     await addColumn(database, "logged_sets", "notes", "TEXT");
   },
+  // 4: bodyweight sets with reps but a blank weight now store 0 added load (they used to be NULL and counted for nothing)
+  async (database) => {
+    await database.execAsync(
+      `UPDATE logged_sets SET weight_lbs = 0
+       WHERE weight_lbs IS NULL AND reps IS NOT NULL
+         AND logged_exercise_id IN (
+           SELECT le.id FROM logged_exercises le
+           JOIN exercises x ON x.id = le.exercise_id
+           WHERE LOWER(x.equipment_type) LIKE '%bodyweight%'
+         )`
+    );
+  },
 ];
 
 async function runMigrations(database: SQLite.SQLiteDatabase) {

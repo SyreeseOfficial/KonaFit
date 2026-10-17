@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus, Settings, ChevronRight, MoreHorizontal, Copy, Archive, Trash2 } from "lucide-react-native";
 import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
 import * as FileSystem from "expo-file-system/legacy";
+import * as ImagePicker from "expo-image-picker";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { saveProgressPhoto } from "../../src/db/photoQueries";
 import { useWorkoutSession, loadCachedSession } from "../../src/hooks/useWorkoutSession";
@@ -21,6 +22,7 @@ import { WorkspaceHeader } from "../../src/components/workout/WorkspaceHeader";
 import { ExerciseBlock } from "../../src/components/workout/ExerciseBlock";
 import { AddExerciseSheet } from "../../src/components/workout/AddExerciseSheet";
 import { RestTimerBar } from "../../src/components/workout/RestTimerBar";
+import { UndoSnackbar } from "../../src/components/workout/UndoSnackbar";
 import { LocationSheet } from "../../src/components/workout/LocationSheet";
 import { saveWorkoutLocation } from "../../src/db/locationQueries";
 import { formatVolume, formatShortDate, formatDuration } from "../../src/utils/exportUtils";
@@ -37,6 +39,9 @@ const LAST_PRS_KEY = "@konafit_last_prs";
 export default function TrainScreen() {
   const {
     session,
+    pendingUndo,
+    runUndo,
+    clearUndo,
     startWorkout,
     resumeSession,
     finishWorkout,
@@ -73,9 +78,20 @@ export default function TrainScreen() {
   const [exerciseSheetOpen, setExerciseSheetOpen] = useState(false);
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
 
+  async function persistPhoto(uri: string, workoutId?: number) {
+    try {
+      const dir = `${FileSystem.documentDirectory}konafit/photos/`;
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+      const filename = `photo_${Date.now()}.jpg`;
+      const dest = `${dir}${filename}`;
+      await FileSystem.copyAsync({ from: uri, to: dest });
+      await saveProgressPhoto(dest, workoutId);
+    } catch (e) {
+      Alert.alert("Error", "Failed to save photo.");
+    }
+  }
+
   const handleCameraPress = useCallback(async () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const ImagePicker = require("expo-image-picker") as typeof import("expo-image-picker");
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       Alert.alert("Permission needed", "Enable photo access in Settings to save progress photos.");
@@ -200,18 +216,6 @@ export default function TrainScreen() {
     [addExercise]
   );
 
-  async function persistPhoto(uri: string, workoutId?: number) {
-    try {
-      const dir = `${FileSystem.documentDirectory}konafit/photos/`;
-      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-      const filename = `photo_${Date.now()}.jpg`;
-      const dest = `${dir}${filename}`;
-      await FileSystem.copyAsync({ from: uri, to: dest });
-      await saveProgressPhoto(dest, workoutId);
-    } catch (e) {
-      Alert.alert("Error", "Failed to save photo.");
-    }
-  }
 
   const handleSetComplete = useCallback(
     (exerciseLocalId: string, setLocalId: string) => {
@@ -563,12 +567,7 @@ export default function TrainScreen() {
             onToggleComplete={(setLocalId) => handleSetComplete(exercise.localId, setLocalId)}
             onToggleWarmup={(setLocalId) => toggleSetWarmup(exercise.localId, setLocalId)}
             onUpdateNotes={(notes, saveAsDefault) => updateExerciseNotes(exercise.localId, notes, saveAsDefault)}
-            onRemoveExercise={() =>
-              Alert.alert("Remove Exercise", `Remove ${exercise.exerciseName} and its sets from this workout?`, [
-                { text: "Cancel", style: "cancel" },
-                { text: "Remove", style: "destructive", onPress: () => removeExercise(exercise.localId) },
-              ])
-            }
+            onRemoveExercise={() => removeExercise(exercise.localId)}
             onSwap={() => setSwappingExerciseLocalId(exercise.localId)}
             onAddSuperset={() => setSupersetTargetLocalId(exercise.localId)}
           />
@@ -617,6 +616,10 @@ export default function TrainScreen() {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {pendingUndo && (
+        <UndoSnackbar id={pendingUndo.id} label={pendingUndo.label} onUndo={runUndo} onExpire={clearUndo} />
+      )}
 
       <RestTimerBar timer={restTimer} />
 

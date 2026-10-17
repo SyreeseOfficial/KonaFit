@@ -1,5 +1,6 @@
 import { getDatabase } from "./database";
 import { localDateKey } from "../utils/time";
+import { setLoadSql } from "./sqlFragments";
 
 export type StatsGrid = {
   totalLiftedLbs: number;
@@ -56,8 +57,9 @@ export async function getStatsTotals(): Promise<{ seconds: number; workoutCount:
     `SELECT
        (SELECT COALESCE(SUM(duration_seconds), 0) FROM workouts WHERE finished_at IS NOT NULL) AS secs,
        (SELECT COUNT(*) FROM workouts WHERE finished_at IS NOT NULL) AS n,
-       (SELECT COALESCE(SUM(weight_lbs * reps), 0) FROM logged_sets
-         WHERE is_completed = 1 AND weight_lbs IS NOT NULL AND reps IS NOT NULL) AS lifted`
+       (SELECT COALESCE(SUM(${setLoadSql()} * ls.reps), 0) FROM logged_sets ls
+         JOIN logged_exercises le ON le.id = ls.logged_exercise_id
+         WHERE ls.is_completed = 1 AND ls.weight_lbs IS NOT NULL AND ls.reps IS NOT NULL) AS lifted`
   );
   return {
     seconds: row?.secs ?? 0,
@@ -74,6 +76,10 @@ export async function getWorkoutDatesForStreak(): Promise<string[]> {
      FROM workouts
      WHERE finished_at IS NOT NULL
        AND started_at >= unixepoch() - 400 * 86400
+       AND EXISTS (
+         SELECT 1 FROM logged_exercises le JOIN logged_sets ls ON ls.logged_exercise_id = le.id
+         WHERE le.workout_id = workouts.id AND ls.is_completed = 1
+       )
      ORDER BY d DESC`
   );
   return rows.map((r) => r.d);
@@ -101,7 +107,7 @@ export function calculateStreak(dates: string[]): number {
 export async function getLatestBodyweight(): Promise<number | null> {
   const db = await getDatabase();
   const row = await db.getFirstAsync<{ weight_lbs: number }>(
-    "SELECT weight_lbs FROM bodyweight_logs ORDER BY logged_at DESC LIMIT 1"
+    "SELECT weight_lbs FROM bodyweight_logs ORDER BY logged_at DESC, id DESC LIMIT 1"
   );
   return row?.weight_lbs ?? null;
 }
@@ -112,7 +118,7 @@ export async function getOneRMHistory(exerciseId: number): Promise<OneRMDataPoin
   const db = await getDatabase();
   const rows = await db.getAllAsync<{ started_at: number; one_rm: number }>(
     `SELECT w.started_at,
-            MAX(ls.weight_lbs * (1.0 + ls.reps / 30.0)) as one_rm
+            MAX(${setLoadSql()} * (1.0 + ls.reps / 30.0)) as one_rm
      FROM logged_sets ls
      JOIN logged_exercises le ON ls.logged_exercise_id = le.id
      JOIN workouts w ON le.workout_id = w.id
@@ -149,7 +155,7 @@ export async function getVolumeByMuscle(days: 7 | 30): Promise<VolumeByMuscle[]>
   const db = await getDatabase();
   const rows = await db.getAllAsync<{ muscle_group: string; volume: number }>(
     `SELECT e.muscle_group,
-            COALESCE(SUM(ls.weight_lbs * ls.reps), 0) as volume
+            COALESCE(SUM(${setLoadSql()} * ls.reps), 0) as volume
      FROM logged_sets ls
      JOIN logged_exercises le ON ls.logged_exercise_id = le.id
      JOIN workouts w ON le.workout_id = w.id
@@ -175,6 +181,26 @@ export async function logBodyweight(weightLbs: number): Promise<void> {
   );
 }
 
+export type BodyweightEntry = { id: number; weight_lbs: number; logged_at: number };
+
+export async function getBodyweightHistory(limit = 8): Promise<BodyweightEntry[]> {
+  const db = await getDatabase();
+  return db.getAllAsync<BodyweightEntry>(
+    "SELECT id, weight_lbs, logged_at FROM bodyweight_logs ORDER BY logged_at DESC, id DESC LIMIT ?",
+    [limit]
+  );
+}
+
+export async function updateBodyweight(id: number, weightLbs: number): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("UPDATE bodyweight_logs SET weight_lbs = ? WHERE id = ?", [weightLbs, id]);
+}
+
+export async function deleteBodyweight(id: number): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("DELETE FROM bodyweight_logs WHERE id = ?", [id]);
+}
+
 // ─── Training Trends ──────────────────────────────────────────────────────────
 
 export type TrendPoint = { x: number; y: number }; // x = ms timestamp
@@ -185,7 +211,7 @@ export async function getVolumeTrend(days: number | null): Promise<TrendPoint[]>
   const params = days !== null ? [days] : [];
   const rows = await db.getAllAsync<{ ts: number; volume: number }>(
     `SELECT w.started_at * 1000 AS ts,
-            COALESCE(SUM(CASE WHEN ls.is_completed = 1 THEN ls.weight_lbs * ls.reps ELSE 0 END), 0) AS volume
+            COALESCE(SUM(CASE WHEN ls.is_completed = 1 THEN ${setLoadSql()} * ls.reps ELSE 0 END), 0) AS volume
      FROM workouts w
      LEFT JOIN logged_exercises le ON le.workout_id = w.id
      LEFT JOIN logged_sets ls ON ls.logged_exercise_id = le.id

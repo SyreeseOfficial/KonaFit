@@ -53,13 +53,12 @@ export default function WorkoutCompleteScreen() {
     router.replace(`/workout/${workoutId}` as never);
   };
 
-  const handleSaveAsProgram = useCallback(async () => {
-    if (!workout) return;
+  const handleSaveAsProgram = async () => {
     const name = `Program · ${formatShortDate(workout.started_at)}`;
     const programId = await createProgramFromWorkout(workoutId, name);
     router.dismissAll();
     router.push(`/programs/${programId}` as never);
-  }, [workout, workoutId]);
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">

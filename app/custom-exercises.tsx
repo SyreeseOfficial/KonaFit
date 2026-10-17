@@ -287,7 +287,7 @@ export default function CustomExercisesScreen() {
             Custom Exercises
           </Text>
           <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5">
-            Exercises you've created
+            Exercises you&apos;ve created
           </Text>
         </View>
       </View>

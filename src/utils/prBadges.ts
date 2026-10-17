@@ -11,8 +11,8 @@ export function computePRBadges(
   hist: HistPRs
 ): PRBadge[] {
   const others = exercise.sets
-    .filter((s) => s.localId !== excludeSetLocalId && s.isCompleted && !s.isWarmup && s.weightLbs !== "" && s.reps !== "")
-    .map((s) => ({ weight: parseFloat(s.weightLbs), reps: parseInt(s.reps, 10) }));
+    .filter((s) => s.localId !== excludeSetLocalId && s.isCompleted && !s.isWarmup && (s.weightLbs !== "" || exercise.isBodyweight) && s.reps !== "")
+    .map((s) => ({ weight: parseFloat(s.weightLbs) || 0, reps: parseInt(s.reps, 10) }));
 
   // No history for this exercise: nothing to beat. Mark the first set instead of faking PRs.
   if (hist.maxVolume == null) return others.length === 0 ? ["F"] : [];

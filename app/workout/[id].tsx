@@ -119,7 +119,7 @@ export default function WorkoutDetailScreen() {
       const setId = parseInt(idStr, 10);
       await updateLoggedSetValues(
         setId,
-        vals.weight === "" ? null : parseFloat(vals.weight),
+        Number.isFinite(parseFloat(vals.weight)) ? parseFloat(vals.weight) : null,
         vals.reps === "" ? null : parseInt(vals.reps, 10),
         vals.rpe === "" ? null : parseFloat(vals.rpe),
       );
@@ -318,8 +318,8 @@ export default function WorkoutDetailScreen() {
                       <TextInput
                         className="flex-1 font-mono-medium text-text-primary dark:text-white text-sm text-right bg-surface-2 dark:bg-zinc-800 h-9 px-2 rounded-lg"
                         value={buf.weight}
-                        onChangeText={(v) => setSetEdits((prev) => ({ ...prev, [s.id]: { ...prev[s.id], weight: cleanDecimal(v, MAX_WEIGHT) ?? prev[s.id].weight } }))}
-                        keyboardType="decimal-pad"
+                        onChangeText={(v) => setSetEdits((prev) => ({ ...prev, [s.id]: { ...prev[s.id], weight: cleanDecimal(v, MAX_WEIGHT, ex.is_bodyweight) ?? prev[s.id].weight } }))}
+                        keyboardType={ex.is_bodyweight ? "numbers-and-punctuation" : "decimal-pad"}
                         placeholder="—"
                         placeholderTextColor="#94A3B8"
                       />
