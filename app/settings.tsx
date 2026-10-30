@@ -17,6 +17,7 @@ import { getAllWorkoutDataForExport } from "../src/db/historyQueries";
 import { exportCsvAndShare, exportJsonAndShare } from "../src/utils/exportUtils";
 import { wipeAllData } from "../src/db/wipe";
 import { removeOrphanPhotos } from "../src/utils/photoFiles";
+import { BOXING_PRESERVED_KEYS } from "../src/utils/boxingSettings";
 import { THEME_KEY, loadTheme, setTheme, type ThemePref } from "../src/utils/theme";
 import {
   REST_TIMER_KEY,
@@ -192,7 +193,7 @@ export default function SettingsScreen() {
     setWipeOpen(false);
     setWipeText("");
     try {
-      await wipeAllData([...PRESERVED_KEYS, HAPTICS_KEY, THEME_KEY]);
+      await wipeAllData([...PRESERVED_KEYS, ...BOXING_PRESERVED_KEYS, HAPTICS_KEY, THEME_KEY]);
       await removeOrphanPhotos().catch(console.error); // the photo rows are gone, so every photo file is now an orphan
       Alert.alert("Done", "All workout data has been deleted.");
     } catch (e) {

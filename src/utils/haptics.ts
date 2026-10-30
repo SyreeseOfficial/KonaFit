@@ -19,5 +19,6 @@ export async function setHapticsEnabled(value: boolean): Promise<void> {
 export const haptics = {
   tap: () => { if (enabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); },
   warn: () => { if (enabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); },
+  heavy: () => { if (enabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); },
   success: () => { if (enabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); },
 };

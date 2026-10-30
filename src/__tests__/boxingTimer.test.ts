@@ -1,7 +1,9 @@
+import { parseFlag, parseGetReady, parseLastSetup, DEFAULT_BOXING_PLAN, BOXING_PRESERVED_KEYS } from "../utils/boxingSettings";
 import {
   createTimer, advance, pause, resume, skipRest, addSeconds, endEarly, remainingSec, currentPhase, warningDue,
   buildPhases, roundResults, activeSeconds, plannedTotalSec, validateSetup, type TimerSetup,
 } from "../utils/boxingTimer";
+jest.mock("expo-sqlite", () => ({})); // boxingSettings -> kvStore -> database; these tests only use the pure parsers
 
 const T0 = 1_000_000_000_000;
 const S = 1000;
@@ -157,4 +159,20 @@ describe("controls", () => {
     expect(pause(s, T0)).toBe(s);
     expect(endEarly(s, T0)).toBe(s);
   });
+});
+
+describe("boxing settings parsing", () => {
+  it("flags default on; only '0' turns them off", () => {
+    expect([parseFlag(null), parseFlag("1"), parseFlag("junk"), parseFlag("0")]).toEqual([true, true, true, false]);
+  });
+  it("get-ready falls back on garbage and clamps to 0-60", () => {
+    expect([parseGetReady(null), parseGetReady("abc"), parseGetReady("25"), parseGetReady("-5"), parseGetReady("999")]).toEqual([10, 10, 25, 0, 60]);
+  });
+  it("last setup falls back on missing, garbled or invalid values", () => {
+    const good = { rounds: 3, workSec: 120, restSec: 30 };
+    expect(parseLastSetup(JSON.stringify(good))).toEqual(good);
+    for (const bad of [null, "{", "[]", JSON.stringify({ rounds: 0, workSec: 120, restSec: 30 }), JSON.stringify({ rounds: 3, workSec: 5, restSec: 30 })])
+      expect(parseLastSetup(bad)).toEqual(DEFAULT_BOXING_PLAN);
+  });
+  it("all four keys are preserved on wipe", () => expect(BOXING_PRESERVED_KEYS).toHaveLength(4));
 });
