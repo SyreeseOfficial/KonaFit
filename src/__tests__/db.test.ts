@@ -146,6 +146,22 @@ describe("migrations", () => {
     expect(await version(adapter)).toBeGreaterThanOrEqual(13);
   });
 
+  it("migration 14 creates boxing tables, seeds 13 chips once, and rounds cascade with their workout", async () => {
+    const { adapter, init } = await fresh();
+    const count = async (t: string) => (await adapter.getFirstAsync<{ n: number }>(`SELECT COUNT(*) n FROM ${t}`))!.n;
+    expect(await count("boxing_focus_chips")).toBe(13);
+    await init();
+    expect(await count("boxing_focus_chips")).toBe(13); // re-run does not reseed
+    await adapter.execAsync("DROP TABLE boxing_rounds; DROP TABLE boxing_focus_chips; PRAGMA user_version = 13");
+    await init();
+    expect(await count("boxing_focus_chips")).toBe(13);
+    const w = await adapter.runAsync("INSERT INTO workouts (name, type) VALUES ('Box', 'boxing')");
+    await adapter.runAsync("PRAGMA foreign_keys = ON");
+    await adapter.runAsync("INSERT INTO boxing_rounds (workout_id, round_number, work_seconds, rest_seconds) VALUES (?, 1, 180, 60)", [w.lastInsertRowId]);
+    await adapter.runAsync("DELETE FROM workouts WHERE id = ?", [w.lastInsertRowId]);
+    expect(await count("boxing_rounds")).toBe(0);
+  });
+
   it("from an old user_version only runs the migrations after it", async () => {
     const { adapter, init } = await fresh();
     await addWorkout(adapter, { "Barbell Bench Press": [{ w: 135, r: 5, done: false }], "Dip": [{ w: null, r: 10 }] });

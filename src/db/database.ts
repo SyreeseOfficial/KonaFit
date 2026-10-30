@@ -147,7 +147,56 @@ const MIGRATIONS: ((database: SQLite.SQLiteDatabase) => Promise<void>)[] = [
     await addColumn(database, "workouts", "session_tags", "TEXT");
     await database.execAsync("CREATE INDEX IF NOT EXISTS idx_workouts_type_finished ON workouts(type, finished_at)");
   },
+  // 14: boxing rounds (one row per round of a boxing workout) and the focus chips used to tag them
+  async (database) => {
+    await database.execAsync(
+      `CREATE TABLE IF NOT EXISTS boxing_rounds (
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         workout_id INTEGER NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
+         round_number INTEGER NOT NULL,
+         rpe INTEGER,
+         focus_tags TEXT,
+         focus_note TEXT,
+         work_seconds INTEGER NOT NULL,
+         rest_seconds INTEGER NOT NULL,
+         actual_work_seconds INTEGER,
+         actual_rest_seconds INTEGER
+       );
+       CREATE INDEX IF NOT EXISTS idx_br_workout ON boxing_rounds(workout_id);
+       CREATE TABLE IF NOT EXISTS boxing_focus_chips (
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         name TEXT NOT NULL,
+         group_name TEXT NOT NULL,
+         is_default INTEGER NOT NULL DEFAULT 0,
+         is_hidden INTEGER NOT NULL DEFAULT 0,
+         order_index INTEGER NOT NULL DEFAULT 0
+       );`
+    );
+    await seedBoxingChips(database);
+  },
 ];
+
+export const DEFAULT_BOXING_CHIPS: [group: string, names: string[]][] = [
+  ["Punches", ["Jab", "Cross", "Hooks", "Uppercuts"]],
+  ["Movement", ["Footwork", "Head movement", "Defense"]],
+  ["Intent", ["Power", "Speed", "Endurance"]],
+  ["Technical", ["Combos", "Counters", "Body shots"]],
+];
+
+/** Inserts the 13 default chips; does nothing if the table already has rows. */
+export async function seedBoxingChips(database: SQLite.SQLiteDatabase) {
+  const row = await database.getFirstAsync<{ n: number }>("SELECT COUNT(*) n FROM boxing_focus_chips");
+  if (row && row.n > 0) return;
+  let order = 0;
+  for (const [group, names] of DEFAULT_BOXING_CHIPS) {
+    for (const name of names) {
+      await database.runAsync(
+        "INSERT INTO boxing_focus_chips (name, group_name, is_default, order_index) VALUES (?, ?, 1, ?)",
+        [name, group, order++]
+      );
+    }
+  }
+}
 
 async function runMigrations(database: SQLite.SQLiteDatabase) {
   const row = await database.getFirstAsync<{ user_version: number }>("PRAGMA user_version");

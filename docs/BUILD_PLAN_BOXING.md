@@ -101,7 +101,7 @@ Tick as you go. Each line = one commit.
 
 **Phase 1: Data foundation**
 - [x] 1.1 Migration 13: `workouts.type` + boxing columns
-- [ ] 1.2 Migration 14: `boxing_rounds` + `boxing_focus_chips` (seeded)
+- [x] 1.2 Migration 14: `boxing_rounds` + `boxing_focus_chips` (seeded)
 - [ ] 1.3 Boxing types + write/read queries
 - [ ] 1.4 Audit: `statsQueries.ts`
 - [ ] 1.5 Audit: `insightQueries.ts`
