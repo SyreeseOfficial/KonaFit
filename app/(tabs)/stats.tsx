@@ -18,6 +18,7 @@ import { StatsGrid } from "../../src/components/stats/StatsGrid";
 import { SectionHeader } from "../../src/components/stats/SectionHeader";
 import { TrendCards } from "../../src/components/stats/TrendCards";
 import { MuscleWeek } from "../../src/components/stats/MuscleWeek";
+import { BoxingStats } from "../../src/components/stats/BoxingStats";
 import { ReadinessCard } from "../../src/components/stats/ReadinessCard";
 import { FeelChart } from "../../src/components/stats/FeelChart";
 import { BodyweightLogger } from "../../src/components/stats/BodyweightLogger";
@@ -138,6 +139,8 @@ export default function StatsScreen() {
           <SectionHeader title="This week" subtitle="Sets, balance, recovery" />
           <MuscleWeek refreshKey={refreshKey} />
         </View>
+
+        <BoxingStats refreshKey={refreshKey} />
 
         <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
           <SectionHeader title="Readiness" subtitle="Daily check-in" />

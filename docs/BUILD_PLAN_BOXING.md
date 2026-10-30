@@ -147,7 +147,7 @@ Tick as you go. Each line = one commit.
 
 **Phase 9: Stats**
 - [x] 9.1 Boxing stats queries + tests
-- [ ] 9.2 Boxing section on Stats
+- [x] 9.2 Boxing section on Stats
 - [x] 9.3 Weekly training load query + tests
 - [ ] 9.4 Weekly load section on Stats
 
