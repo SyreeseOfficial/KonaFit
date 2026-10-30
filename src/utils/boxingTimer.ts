@@ -136,6 +136,22 @@ export function advance(state: TimerState, now: number): { state: TimerState; ev
   return { state: s, events };
 }
 
+export type Cue = "roundStart" | "roundEnd" | "warning";
+
+/**
+ * The one cue to play for a batch of events: the last one that has a cue. A normal tick can hold a phaseEnd plus the next
+ * phaseStart (bell for the round end); after a long background catch-up it is still a single cue, not one per missed boundary.
+ */
+export function cueFor(events: TimerEvent[]): Cue | null {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.type === "warning") return "warning";
+    if (e.type === "phaseStart" && e.kind === "work") return "roundStart";
+    if (e.type === "phaseEnd" && e.kind === "work") return "roundEnd";
+  }
+  return null;
+}
+
 export function pause(state: TimerState, now: number): TimerState {
   if (state.done || state.paused) return state;
   return { ...state, paused: { remainingMs: remainingMs(state, now) } };

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { View, Text, Alert, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useBoxingSession } from "../../src/hooks/useBoxingSession";
 import { setupFromParams } from "../../src/utils/boxingRoute";
 import { currentPhase, remainingSec, sessionProgress } from "../../src/utils/boxingTimer";
@@ -13,6 +14,14 @@ export default function BoxingSessionScreen() {
   const b = useBoxingSession(setupFromParams(params));
 
   useEffect(() => { if (b.status === "none") router.back(); }, [b.status]);
+
+  // Screen stays on while a session is live.
+  const live = !!b.timer && !b.timer.done;
+  useEffect(() => {
+    if (!live) return;
+    activateKeepAwakeAsync("boxing").catch(() => {});
+    return () => { deactivateKeepAwake("boxing"); };
+  }, [live]);
   if (!b.timer) return <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950" />;
 
   const t = b.timer;

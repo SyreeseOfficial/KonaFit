@@ -1,7 +1,7 @@
 import { parseFlag, parseGetReady, parseLastSetup, DEFAULT_BOXING_PLAN, BOXING_PRESERVED_KEYS } from "../utils/boxingSettings";
 import {
   createTimer, advance, pause, resume, skipRest, addSeconds, endEarly, remainingSec, currentPhase, warningDue,
-  buildPhases, parseClock, sessionProgress, roundResults, activeSeconds, plannedTotalSec, validateSetup, type TimerSetup,
+  buildPhases, parseClock, cueFor, sessionProgress, roundResults, activeSeconds, plannedTotalSec, validateSetup, type TimerSetup,
 } from "../utils/boxingTimer";
 jest.mock("expo-sqlite", () => ({})); // boxingSettings -> kvStore -> database; these tests only use the pure parsers
 
@@ -109,6 +109,25 @@ describe("pause / resume", () => {
     expect(resume(s, T0)).toBe(s);
     const p = pause(s, T0);
     expect(pause(p, T0 + S)).toBe(p);
+  });
+});
+
+describe("cueFor", () => {
+  const std2 = { rounds: 3, workSec: 30, restSec: 10, getReadySec: 5 };
+  it("rings the right bell at each boundary, once", () => {
+    const at = (secs: number) => cueFor(advance(createTimer(std2, T0), T0 + secs * S).events);
+    expect(at(5)).toBe("roundStart"); // get ready -> work 1
+    expect(at(35)).toBe("roundEnd"); // work 1 -> rest
+    expect(at(45)).toBe("roundStart"); // rest -> work 2
+    expect(at(1)).toBeNull();
+  });
+  it("a long catch-up yields a single cue", () => {
+    expect(cueFor(advance(createTimer(std2, T0), T0 + 100 * S).events)).toBe("roundStart"); // lands in round 3: only the latest cue plays
+  });
+  it("warning wins over nothing and rest start has no cue", () => {
+    expect(cueFor([{ type: "warning" }])).toBe("warning");
+    expect(cueFor([{ type: "phaseStart", kind: "rest", round: 1 }])).toBeNull();
+    expect(cueFor([])).toBeNull();
   });
 });
 

@@ -1,11 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
-  createTimer, advance, pause, resume, skipRest, addSeconds, endEarly,
+  createTimer, advance as advanceTimer, cueFor, pause, resume, skipRest, addSeconds, endEarly,
   type TimerSetup, type TimerState,
 } from "../utils/boxingTimer";
+import { cues, loadCueSettings } from "../utils/boxingCues";
 import { saveSnapshot, loadSnapshot, clearSnapshot, type RoundLogEntry } from "../utils/boxingSnapshot";
 
 const TICK_MS = 250;
+
+/** advance() plus the one cue its events call for. */
+function advance(t: TimerState, at: number): { state: TimerState } {
+  const r = advanceTimer(t, at);
+  const cue = cueFor(r.events);
+  if (cue) cues[cue]();
+  return r;
+}
 
 const emptyLog = (rounds: number): RoundLogEntry[] =>
   Array.from({ length: rounds }, () => ({ rpe: null, focusTags: [], focusNote: "" }));
@@ -42,6 +51,8 @@ export function useBoxingSession(newSetup: TimerSetup | null) {
       }
       if (cancelled) return;
       if (!s) return setStatus("none");
+      await loadCueSettings();
+      if (newSetup && s.timer.setup.getReadySec === 0) cues.roundStart(); // no get-ready: round 1 starts right now
       const t = Date.now();
       s = { ...s, timer: advance(s.timer, t).state }; // catch up if the app was away
       commit(s);
