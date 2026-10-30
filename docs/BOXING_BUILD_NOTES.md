@@ -1,7 +1,7 @@
 # Boxing build: decisions, issues and acceptance
 
 Written during the unattended run of `BUILD_PLAN_BOXING.md` (all 12 phases built, gate green, one commit per step, all pushed).
-Nothing here was tested on a phone: the Expo Android bundle compiles (`expo export`), and the pure logic has 190 unit tests. **Run Appendix A of the plan on a device first.**
+Nothing here was tested on a phone: the Expo Android bundle compiles (`expo export`), and the pure logic has 189 unit tests. **Run Appendix A of the plan on a device first.**
 
 ## Decisions needed from you (ranked)
 
