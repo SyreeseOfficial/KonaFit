@@ -152,7 +152,7 @@ Tick as you go. Each line = one commit.
 - [x] 9.4 Weekly load section on Stats
 
 **Phase 10: Goals**
-- [ ] 10.1 Migration 15 + goal types + progress queries + tests
+- [x] 10.1 Migration 15 + goal types + progress queries + tests
 - [ ] 10.2 Create-goal UI and display
 
 **Phase 11: Polish**

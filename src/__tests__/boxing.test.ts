@@ -525,3 +525,71 @@ describe("training load", () => {
     expect(await (await import("../db/boxingStats")).getTrainingLoad()).toEqual({ thisWeek: 0, lastWeek: 0, changePct: null });
   });
 });
+
+describe("boxing goals", () => {
+  const T = () => nowSecs();
+  async function setup() {
+    const ctx = await fresh();
+    const goalsQ = await import("../db/goalQueries");
+    const mk = async (type: Parameters<typeof goalsQ.createGoal>[0]["type"], extra: Partial<Parameters<typeof goalsQ.createGoal>[0]> = {}) => {
+      const id = await goalsQ.createGoal({ type, title: "g", targetValue: 20, startDate: T() - 60 * DAY, endDate: T() + 60 * DAY, ...extra });
+      return (await goalsQ.getGoals()).find((g) => g.id === id)!;
+    };
+    return { ...ctx, goalsQ, mk };
+  }
+  const mon = async () => (await import("../db/statsQueries")).weekStartSecs();
+
+  it("rounds / sessions / minutes are this week's totals; last week and outside-range sessions are ignored", async () => {
+    const { q, goalsQ, mk } = await setup();
+    const m = await mon();
+    await q.saveBoxingSession(session({ startedAt: m + 100, finishedAt: m + 700, durationSeconds: 600, rounds: rounds(3) }));
+    await q.saveBoxingSession(session({ startedAt: m + 200, finishedAt: m + 1400, durationSeconds: 1200, rounds: rounds(5) }));
+    await q.saveBoxingSession(session({ startedAt: m - DAY, finishedAt: m - DAY + 600, durationSeconds: 600, rounds: rounds(9) })); // last week
+    expect(await goalsQ.getGoalProgress(await mk("boxing_rounds"))).toBe(8);
+    expect(await goalsQ.getGoalProgress(await mk("boxing_sessions"))).toBe(2);
+    expect(await goalsQ.getGoalProgress(await mk("boxing_minutes"))).toBe(30);
+    // a goal that only started mid-week ignores sessions before its start date
+    expect(await goalsQ.getGoalProgress(await mk("boxing_rounds", { startDate: m + 150 }))).toBe(5);
+  });
+
+  it("before the start date: 0 (or no average); after the end: the last week of the range", async () => {
+    const { q, goalsQ, mk } = await setup();
+    const m = await mon();
+    await q.saveBoxingSession(session({ startedAt: m + 100, finishedAt: m + 700, rounds: rounds(4) }));
+    expect(await goalsQ.getGoalProgress(await mk("boxing_rounds", { startDate: T() + 10 * DAY, endDate: T() + 20 * DAY }))).toBe(0);
+    expect(await goalsQ.getGoalProgress(await mk("boxing_avg_rpe", { startDate: T() + 10 * DAY, endDate: T() + 20 * DAY }))).toBeNull();
+    const ended = await mk("boxing_rounds", { startDate: m - 30 * DAY, endDate: m - 3 * DAY });
+    await q.saveBoxingSession(session({ startedAt: m - 4 * DAY, finishedAt: m - 4 * DAY + 600, rounds: rounds(7) }));
+    expect(goalsQ.goalEnded(ended)).toBe(true);
+    expect(await goalsQ.getGoalProgress(ended)).toBe(7);
+  });
+
+  it("avg RPE covers the whole range so far (round averages, else overall); ceiling vs floor fractions", async () => {
+    const { q, goalsQ, mk } = await setup();
+    const t = T();
+    await q.saveBoxingSession(session({ startedAt: t - 20 * DAY, finishedAt: t - 20 * DAY + 600, rpe: null, rounds: rounds(2).map((r) => ({ ...r, rpe: 6 })) }));
+    await q.saveBoxingSession(session({ startedAt: t - 2 * DAY, finishedAt: t - 2 * DAY + 600, rpe: 10, rounds: rounds(2) }));
+    await q.saveBoxingSession(session({ startedAt: t - 90 * DAY, finishedAt: t - 90 * DAY + 600, rpe: 1, rounds: rounds(2) })); // before range
+    const ceiling = await mk("boxing_avg_rpe", { targetValue: 7, direction: "down" });
+    const floor = await mk("boxing_avg_rpe", { targetValue: 9, direction: "up" });
+    expect(ceiling.direction).toBe("down");
+    expect(await goalsQ.getGoalProgress(ceiling)).toBe(8);
+    expect(goalsQ.goalFraction(ceiling, 8)).toBeCloseTo(7 / 8); // over the ceiling
+    expect(goalsQ.goalFraction(ceiling, 6)).toBe(1);
+    expect(goalsQ.goalFraction(floor, 8)).toBeCloseTo(8 / 9); // under the floor
+    expect(goalsQ.goalFraction(floor, 9.5)).toBe(1);
+    expect(goalsQ.goalFraction(floor, null)).toBeNull();
+  });
+
+  it("per-week fractions, and existing lift/bodyweight goals are unaffected by migration 15 and boxing rows", async () => {
+    const { adapter, q, goalsQ, mk } = await setup();
+    const g = await mk("boxing_rounds", { targetValue: 10 });
+    expect(goalsQ.goalFraction(g, 5)).toBe(0.5);
+    expect(goalsQ.goalFraction(g, 25)).toBe(1);
+    await q.saveBoxingSession(session());
+    const bw = await goalsQ.createGoal({ type: "custom", title: "Read" });
+    expect((await goalsQ.getGoals()).find((x) => x.id === bw)).toMatchObject({ start_date: null, end_date: null });
+    expect(await goalsQ.getGoalProgress((await goalsQ.getGoals()).find((x) => x.id === bw)!)).toBeNull();
+    expect(await adapter.getFirstAsync("SELECT 1 FROM pragma_table_info('goals') WHERE name = 'end_date'")).not.toBeNull();
+  });
+});

@@ -1,7 +1,13 @@
 import { getDatabase } from "./database";
 import { setLoadSql, oneRmSql, workingSetSql } from "./sqlFragments";
+import { weekStartSecs } from "./statsQueries";
 
-export type GoalType = "lift_pr" | "bodyweight" | "custom";
+export type GoalType =
+  | "lift_pr" | "bodyweight" | "custom"
+  | "boxing_rounds" | "boxing_sessions" | "boxing_minutes" | "boxing_avg_rpe";
+
+export const BOXING_GOAL_TYPES: GoalType[] = ["boxing_rounds", "boxing_sessions", "boxing_minutes", "boxing_avg_rpe"];
+export const isBoxingGoal = (t: GoalType) => BOXING_GOAL_TYPES.includes(t);
 
 export type Goal = {
   id: number;
@@ -13,7 +19,9 @@ export type Goal = {
   target_reps: number | null;
   notes: string | null;
   start_value: number | null; // bodyweight goals: weight when the goal was set
-  direction: "up" | "down" | null; // bodyweight goals: bulking (up) or cutting (down)
+  direction: "up" | "down" | null; // bodyweight goals: bulking (up) or cutting (down). Avg-RPE goals: floor (up) or ceiling (down)
+  start_date: number | null; // unix seconds; boxing goals' date range (null = open-ended)
+  end_date: number | null;
   is_achieved: number; // 0 | 1
   created_at: number;
   achieved_at: number | null;
@@ -34,6 +42,10 @@ export async function createGoal(data: {
   targetValue?: number | null;
   targetReps?: number | null;
   notes?: string | null;
+  startDate?: number | null;
+  endDate?: number | null;
+  /** Avg-RPE goals: "down" = keep it under the target (ceiling), "up" = keep it at or over (floor). */
+  direction?: "up" | "down" | null;
 }): Promise<number> {
   const db = await getDatabase();
   // A bodyweight goal remembers where you started, so progress and cut/bulk direction can be told later.
@@ -46,11 +58,13 @@ export async function createGoal(data: {
     startValue = bw?.weight_lbs ?? null;
     if (startValue != null) direction = data.targetValue < startValue ? "down" : "up";
   }
+  if (data.type === "boxing_avg_rpe") direction = data.direction ?? "down";
   const result = await db.runAsync(
-    `INSERT INTO goals (type, title, exercise_id, exercise_name, target_value, target_reps, notes, start_value, direction)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO goals (type, title, exercise_id, exercise_name, target_value, target_reps, notes, start_value, direction, start_date, end_date)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [data.type, data.title.trim(), data.exerciseId ?? null, data.exerciseName ?? null,
-     data.targetValue ?? null, data.targetReps ?? null, data.notes?.trim() ?? null, startValue, direction]
+     data.targetValue ?? null, data.targetReps ?? null, data.notes?.trim() ?? null, startValue, direction,
+     data.startDate ?? null, data.endDate ?? null]
   );
   return result.lastInsertRowId;
 }
@@ -137,7 +151,48 @@ export async function getGoalProgress(goal: Goal): Promise<number | null> {
     );
     return row?.weight_lbs ?? null;
   }
+  if (isBoxingGoal(goal.type)) return getBoxingGoalProgress(goal);
   return null;
+}
+
+/** True once a goal's end date has passed. Open-ended goals never end. */
+export const goalEnded = (goal: Goal, nowMs = Date.now()): boolean => goal.end_date != null && nowMs / 1000 > goal.end_date;
+
+/**
+ * The slice of time a boxing goal measures, in unix seconds, or null before the goal starts.
+ * Per-week goals (rounds, sessions, minutes) look at the current week, or the last week of the range once it has ended,
+ * cut to the goal's dates. The average-RPE goal looks at the whole range so far.
+ */
+export function boxingGoalWindow(goal: Goal, nowMs = Date.now()): { from: number; to: number } | null {
+  const now = nowMs / 1000;
+  const start = goal.start_date ?? goal.created_at;
+  if (now < start) return null;
+  const ref = goal.end_date != null ? Math.min(now, goal.end_date) : now;
+  let from = start;
+  if (goal.type !== "boxing_avg_rpe") from = Math.max(start, weekStartSecs(new Date(ref * 1000)));
+  return { from, to: ref };
+}
+
+async function getBoxingGoalProgress(goal: Goal): Promise<number | null> {
+  const w = boxingGoalWindow(goal);
+  if (!w) return goal.type === "boxing_avg_rpe" ? null : 0;
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ sessions: number; rounds: number | null; secs: number | null; avg_rpe: number | null }>(
+    `SELECT COUNT(*) AS sessions, SUM(rounds) AS rounds, SUM(dur) AS secs, AVG(srpe) AS avg_rpe FROM (
+       SELECT (SELECT COUNT(*) FROM boxing_rounds br WHERE br.workout_id = w.id) AS rounds,
+              COALESCE(w.duration_seconds, 0) AS dur,
+              COALESCE((SELECT AVG(br.rpe) FROM boxing_rounds br WHERE br.workout_id = w.id), w.rpe) AS srpe
+       FROM workouts w
+       WHERE w.type = 'boxing' AND w.finished_at IS NOT NULL AND w.started_at >= ? AND w.started_at <= ?
+     )`,
+    [w.from, w.to]
+  );
+  switch (goal.type) {
+    case "boxing_rounds": return row?.rounds ?? 0;
+    case "boxing_sessions": return row?.sessions ?? 0;
+    case "boxing_minutes": return Math.round((row?.secs ?? 0) / 6) / 10;
+    default: return row?.avg_rpe ?? null;
+  }
 }
 
 /** 0..1 share of the way to the goal, or null when it can't be measured (custom goals, or a bodyweight goal with no start). */
@@ -147,6 +202,11 @@ export function goalFraction(goal: Goal, progress: number | null): number | null
   if (goal.type === "bodyweight") {
     if (goal.start_value == null || goal.start_value === goal.target_value) return null;
     return clamp((goal.start_value - progress) / (goal.start_value - goal.target_value));
+  }
+  if (goal.type === "boxing_avg_rpe") {
+    if (goal.target_value <= 0 || progress <= 0) return progress <= 0 ? 1 : null;
+    // ceiling ("down"): at or under the target is full; floor ("up"): at or over is full. Otherwise how close you are.
+    return goal.direction === "up" ? clamp(progress / goal.target_value) : clamp(goal.target_value / progress);
   }
   const target = goal.target_reps != null ? goal.target_reps : goal.target_value;
   return target > 0 ? clamp(progress / target) : null;

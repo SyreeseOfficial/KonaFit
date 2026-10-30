@@ -174,6 +174,11 @@ const MIGRATIONS: ((database: SQLite.SQLiteDatabase) => Promise<void>)[] = [
     );
     await seedBoxingChips(database);
   },
+  // 15: goals can have a date range (boxing goals: a fight camp, 8 weeks); null = open-ended like the older goal types
+  async (database) => {
+    await addColumn(database, "goals", "start_date", "INTEGER");
+    await addColumn(database, "goals", "end_date", "INTEGER");
+  },
 ];
 
 export const DEFAULT_BOXING_CHIPS: [group: string, names: string[]][] = [

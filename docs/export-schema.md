@@ -7,7 +7,7 @@ Settings > Data > Export Everything (JSON). One file, `konafit_full_YYYY-MM-DD.j
   "format": "konafit-export",
   "formatVersion": 2,          // bumped when a table is added or renamed
   "appVersion": "1.0.0",
-  "schemaVersion": 14,         // PRAGMA user_version of the database
+  "schemaVersion": 15,         // PRAGMA user_version of the database
   "exportedAt": "2026-10-30T18:00:00.000Z",
   "tables": { "<table>": [ { "<column>": value, ... }, ... ] }
 }
@@ -26,7 +26,7 @@ booleans are 0/1. Foreign keys are the usual `<table>_id` columns.
 | `boxing_focus_chips` | Focus tags: `name`, `group_name`, `is_default`, `is_hidden`, `order_index` |
 | `session_events` | `start` / `pause` / `resume` / `finish` stamps per workout |
 | `programs`, `program_days`, `program_exercises` | Saved programs, their days and target sets/reps/RPE |
-| `goals` | Lift, bodyweight and custom goals |
+| `goals` | Lift, bodyweight, custom and boxing goals (`boxing_rounds`, `boxing_sessions`, `boxing_minutes`, `boxing_avg_rpe`; `start_date`/`end_date` unix seconds, `direction` `down` = ceiling, `up` = floor) |
 | `bodyweight_logs` | `weight_lbs`, `logged_at` |
 | `readiness_checkins` | One per local day: `day` (YYYY-MM-DD), `sleep`, `soreness`, `mood` (1-5) |
 | `locations` | Gyms |
