@@ -12,6 +12,9 @@ import { WeeklyGoal } from "../../src/components/train/WeeklyGoal";
 import { GoalsSection } from "../../src/components/train/GoalsSection";
 import { StartSheet } from "../../src/components/train/StartSheet";
 import { loadSnapshot, clearSnapshot } from "../../src/utils/boxingSnapshot";
+import { hasLastSetup, getLastSetup, getGetReadySec } from "../../src/utils/boxingSettings";
+import { sessionHref } from "../../src/utils/boxingRoute";
+import { formatTime } from "../../src/utils/time";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus, X, ArrowUpDown, Settings, ChevronRight, MoreHorizontal, Copy, Archive, Trash2 } from "lucide-react-native";
 import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
@@ -85,6 +88,7 @@ export default function TrainScreen() {
   const [exerciseSheetOpen, setExerciseSheetOpen] = useState(false);
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
   const [startSheetOpen, setStartSheetOpen] = useState(false);
+  const [lastBoxing, setLastBoxing] = useState<{ rounds: number; workSec: number; restSec: number } | null>(null);
 
   // A boxing session left running counts as "in progress" too: starting anything else asks before discarding it.
   const startUnlessBoxingRunning = useCallback(async (go: () => void) => {
@@ -150,6 +154,7 @@ export default function TrainScreen() {
   useFocusEffect(useCallback(() => {
     loadPrograms();
     loadRecentWorkouts();
+    hasLastSetup().then(async (has) => setLastBoxing(has ? await getLastSetup() : null)).catch(() => setLastBoxing(null));
   }, [loadPrograms, loadRecentWorkouts]));
 
   const handleProgramDelete = (p: ProgramSummary) => {
@@ -496,6 +501,8 @@ export default function TrainScreen() {
           onClose={() => setStartSheetOpen(false)}
           onLift={() => startUnlessBoxingRunning(startWorkout)}
           onBox={() => startUnlessBoxingRunning(() => router.push("/boxing/setup" as never))}
+          repeatLabel={lastBoxing ? `${lastBoxing.rounds} x ${formatTime(lastBoxing.workSec)} / ${formatTime(lastBoxing.restSec)}` : null}
+          onRepeat={() => lastBoxing && startUnlessBoxingRunning(async () => router.push(sessionHref({ ...lastBoxing, getReadySec: await getGetReadySec() })))}
         />
 
         {/* Programs context menu */}

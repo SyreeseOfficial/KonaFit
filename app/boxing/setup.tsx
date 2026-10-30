@@ -7,6 +7,7 @@ import { getLastSetup, getGetReadySec, setLastSetup, setGetReadySec } from "../.
 import { validateSetup, parseClock, type TimerSetup } from "../../src/utils/boxingTimer";
 import { cleanInt } from "../../src/utils/numberInput";
 import { formatTime } from "../../src/utils/time";
+import { sessionHref } from "../../src/utils/boxingRoute";
 import { haptics } from "../../src/utils/haptics";
 
 // [work, rest] in seconds
@@ -41,10 +42,7 @@ export default function BoxingSetupScreen() {
     if (error) return;
     haptics.tap();
     await Promise.all([setLastSetup({ rounds: setup.rounds, workSec: setup.workSec, restSec: setup.restSec }), setGetReadySec(setup.getReadySec)]);
-    router.replace({
-      pathname: "/boxing/session",
-      params: { rounds, workSec: String(setup.workSec), restSec: String(setup.restSec), getReadySec: ready },
-    } as never);
+    router.replace(sessionHref(setup));
   }
 
   return (
