@@ -10,8 +10,10 @@ import {
   calculateStreak,
   getLatestBodyweight,
 } from "../../src/db/statsQueries";
+import { getRestDays } from "../../src/utils/settings";
 import { getAllWorkoutDataForExport } from "../../src/db/historyQueries";
 import { exportCsvAndShare } from "../../src/utils/exportUtils";
+import { WeeklyGoal } from "../../src/components/train/WeeklyGoal";
 import { StatsGrid } from "../../src/components/stats/StatsGrid";
 import { SectionHeader } from "../../src/components/stats/SectionHeader";
 import { BodyweightLogger } from "../../src/components/stats/BodyweightLogger";
@@ -27,16 +29,17 @@ type StatsData = {
 };
 
 async function loadStats(): Promise<StatsData> {
-  const [totals, prs, dates, bw] = await Promise.all([
+  const [totals, prs, dates, bw, restDays] = await Promise.all([
     getStatsTotals(),
     getTotalPRCount(),
     getWorkoutDatesForStreak(),
     getLatestBodyweight(),
+    getRestDays(),
   ]);
   return {
     totalLiftedLbs: totals.totalLifted,
     workoutCount: totals.workoutCount,
-    streak: calculateStreak(dates),
+    streak: calculateStreak(dates, restDays),
     bodyweightLbs: bw,
     totalSeconds: totals.seconds,
     prCount: prs,
@@ -107,6 +110,8 @@ export default function StatsScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        <WeeklyGoal />
 
         {/* Stats Grid */}
         {stats && (

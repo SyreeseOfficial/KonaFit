@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { AppState } from "react-native";
+import { AppState, Alert } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { kvStore } from "../utils/kvStore";
 import { haptics } from "../utils/haptics";
@@ -20,6 +20,7 @@ import {
   deleteLoggedExercise,
   getExerciseInfo,
   updateExerciseLibraryNote,
+  setLoggedExerciseSuperset,
 } from "../db/workoutQueries";
 import { getProgramDayExercises } from "../db/programQueries";
 import { getHistPRs, getLastWorkoutExercises } from "../db/historyQueries";
@@ -28,8 +29,10 @@ import type { PRBadge } from "../types/workout";
 import * as R from "../utils/sessionReducers";
 
 const SESSION_KEY = "@kinetic_active_session";
-let localIdCounter = 0;
-const uid = () => `local_${++localIdCounter}_${Date.now()}`;
+// Local ids must stay unique across app restarts (a resumed session keeps its old ids), so no per-run counter.
+let localIdFallback = 0;
+const uid = () =>
+  `local_${globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}_${++localIdFallback}`}`;
 
 // Write the order the user sees (array position) to the DB in one transaction.
 const persistOrder = (exercises: ActiveExercise[]) =>
@@ -65,6 +68,12 @@ export async function loadCachedSession(): Promise<ActiveSession | null> {
   }
 }
 
+/** Throw away a saved session the user chose not to resume: its half-finished workout and the saved copy. */
+export async function discardCachedSession(cached: ActiveSession): Promise<void> {
+  await deleteWorkout(cached.workoutId);
+  await saveToStorage(null);
+}
+
 export function useWorkoutSession() {
   const [session, setSession] = useState<ActiveSession | null>(null);
   // Last destructive action, restorable until the snackbar's 5 s run out or something newer replaces it.
@@ -89,10 +98,41 @@ export function useWorkoutSession() {
     cancelPending();
     if (pending) saveToStorage(pending).catch(console.error);
   }, [cancelPending]);
+  // Typing in a set row marks it dirty; its DB row is written once typing pauses (400 ms), on blur, on Finish, or when the app backgrounds.
+  const latestRef = useRef<ActiveSession | null>(null);
+  const dirtyRef = useRef(new Map<string, string>()); // set localId -> exercise localId
+  const dirtyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushDirty = useCallback(async () => {
+    if (dirtyTimerRef.current) clearTimeout(dirtyTimerRef.current);
+    dirtyTimerRef.current = null;
+    const dirty = [...dirtyRef.current];
+    dirtyRef.current.clear();
+    const cur = latestRef.current;
+    if (!cur) return;
+    await Promise.all(dirty.map(([setLocalId, exerciseLocalId]) => {
+      const e = cur.exercises.find((x) => x.localId === exerciseLocalId);
+      const set = e?.sets.find((x) => x.localId === setLocalId);
+      return e?.dbId && set ? upsertLoggedSet({ ...set, loggedExerciseId: e.dbId }).catch(console.error) : undefined;
+    }));
+  }, []);
+  const markDirty = useCallback((exerciseLocalId: string, setLocalId: string, delayMs: number) => {
+    dirtyRef.current.set(setLocalId, exerciseLocalId);
+    if (dirtyTimerRef.current) clearTimeout(dirtyTimerRef.current);
+    dirtyTimerRef.current = setTimeout(flushDirty, delayMs);
+  }, [flushDirty]);
+  const dropDirty = useCallback(() => {
+    if (dirtyTimerRef.current) clearTimeout(dirtyTimerRef.current);
+    dirtyTimerRef.current = null;
+    dirtyRef.current.clear();
+  }, []);
+  useEffect(() => { latestRef.current = session; }, [session]);
+
   useEffect(() => {
-    const sub = AppState.addEventListener("change", (state) => { if (state !== "active") flushPending(); });
-    return () => { sub.remove(); flushPending(); };
-  }, [flushPending]);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") { flushDirty(); flushPending(); }
+    });
+    return () => { sub.remove(); flushDirty(); flushPending(); };
+  }, [flushPending, flushDirty]);
 
   // The workout can be deleted behind our back (Settings > Wipe All Data); drop the stale session.
   const activeWorkoutId = session?.workoutId;
@@ -108,6 +148,7 @@ export function useWorkoutSession() {
       setSession((prev) => {
         if (!prev) return prev;
         const next = updater(prev);
+        latestRef.current = next;
         pendingRef.current = next;
         if (timerRef.current) clearTimeout(timerRef.current);
         timerRef.current = setTimeout(flushPending, 500);
@@ -143,21 +184,23 @@ export function useWorkoutSession() {
 
   const finishWorkout = useCallback(async (location?: string) => {
     if (!session) return;
+    await flushDirty(); // the last typed values must be in the DB before the finish is stamped
     await finalizeWorkout(session.workoutId, location);
     setPendingUndo(null);
     cancelPending();
     await saveToStorage(null);
     setSession(null);
-  }, [session, cancelPending]);
+  }, [session, cancelPending, flushDirty]);
 
   const discardWorkout = useCallback(async () => {
     if (!session) return;
+    dropDirty();
     await deleteWorkout(session.workoutId);
     setPendingUndo(null);
     cancelPending();
     await saveToStorage(null);
     setSession(null);
-  }, [session, cancelPending]);
+  }, [session, cancelPending, dropDirty]);
 
   const addExercise = useCallback(
     async (exerciseId: number, exerciseName: string, muscleGroup: string) => {
@@ -261,6 +304,7 @@ export function useWorkoutSession() {
         histPRs,
         isBodyweight: info.isBodyweight,
       };
+      setLoggedExerciseSuperset([target.dbId, dbId], supersetId).catch(console.error);
       updateSession((prev) => {
         const next = R.addSupersetAfter(prev, targetLocalId, newExercise, supersetId);
         persistOrder(next.exercises);
@@ -334,19 +378,15 @@ export function useWorkoutSession() {
             sets: e.sets.map((s) => {
               if (s.localId !== setLocalId) return s;
               const isEditingValue = "weightLbs" in patch || "reps" in patch;
-              const updated = { ...s, ...patch, ...(isEditingValue ? { isGhostFilled: false } : {}) };
-              if (e.dbId) {
-                upsertLoggedSet({ ...updated, loggedExerciseId: e.dbId }).catch(
-                  console.error
-                );
-              }
-              return updated;
+              return { ...s, ...patch, ...(isEditingValue ? { isGhostFilled: false } : {}) };
             }),
           };
         }),
       }));
+      // Text edits wait for a pause in typing; a tick or warm-up toggle is written right away.
+      markDirty(exerciseLocalId, setLocalId, "isCompleted" in patch || "isWarmup" in patch ? 0 : 400);
     },
-    [updateSession]
+    [updateSession, markDirty]
   );
 
   // Copy weight/reps/rpe from the last filled set into every other incomplete set.
@@ -370,6 +410,7 @@ export function useWorkoutSession() {
   // Re-evaluate PR badges for an already-completed set after its values were edited.
   const recheckSetPR = useCallback(
     (exerciseLocalId: string, setLocalId: string) => {
+      flushDirty(); // blur: write what was typed now
       updateSession((prev) => ({
         ...prev,
         exercises: prev.exercises.map((e) => {
@@ -387,7 +428,7 @@ export function useWorkoutSession() {
         }),
       }));
     },
-    [updateSession]
+    [updateSession, flushDirty]
   );
 
   const toggleSetComplete = useCallback(
@@ -538,57 +579,79 @@ export function useWorkoutSession() {
   );
 
   const launchFromExercises = useCallback(async (
-    programExercises: { exerciseId: number; exerciseName: string; muscleGroup: string; targetSets: number | null }[],
+    programExercises: {
+      exerciseId: number; exerciseName: string; muscleGroup: string; targetSets: number | null;
+      warmupSets?: number; supersetId?: string | null;
+    }[],
     programDayId?: number
   ) => {
     const workoutId = await createWorkout(programDayId);
+    try {
+      const supersetIds = new Map<string, string>(); // saved superset id -> this workout's own id
+      const exercises: ActiveExercise[] = await Promise.all(
+        programExercises.map(async (pe, orderIndex) => {
+          const dbId = await createLoggedExercise(
+            workoutId, pe.exerciseId, pe.exerciseName, orderIndex
+          );
+          const [ghost, histPRs, info] = await Promise.all([
+            getGhostSets(pe.exerciseId, workoutId),
+            getHistPRs(pe.exerciseId, workoutId),
+            getExerciseInfo(pe.exerciseId),
+          ]);
+          const libraryNote = info.note;
+          if (libraryNote) {
+            updateLoggedExerciseNotes(dbId, libraryNote).catch(console.error);
+          }
+          const warmups = pe.warmupSets ?? 0;
+          const working = ghost.length > 0 ? ghost.length : (pe.targetSets ?? 3);
+          const sets: ActiveSet[] = [];
+          for (let i = 1; i <= warmups + working; i++) {
+            const setDbId = await createLoggedSet(dbId, i);
+            const isWarmup = i <= warmups;
+            const g = isWarmup ? undefined : ghost[i - warmups - 1]; // ghost sets are the last session's working sets, in order
+            sets.push({
+              ...defaultSet(i),
+              dbId: setDbId,
+              isWarmup,
+              ...(g?.weightLbs != null && g?.reps != null
+                ? { weightLbs: String(g.weightLbs), reps: String(g.reps), isGhostFilled: true }
+                : {}),
+            });
+          }
+          let supersetId: string | undefined;
+          if (pe.supersetId) {
+            supersetId = supersetIds.get(pe.supersetId) ?? uid();
+            supersetIds.set(pe.supersetId, supersetId);
+          }
+          return {
+            localId: uid(),
+            dbId,
+            exerciseId: pe.exerciseId,
+            exerciseName: pe.exerciseName,
+            muscleGroup: pe.muscleGroup,
+            orderIndex,
+            supersetId,
+            notes: libraryNote,
+            sets,
+            ghostSets: ghost,
+            histPRs,
+            isBodyweight: info.isBodyweight,
+          };
+        })
+      );
+      for (const [, id] of supersetIds) {
+        await setLoggedExerciseSuperset(exercises.filter((e) => e.supersetId === id).map((e) => e.dbId!), id);
+      }
 
-    const exercises: ActiveExercise[] = await Promise.all(
-      programExercises.map(async (pe, orderIndex) => {
-        const dbId = await createLoggedExercise(
-          workoutId, pe.exerciseId, pe.exerciseName, orderIndex
-        );
-        const [ghost, histPRs, info] = await Promise.all([
-          getGhostSets(pe.exerciseId, workoutId),
-          getHistPRs(pe.exerciseId, workoutId),
-          getExerciseInfo(pe.exerciseId),
-        ]);
-        const libraryNote = info.note;
-        if (libraryNote) {
-          updateLoggedExerciseNotes(dbId, libraryNote).catch(console.error);
-        }
-        const setCount = ghost.length > 0 ? ghost.length : (pe.targetSets ?? 3);
-        const sets: ActiveSet[] = [];
-        for (let i = 1; i <= setCount; i++) {
-          const setDbId = await createLoggedSet(dbId, i);
-          const g = ghost.find((gs) => gs.setNumber === i);
-          sets.push({
-            ...defaultSet(i),
-            dbId: setDbId,
-            ...(g?.weightLbs != null && g?.reps != null
-              ? { weightLbs: String(g.weightLbs), reps: String(g.reps), isGhostFilled: true }
-              : {}),
-          });
-        }
-        return {
-          localId: uid(),
-          dbId,
-          exerciseId: pe.exerciseId,
-          exerciseName: pe.exerciseName,
-          muscleGroup: pe.muscleGroup,
-          orderIndex,
-          notes: libraryNote,
-          sets,
-          ghostSets: ghost,
-          histPRs,
-          isBodyweight: info.isBodyweight,
-        };
-      })
-    );
-
-    const newSession: ActiveSession = { workoutId, startedAt: Date.now(), exercises };
-    setSession(newSession);
-    await saveToStorage(newSession);
+      const newSession: ActiveSession = { workoutId, startedAt: Date.now(), exercises };
+      await saveToStorage(newSession);
+      setSession(newSession);
+    } catch (e) {
+      // All or nothing: a half-built workout would otherwise linger in the DB and in history queries.
+      console.error("Failed to start workout", e);
+      await deleteWorkout(workoutId).catch(console.error);
+      Alert.alert("Couldn't start workout", "Nothing was saved. Please try again.");
+    }
   }, []);
 
   const launchFromProgramDay = useCallback(

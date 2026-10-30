@@ -65,6 +65,19 @@ const MIGRATIONS: ((database: SQLite.SQLiteDatabase) => Promise<void>)[] = [
          )`
     );
   },
+  // 5: when each set was ticked (true workout length), and where a bodyweight goal started (progress + cut/bulk direction)
+  async (database) => {
+    await addColumn(database, "logged_sets", "completed_at", "INTEGER");
+    await addColumn(database, "goals", "start_value", "REAL");
+    await addColumn(database, "goals", "direction", "TEXT");
+    await database.execAsync(
+      `UPDATE goals SET start_value = (
+         SELECT b.weight_lbs FROM bodyweight_logs b WHERE b.logged_at <= goals.created_at ORDER BY b.logged_at DESC, b.id DESC LIMIT 1
+       ) WHERE type = 'bodyweight' AND start_value IS NULL;
+       UPDATE goals SET direction = CASE WHEN target_value < start_value THEN 'down' ELSE 'up' END
+       WHERE type = 'bodyweight' AND start_value IS NOT NULL AND target_value IS NOT NULL AND direction IS NULL;`
+    );
+  },
 ];
 
 async function runMigrations(database: SQLite.SQLiteDatabase) {
@@ -170,6 +183,7 @@ export async function initializeDatabase(): Promise<void> {
       logged_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
 
+    -- Unused: the hydration/pre-workout screens were removed. Kept (and still wiped) so existing logs aren't dropped.
     CREATE TABLE IF NOT EXISTS lifestyle_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       logged_at INTEGER NOT NULL DEFAULT (unixepoch()),
@@ -214,7 +228,8 @@ export async function initializeDatabase(): Promise<void> {
 
 // ─── Master exercise list ─────────────────────────────────────────────────────
 // [name, muscle_group, equipment_type]
-// muscle_group matches AddExerciseSheet filter options for proper filtering.
+// muscle_group matches AddExerciseSheet filter options for proper filtering; an exercise that
+// trains two groups lists both ("Hamstrings, Lower Back") rather than appearing twice. Names must be unique.
 // All default to target_type = 'reps' via column default.
 
 const ALL_EXERCISES: [string, string, string][] = [
@@ -277,18 +292,14 @@ const ALL_EXERCISES: [string, string, string][] = [
   ["Prone T Raise",                 "Upper Back", "dumbbell"],
   ["Prone W Raise",                 "Upper Back", "dumbbell"],
   ["Band Pull-Apart",               "Upper Back", "resistance bands"],
-  ["Banded Pull-Apart",             "Upper Back", "resistance bands"],
 
   // ── LOWER BACK ─────────────────────────────────────────────────────────────
   ["Deadlift",                      "Lower Back", "barbell"],
   ["Sumo Deadlift",                 "Lower Back", "barbell"],
   ["Trap Bar Deadlift",             "Lower Back", "barbell"],
-  ["Stiff-Leg Deadlift",            "Lower Back", "barbell"],
-  ["Hyperextension",                "Lower Back", "bodyweight"],
   ["Back Extension",                "Lower Back", "bodyweight"],
   ["45-Degree Back Extension",      "Lower Back", "machine"],
   ["Reverse Hyperextension",        "Lower Back", "machine"],
-  ["Good Morning",                  "Lower Back", "barbell"],
 
   // ── REAR DELTS ─────────────────────────────────────────────────────────────
   ["Face Pull",                     "Rear Delts", "cable"],
@@ -340,7 +351,7 @@ const ALL_EXERCISES: [string, string, string][] = [
   ["Cable Hammer Curl",             "Biceps", "cable"],
   ["Bayesian Curl",                 "Biceps", "cable"],
   ["Preacher Curl",                 "Biceps", "barbell"],
-  ["Reverse Curl",                  "Biceps", "barbell"],
+  ["Reverse Curl",                  "Biceps, Forearms", "barbell"],
   ["Drag Curl",                     "Biceps", "barbell"],
   ["21s",                           "Biceps", "barbell"],
   ["Cheat Curl",                    "Biceps", "barbell"],
@@ -374,7 +385,6 @@ const ALL_EXERCISES: [string, string, string][] = [
   ["Wrist Curl",                    "Forearms", "barbell"],
   ["Reverse Wrist Curl",            "Forearms", "barbell"],
   ["Behind-the-Back Wrist Curl",    "Forearms", "barbell"],
-  ["Reverse Curl",                  "Forearms", "barbell"],
   ["Dead Hang",                     "Forearms", "bodyweight"],
   ["Towel Pull-Up",                 "Forearms", "bodyweight"],
   ["Farmer's Carry",                "Forearms", "dumbbell"],
@@ -409,8 +419,8 @@ const ALL_EXERCISES: [string, string, string][] = [
   // ── HAMSTRINGS ─────────────────────────────────────────────────────────────
   ["Romanian Deadlift",             "Hamstrings", "barbell"],
   ["Trap Bar Romanian Deadlift",    "Hamstrings", "barbell"],
-  ["Stiff-Leg Deadlift",            "Hamstrings", "barbell"],
-  ["Good Morning",                  "Hamstrings", "barbell"],
+  ["Stiff-Leg Deadlift",            "Hamstrings, Lower Back", "barbell"],
+  ["Good Morning",                  "Hamstrings, Lower Back", "barbell"],
   ["Lying Leg Curl",                "Hamstrings", "machine"],
   ["Seated Leg Curl",               "Hamstrings", "machine"],
   ["Nordic Hamstring Curl",         "Hamstrings", "bodyweight"],

@@ -2,6 +2,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { Share, Platform } from "react-native";
 import type { WorkoutDetail, CsvRow } from "../db/historyQueries";
 import { localDateKey, formatTime } from "./time";
+import { compactNumber } from "./format";
 
 // ─── Formatting helpers ───────────────────────────────────────────────────────
 
@@ -24,11 +25,7 @@ export function formatShortDate(unixSeconds: number): string {
   });
 }
 
-export function formatVolume(lbs: number): string {
-  if (lbs >= 1_000_000) return `${(lbs / 1_000_000).toFixed(2)}M lbs`;
-  if (lbs >= 1_000) return `${(lbs / 1_000).toFixed(1)}K lbs`;
-  return `${Math.round(lbs)} lbs`;
-}
+export const formatVolume = (lbs: number): string => `${compactNumber(lbs)} lbs`;
 
 // ─── Markdown export ──────────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 import { getDatabase } from "./database";
 import { localDateKey } from "../utils/time";
-import { setLoadSql, isBodyweightSql, LATEST_BODYWEIGHT_SQL } from "./sqlFragments";
+import { setLoadSql, isBodyweightSql, LATEST_BODYWEIGHT_SQL, workingSetSql, setVolumeSql, prVolumeSql, oneRmSql } from "./sqlFragments";
 
 export type WorkoutSummary = {
   id: number;
@@ -59,7 +59,7 @@ export async function getWorkoutHistory(limit = 20, offset = 0, exerciseQuery = 
        COALESCE(w.duration_seconds, 0) as duration_seconds,
        COUNT(DISTINCT le.id) as exercise_count,
        COUNT(DISTINCT ls.id) as set_count,
-       COALESCE(SUM(CASE WHEN ls.is_completed = 1 THEN ${setLoadSql()} * ls.reps ELSE 0 END), 0) as total_volume
+       COALESCE(SUM(CASE WHEN ${workingSetSql()} THEN ${setVolumeSql()} ELSE 0 END), 0) as total_volume
      FROM workouts w
      LEFT JOIN logged_exercises le ON le.workout_id = w.id
      LEFT JOIN logged_sets ls ON ls.logged_exercise_id = le.id
@@ -71,15 +71,24 @@ export async function getWorkoutHistory(limit = 20, offset = 0, exerciseQuery = 
   );
 }
 
-// Exercises of the most recent finished workout, in order, for "Repeat last workout".
-export async function getLastWorkoutExercises(): Promise<
-  { exerciseId: number; exerciseName: string; muscleGroup: string; targetSets: number }[]
-> {
+export type RepeatExercise = {
+  exerciseId: number;
+  exerciseName: string;
+  muscleGroup: string;
+  targetSets: number; // working sets that were ticked (at least 1)
+  warmupSets: number; // warm-up sets that were ticked
+  supersetId: string | null;
+};
+
+// Exercises of the most recent finished workout, in order, for "Repeat last workout". Only ticked sets count.
+export async function getLastWorkoutExercises(): Promise<RepeatExercise[]> {
   const db = await getDatabase();
-  return db.getAllAsync(
+  return db.getAllAsync<RepeatExercise>(
     `SELECT le.exercise_id as exerciseId, le.exercise_name as exerciseName,
             COALESCE(e.muscle_group, '') as muscleGroup,
-            MAX(1, COALESCE(SUM(CASE WHEN ls.is_warmup = 0 THEN 1 ELSE 0 END), 0)) as targetSets
+            le.superset_id as supersetId,
+            MAX(1, COALESCE(SUM(CASE WHEN ls.is_completed = 1 AND ls.is_warmup = 0 THEN 1 ELSE 0 END), 0)) as targetSets,
+            COALESCE(SUM(CASE WHEN ls.is_completed = 1 AND ls.is_warmup = 1 THEN 1 ELSE 0 END), 0) as warmupSets
      FROM logged_exercises le
      LEFT JOIN exercises e ON e.id = le.exercise_id
      LEFT JOIN logged_sets ls ON ls.logged_exercise_id = le.id
@@ -127,7 +136,7 @@ export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail
         [ex.id]
       );
       sets.forEach((s) => {
-        if (s.is_completed && s.weight_lbs != null && s.reps) {
+        if (s.is_completed && !s.is_warmup && s.weight_lbs != null && s.reps) {
           totalVolume += Math.max(0, s.weight_lbs + ex.bw_lbs) * s.reps;
         }
       });
@@ -277,7 +286,7 @@ export type ExercisePRs = {
   maxReps: PRSet;
   maxVolume: PRSet;
   lastTrainedAt: number | null; // unix ms
-  maxOneRM: PRSet; // heaviest estimated 1RM (Epley); weightLbs/reps are the set that produced it
+  maxOneRM: PRSet; // heaviest estimated 1RM (Epley, see utils/oneRm.ts); weightLbs/reps are the set that produced it
 };
 
 const PR_BASE = `
@@ -285,8 +294,7 @@ const PR_BASE = `
   JOIN logged_exercises le ON ls.logged_exercise_id = le.id
   JOIN workouts w ON le.workout_id = w.id
   WHERE le.exercise_id = ?
-    AND ls.is_completed = 1 AND ls.is_warmup = 0
-    AND ls.weight_lbs IS NOT NULL AND ls.reps IS NOT NULL
+    AND ${workingSetSql()}
     AND w.finished_at IS NOT NULL
 `;
 
@@ -295,39 +303,33 @@ export type RawHistPRs = {
   maxReps: number | null;
   maxVolume: number | null;
   repsByWeight: { weight: number; reps: number }[];
+  bodyweightLbs: number; // latest logged bodyweight (0 when none), the base load of bodyweight-exercise volume
 };
 
+/** What the live badges compare against: the same working-set rule as `getExercisePRs`, minus the workout in progress. */
 export async function getHistPRs(exerciseId: number, excludeWorkoutId: number): Promise<RawHistPRs> {
   const db = await getDatabase();
-  const row = await db.getFirstAsync<{ mw: number | null; mr: number | null; mv: number | null }>(
+  const where = `FROM logged_sets ls
+     JOIN logged_exercises le ON ls.logged_exercise_id = le.id
+     JOIN workouts w ON le.workout_id = w.id
+     WHERE le.exercise_id = ?
+       AND w.id != ?
+       AND w.finished_at IS NOT NULL
+       AND ${workingSetSql()}`;
+  const row = await db.getFirstAsync<{ mw: number | null; mr: number | null; mv: number | null; bw: number | null }>(
     `SELECT
        MAX(ls.weight_lbs) AS mw,
        MAX(ls.reps) AS mr,
-       MAX(ls.weight_lbs * ls.reps) AS mv
-     FROM logged_sets ls
-     JOIN logged_exercises le ON ls.logged_exercise_id = le.id
-     JOIN workouts w ON le.workout_id = w.id
-     WHERE le.exercise_id = ?
-       AND w.id != ?
-       AND w.finished_at IS NOT NULL
-       AND ls.is_completed = 1 AND ls.is_warmup = 0
-       AND ls.weight_lbs IS NOT NULL AND ls.reps IS NOT NULL`,
+       MAX(${prVolumeSql()}) AS mv,
+       ${LATEST_BODYWEIGHT_SQL} AS bw
+     ${where}`,
     [exerciseId, excludeWorkoutId]
   );
   const repsByWeight = await db.getAllAsync<{ weight: number; reps: number }>(
-    `SELECT ls.weight_lbs AS weight, MAX(ls.reps) AS reps
-     FROM logged_sets ls
-     JOIN logged_exercises le ON ls.logged_exercise_id = le.id
-     JOIN workouts w ON le.workout_id = w.id
-     WHERE le.exercise_id = ?
-       AND w.id != ?
-       AND w.finished_at IS NOT NULL
-       AND ls.is_completed = 1 AND ls.is_warmup = 0
-       AND ls.weight_lbs IS NOT NULL AND ls.reps IS NOT NULL
-     GROUP BY ls.weight_lbs`,
+    `SELECT ls.weight_lbs AS weight, MAX(ls.reps) AS reps ${where} GROUP BY ls.weight_lbs`,
     [exerciseId, excludeWorkoutId]
   );
-  return { maxWeight: row?.mw ?? null, maxReps: row?.mr ?? null, maxVolume: row?.mv ?? null, repsByWeight };
+  return { maxWeight: row?.mw ?? null, maxReps: row?.mr ?? null, maxVolume: row?.mv ?? null, repsByWeight, bodyweightLbs: row?.bw ?? 0 };
 }
 
 export async function getExercisePRs(exerciseId: number): Promise<ExercisePRs> {
@@ -348,13 +350,13 @@ export async function getExercisePRs(exerciseId: number): Promise<ExercisePRs> {
   // Volume and 1RM rank by effective load (bodyweight exercises add the lifter's bodyweight), and report it as weight_lbs.
   const maxVolumeRow = await db.getFirstAsync<{ weight_lbs: number; reps: number; started_at: number }>(
     `SELECT ${setLoadSql()} AS weight_lbs, ls.reps, w.started_at ${PR_BASE}
-     ORDER BY (${setLoadSql()} * ls.reps) DESC LIMIT 1`,
+     ORDER BY ${prVolumeSql()} DESC LIMIT 1`,
     [exerciseId]
   );
 
   const maxOneRMRow = await db.getFirstAsync<{ weight_lbs: number; reps: number; started_at: number }>(
     `SELECT ${setLoadSql()} AS weight_lbs, ls.reps, w.started_at ${PR_BASE} AND ls.reps > 0
-     ORDER BY ${setLoadSql()} * (1.0 + ls.reps / 30.0) DESC LIMIT 1`,
+     ORDER BY ${oneRmSql(setLoadSql(), "ls.reps")} DESC LIMIT 1`,
     [exerciseId]
   );
 
@@ -377,5 +379,3 @@ export async function getExercisePRs(exerciseId: number): Promise<ExercisePRs> {
     lastTrainedAt: lastRow?.t ? lastRow.t * 1000 : null,
   };
 }
-
-// kept for potential future use — not used by ExerciseHistoryModal anymore

@@ -1,14 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { AppState } from "react-native";
 import { useFocusEffect } from "expo-router";
+import { haptics } from "../utils/haptics";
 import { formatTime } from "../utils/time";
-import { DEFAULT_REST_SECONDS, getDefaultRestSeconds } from "../utils/settings";
+import { DEFAULT_REST_SECONDS, DEFAULT_REST_STEP, getDefaultRestSeconds, getRestStep } from "../utils/settings";
 
-const STEP = 15;
+export const MAX_REST_SECONDS = 20 * 60;
 
 export function useRestTimer() {
   const [remaining, setRemaining] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [totalSeconds, setTotalSeconds] = useState(DEFAULT_REST_SECONDS);
+  const [step, setStep] = useState(DEFAULT_REST_STEP);
   // Wall-clock end time, so backgrounding or a late tick can't make the countdown drift.
   const endTimeRef = useRef(0);
 
@@ -18,6 +21,7 @@ export function useRestTimer() {
     if (isRunning) return;
     let cancelled = false;
     getDefaultRestSeconds().then((s) => { if (!cancelled) setTotalSeconds(s); });
+    getRestStep().then((s) => { if (!cancelled) setStep(s); });
     return () => { cancelled = true; };
   }, [isRunning]));
 
@@ -27,31 +31,40 @@ export function useRestTimer() {
   }, []);
 
   const start = useCallback((seconds?: number) => {
-    const duration = seconds ?? totalSeconds;
+    const duration = Math.min(seconds ?? totalSeconds, MAX_REST_SECONDS);
     endTimeRef.current = Date.now() + duration * 1000;
     setTotalSeconds(duration);
     setRemaining(duration);
     setIsRunning(true);
   }, [totalSeconds]);
 
+  // +/- only makes sense while counting down, and the clock never goes past MAX_REST_SECONDS.
   const adjust = useCallback((delta: number) => {
-    endTimeRef.current = Math.max(Date.now(), endTimeRef.current + delta * 1000);
-    setRemaining(Math.ceil((endTimeRef.current - Date.now()) / 1000));
-    setTotalSeconds((prev) => Math.max(STEP, prev + delta));
-  }, []);
+    if (!isRunning) return;
+    const now = Date.now();
+    endTimeRef.current = Math.min(now + MAX_REST_SECONDS * 1000, Math.max(now, endTimeRef.current + delta * 1000));
+    setRemaining(Math.ceil((endTimeRef.current - now) / 1000));
+    setTotalSeconds((prev) => Math.min(MAX_REST_SECONDS, Math.max(step, prev + delta)));
+  }, [isRunning, step]);
 
   useEffect(() => {
     if (!isRunning) return;
-    const id = setInterval(() => {
+    const tick = () => {
       const left = Math.ceil((endTimeRef.current - Date.now()) / 1000);
       if (left <= 0) {
+        if (endTimeRef.current === 0) return; // already finished (the interval and a foreground tick can both land here)
+        endTimeRef.current = 0;
         setRemaining(0);
         setIsRunning(false);
+        haptics.success(); // rest is over
       } else {
         setRemaining(left);
       }
-    }, 250);
-    return () => clearInterval(id);
+    };
+    const id = setInterval(tick, 250);
+    // Timers are throttled in the background; catch up the moment the app is visible again.
+    const sub = AppState.addEventListener("change", (state) => { if (state === "active") tick(); });
+    return () => { clearInterval(id); sub.remove(); };
   }, [isRunning]);
 
   return {
@@ -62,6 +75,6 @@ export function useRestTimer() {
     start,
     stop,
     adjust,
-    STEP,
+    STEP: step,
   };
 }

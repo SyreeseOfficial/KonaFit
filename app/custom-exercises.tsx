@@ -251,12 +251,17 @@ export default function CustomExercisesScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const handleSave = async (id: number, data: SaveData) => {
-    await updateExercise(id, {
-      name: data.name,
-      muscleGroup: data.muscleGroup,
-      targetType: data.targetType,
-      equipmentType: data.equipmentType,
-    });
+    try {
+      await updateExercise(id, {
+        name: data.name,
+        muscleGroup: data.muscleGroup,
+        targetType: data.targetType,
+        equipmentType: data.equipmentType,
+      });
+    } catch (e) {
+      Alert.alert("Can't save exercise", e instanceof Error ? e.message : String(e));
+      return;
+    }
     setEditingExercise(null);
     load();
   };

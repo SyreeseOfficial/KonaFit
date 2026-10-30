@@ -1,3 +1,5 @@
+import { MAX_1RM_REPS } from "../utils/oneRm";
+
 /** Latest logged bodyweight in lbs, NULL when nothing is logged. */
 export const LATEST_BODYWEIGHT_SQL =
   "(SELECT weight_lbs FROM bodyweight_logs ORDER BY logged_at DESC, id DESC LIMIT 1)";
@@ -13,3 +15,23 @@ export const isBodyweightSql = (le = "le") =>
  */
 export const setLoadSql = (ls = "ls", le = "le") =>
   `MAX(0, ${ls}.weight_lbs + CASE WHEN ${isBodyweightSql(le)} THEN COALESCE(${LATEST_BODYWEIGHT_SQL}, 0) ELSE 0 END)`;
+
+/** Estimated 1RM (Epley, reps capped at MAX_1RM_REPS). Keep in sync with `estimateOneRm` in utils/oneRm.ts. */
+export const oneRmSql = (load: string, reps: string) => `(${load} * (1.0 + MIN(${reps}, ${MAX_1RM_REPS}) / 30.0))`;
+
+/**
+ * The one rule for what counts as volume and PRs: a ticked, non-warm-up set with weight and reps.
+ * Callers also join `workouts w` and require `w.finished_at IS NOT NULL` (in-progress workouts never count).
+ */
+export const workingSetSql = (ls = "ls") =>
+  `${ls}.is_completed = 1 AND ${ls}.is_warmup = 0 AND ${ls}.weight_lbs IS NOT NULL AND ${ls}.reps IS NOT NULL`;
+
+/** Volume of one set: effective load x reps. Only meaningful for rows matching `workingSetSql`. */
+export const setVolumeSql = (ls = "ls", le = "le") => `${setLoadSql(ls, le)} * ${ls}.reps`;
+
+/**
+ * PR score of a set: its volume, except bodyweight sets always score at least their reps
+ * (added load 0 would otherwise make every rep PR worth 0). Mirrored live by `volumeScore` in utils/prBadges.ts.
+ */
+export const prVolumeSql = (ls = "ls", le = "le") =>
+  `CASE WHEN ${isBodyweightSql(le)} THEN MAX(1, ${setLoadSql(ls, le)}) ELSE ${ls}.weight_lbs END * ${ls}.reps`;

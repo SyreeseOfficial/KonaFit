@@ -25,6 +25,7 @@ export type HistPRs = {
   maxReps: number | null;
   maxVolume: number | null;
   repsByWeight?: { weight: number; reps: number }[]; // best reps at each weight; missing in older cached sessions
+  bodyweightLbs?: number; // latest bodyweight, added to bodyweight-exercise load for volume PRs; missing in older cached sessions
 };
 
 export type ActiveExercise = {

@@ -8,6 +8,7 @@ import {
   Modal,
   Pressable,
 } from "react-native";
+import { WeeklyGoal } from "../../src/components/train/WeeklyGoal";
 import { GoalsSection } from "../../src/components/train/GoalsSection";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus, Settings, ChevronRight, MoreHorizontal, Copy, Archive, Trash2 } from "lucide-react-native";
@@ -16,7 +17,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { saveProgressPhoto } from "../../src/db/photoQueries";
-import { useWorkoutSession, loadCachedSession } from "../../src/hooks/useWorkoutSession";
+import { useWorkoutSession, loadCachedSession, discardCachedSession } from "../../src/hooks/useWorkoutSession";
 import { useRestTimer } from "../../src/hooks/useRestTimer";
 import { WorkspaceHeader } from "../../src/components/workout/WorkspaceHeader";
 import { ExerciseBlock } from "../../src/components/workout/ExerciseBlock";
@@ -254,11 +255,18 @@ export default function TrainScreen() {
       const prs = session.exercises
         .filter((e) => e.sets.some((s) => isRealPR(s.prBadges)))
         .map((e) => e.exerciseName);
+
+      try {
+        await finishWorkout();
+      } catch (e) {
+        // The session is only cleared after a successful save, so the sets are still on screen.
+        console.error("Failed to finish workout:", e);
+        Alert.alert("Couldn't save workout", "Your sets are still here. Tap Finish to try again.");
+        return;
+      }
       try {
         await kvStore.setItem(LAST_PRS_KEY, JSON.stringify(prs));
       } catch {}
-
-      await finishWorkout();
       haptics.success();
 
       router.push({
@@ -309,7 +317,7 @@ export default function TrainScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
-                  discardWorkout();
+                  discardCachedSession(cachedSession).catch(console.error);
                   setCachedSession(null);
                   setRecoveryVisible(false);
                 }}
@@ -339,6 +347,8 @@ export default function TrainScreen() {
             <Settings size={20} color="#94A3B8" />
           </TouchableOpacity>
         </View>
+
+        <WeeklyGoal />
 
         <ScrollView
           className="flex-1"
@@ -634,10 +644,20 @@ export default function TrainScreen() {
         visible={swappingExerciseLocalId !== null}
         onClose={() => setSwappingExerciseLocalId(null)}
         onSelect={(ex) => {
-          if (swappingExerciseLocalId) {
-            swapExercise(swappingExerciseLocalId, ex.id, ex.name, ex.muscle_group);
-            setSwappingExerciseLocalId(null);
-          }
+          const localId = swappingExerciseLocalId;
+          if (!localId) return;
+          setSwappingExerciseLocalId(null);
+          const logged = session.exercises.find((e) => e.localId === localId)?.sets
+            .filter((s) => s.isCompleted || s.weightLbs !== "" || s.reps !== "").length ?? 0;
+          if (logged === 0) { swapExercise(localId, ex.id, ex.name, ex.muscle_group); return; }
+          Alert.alert(
+            "Swap exercise?",
+            `Your ${logged} logged ${logged === 1 ? "set stays" : "sets stay"} but now count as ${ex.name}, and their PR badges are cleared.`,
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Swap", onPress: () => swapExercise(localId, ex.id, ex.name, ex.muscle_group) },
+            ]
+          );
         }}
       />
 

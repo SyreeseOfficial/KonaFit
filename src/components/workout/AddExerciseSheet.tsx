@@ -11,6 +11,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -263,6 +264,8 @@ export function AddExerciseSheet({ visible, onClose, onSelect, multiSelect = fal
       const exercise = await createCustomExercise(createName, createMuscles, createEquipments, createTargetType);
       if (multiSelect) { setPending((prev) => [...prev, exercise]); setMode("search"); }
       else { onSelect(exercise); onClose(); }
+    } catch (e) {
+      Alert.alert("Can't create exercise", e instanceof Error ? e.message : String(e));
     } finally { setCreating(false); }
   };
 

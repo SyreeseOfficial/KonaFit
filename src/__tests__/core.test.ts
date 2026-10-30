@@ -3,8 +3,12 @@ jest.mock("expo-sqlite", () => ({}));
 jest.mock("expo-file-system/legacy", () => ({}));
 jest.mock("react-native", () => ({ Share: {}, Platform: { OS: "android" } }));
 
-import { calculateStreak } from "../db/statsQueries";
-import { calculatePlates, PLATES } from "../utils/plateCalc";
+import { calculateStreak, countPRs, weekStartSecs } from "../db/statsQueries";
+import { calculatePlates, planLoad, PLATES } from "../utils/plateCalc";
+import { estimateOneRm, repsAtPercent } from "../utils/oneRm";
+import { compactNumber } from "../utils/format";
+import { parseSetting } from "../utils/settings";
+import { cleanCommaList } from "../db/workoutQueries";
 import { buildCsv } from "../utils/exportUtils";
 import { localDateKey } from "../utils/time";
 import { cleanDecimal, cleanInt } from "../utils/numberInput";
@@ -27,6 +31,89 @@ describe("calculateStreak", () => {
       expect(calculateStreak([])).toBe(0);
     }
   );
+});
+
+describe("calculateStreak rest days", () => {
+  it("planned rest days don't break the streak or add to it", () => {
+    process.env.TZ = "UTC";
+    jest.useFakeTimers().setSystemTime(new Date(2026, 5, 15, 12, 0)); // a Monday
+    const day = (back: number) => localDateKey(new Date(2026, 5, 15 - back));
+    // trained Fri + Sat + Mon, rested Sunday (0)
+    const dates = [day(0), day(2), day(3)];
+    expect(calculateStreak(dates)).toBe(1);
+    expect(calculateStreak(dates, [0])).toBe(3);
+    expect(calculateStreak([day(3)], [0])).toBe(0); // rest days only carry a streak that's still alive: Mon and Sun are 2 days past Sat
+    expect(calculateStreak([], [0, 1, 2, 3, 4, 5, 6])).toBe(0); // every day a rest day still terminates
+  });
+});
+
+describe("countPRs", () => {
+  it("skips first appearances, ties and outliers", () => {
+    const rows = [
+      { exercise_id: 1, max_weight: 100 }, { exercise_id: 1, max_weight: 110 }, { exercise_id: 1, max_weight: 110 },
+      { exercise_id: 1, max_weight: 1100 }, // typo, ignored and not the new bar
+      { exercise_id: 1, max_weight: 115 },
+      { exercise_id: 2, max_weight: 50 },
+    ];
+    expect(countPRs(rows)).toBe(2);
+  });
+});
+
+describe("weekStartSecs", () => {
+  it("is the local Monday 00:00", () => {
+    process.env.TZ = "America/Los_Angeles";
+    const sunday = new Date(2026, 5, 14, 15, 0);
+    expect(new Date(weekStartSecs(sunday) * 1000)).toEqual(new Date(2026, 5, 8, 0, 0));
+    const monday = new Date(2026, 5, 15, 0, 5);
+    expect(new Date(weekStartSecs(monday) * 1000)).toEqual(new Date(2026, 5, 15, 0, 0));
+  });
+});
+
+describe("estimateOneRm / repsAtPercent", () => {
+  it("caps reps at 12 and offers three formulas", () => {
+    expect(estimateOneRm(100, 30)).toBeCloseTo(140);
+    expect(estimateOneRm(100, 5, "brzycki")).toBeCloseTo(112.5);
+    expect(estimateOneRm(100, 5, "lombardi")).toBeCloseTo(117.5, 1);
+    expect(repsAtPercent(100)).toBe(1);
+    expect(repsAtPercent(80, "epley")).toBe(8);
+    expect(repsAtPercent(80, "brzycki")).toBe(8);
+  });
+});
+
+describe("compactNumber", () => {
+  it("rounds first, then picks the unit", () => {
+    expect(compactNumber(999.4)).toBe("999");
+    expect(compactNumber(999.6)).toBe("1.0K");
+    expect(compactNumber(999_949)).toBe("999.9K");
+    expect(compactNumber(999_999.9)).toBe("1.00M");
+    expect(compactNumber(1_234_567, 1)).toBe("1.2M");
+  });
+});
+
+describe("parseSetting", () => {
+  it("falls back to the default for garbage or out-of-range values", () => {
+    expect(parseSetting("120", 90, 1)).toBe(120);
+    expect(parseSetting("abc", 90, 1)).toBe(90);
+    expect(parseSetting(null, 90, 1)).toBe(90);
+    expect(parseSetting("0", 90, 1)).toBe(90);
+    expect(parseSetting("9", 4, 1, 7)).toBe(4);
+  });
+});
+
+describe("planLoad", () => {
+  it("reports what's loadable when the plates can't hit the target", () => {
+    const std = PLATES.filter((p) => p.weight !== 15 && p.weight !== 1.25);
+    expect(planLoad(135, 45, std)).toMatchObject({ loadedLbs: 135, leftoverLbs: 0 });
+    expect(planLoad(137, 45, std)).toMatchObject({ loadedLbs: 135, leftoverLbs: 2 }); // smallest plate is 2.5 -> 5 lb steps
+    expect(planLoad(30, 45, std)).toEqual({ results: null, loadedLbs: 45, leftoverLbs: 0 });
+  });
+});
+
+describe("cleanCommaList", () => {
+  it("trims, drops empties and repeats", () => {
+    expect(cleanCommaList("Chest, ,triceps,Chest")).toBe("Chest, triceps");
+    expect(cleanCommaList([" Lats ", ""])).toBe("Lats");
+  });
 });
 
 describe("localDateKey", () => {

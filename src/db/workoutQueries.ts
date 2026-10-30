@@ -26,25 +26,33 @@ export function autoWorkoutName(muscleGroups: string[], startedAtSecs: number): 
     : `${day.toLocaleDateString(undefined, { weekday: "long" })} Workout`;
 }
 
+/** After the last ticked set the lifter is assumed to rest this long before stopping the workout. */
+const END_PAD_SECS = 120;
+
+/**
+ * Stamps the finish. Only ticked sets count (nothing is auto-completed). The end time is the last ticked set + 2 min
+ * (capped at now), so leaving the app open over lunch doesn't inflate the duration; it's editable on the workout screen.
+ */
 export async function finalizeWorkout(workoutId: number, location?: string): Promise<void> {
   const db = await getDatabase();
-  // Auto-complete any set with weight+reps filled in — covers users who don't tap ✓
-  await db.runAsync(
-    `UPDATE logged_sets SET is_completed = 1
-     WHERE is_completed = 0
-       AND weight_lbs IS NOT NULL AND reps IS NOT NULL AND reps > 0
-       AND logged_exercise_id IN (
-         SELECT id FROM logged_exercises WHERE workout_id = ?
-       )`,
+  const row = await db.getFirstAsync<{ started_at: number; last_set: number | null }>(
+    `SELECT w.started_at,
+            (SELECT MAX(ls.completed_at) FROM logged_sets ls
+               JOIN logged_exercises le ON le.id = ls.logged_exercise_id
+              WHERE le.workout_id = w.id AND ls.is_completed = 1) AS last_set
+     FROM workouts w WHERE w.id = ?`,
     [workoutId]
   );
+  if (!row) throw new Error(`Workout ${workoutId} not found`);
+  const now = Math.floor(Date.now() / 1000);
+  const end = Math.max(row.started_at, row.last_set != null ? Math.min(now, row.last_set + END_PAD_SECS) : now);
   await db.runAsync(
     `UPDATE workouts
-     SET finished_at = unixepoch(),
-         duration_seconds = unixepoch() - started_at,
+     SET finished_at = ?,
+         duration_seconds = ? - started_at,
          location = COALESCE(?, location)
      WHERE id = ?`,
-    [location ?? null, workoutId]
+    [end, end, location ?? null, workoutId]
   );
   // Still the default name (not launched from a program day, not renamed): describe what was trained.
   const w = await db.getFirstAsync<{ name: string; started_at: number }>(
@@ -69,6 +77,12 @@ export async function deleteWorkout(workoutId: number): Promise<void> {
   await db.runAsync("DELETE FROM workouts WHERE id = ?", [workoutId]);
 }
 
+/** Drop unfinished workouts except `keepId` (the one a saved session can still resume): leftovers from crashes or failed starts. */
+export async function deleteUnfinishedWorkouts(keepId: number | null): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("DELETE FROM workouts WHERE finished_at IS NULL AND id IS NOT ?", [keepId]);
+}
+
 export async function workoutExists(workoutId: number): Promise<boolean> {
   const db = await getDatabase();
   return (await db.getFirstAsync("SELECT 1 FROM workouts WHERE id = ?", [workoutId])) != null;
@@ -91,6 +105,15 @@ export async function createLoggedExercise(
     [exerciseId]
   );
   return result.lastInsertRowId;
+}
+
+/** Persist which exercises are grouped as a superset (so "Repeat last workout" can restore the grouping). */
+export async function setLoggedExerciseSuperset(loggedExerciseIds: number[], supersetId: string): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    `UPDATE logged_exercises SET superset_id = ? WHERE id IN (${loggedExerciseIds.map(() => "?").join(",")})`,
+    [supersetId, ...loggedExerciseIds]
+  );
 }
 
 export async function updateLoggedExerciseNotes(
@@ -129,15 +152,16 @@ export async function upsertLoggedSet(set: ActiveSet & { loggedExerciseId: numbe
   if (set.dbId) {
     await db.runAsync(
       `UPDATE logged_sets
-       SET weight_lbs = ${blankWeight}, reps = ?, rpe = ?, notes = ?, is_warmup = ?, is_completed = ?
+       SET weight_lbs = ${blankWeight}, reps = ?, rpe = ?, notes = ?, is_warmup = ?, is_completed = ?,
+           completed_at = CASE WHEN ? = 1 THEN COALESCE(completed_at, unixepoch()) END
        WHERE id = ?`,
-      [weight, set.loggedExerciseId, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.dbId]
+      [weight, set.loggedExerciseId, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.isCompleted ? 1 : 0, set.dbId]
     );
   } else {
     await db.runAsync(
-      `INSERT INTO logged_sets (logged_exercise_id, set_number, weight_lbs, reps, rpe, notes, is_warmup, is_completed)
-       VALUES (?, ?, ${blankWeight}, ?, ?, ?, ?, ?)`,
-      [set.loggedExerciseId, set.setNumber, weight, set.loggedExerciseId, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0]
+      `INSERT INTO logged_sets (logged_exercise_id, set_number, weight_lbs, reps, rpe, notes, is_warmup, is_completed, completed_at)
+       VALUES (?, ?, ${blankWeight}, ?, ?, ?, ?, ?, CASE WHEN ? = 1 THEN unixepoch() END)`,
+      [set.loggedExerciseId, set.setNumber, weight, set.loggedExerciseId, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.isCompleted ? 1 : 0]
     );
   }
 }
@@ -224,6 +248,21 @@ export async function getGhostSets(
   }));
 }
 
+/** "Chest, ,triceps,Chest" -> "Chest, triceps": trimmed, no empty entries, no repeats. */
+export function cleanCommaList(list: string | string[]): string {
+  const items = (Array.isArray(list) ? list : list.split(",")).map((x) => x.trim()).filter(Boolean);
+  return items.filter((x, i) => items.findIndex((y) => y.toLowerCase() === x.toLowerCase()) === i).join(", ");
+}
+
+async function assertNameFree(name: string, exceptId = -1): Promise<void> {
+  const db = await getDatabase();
+  const clash = await db.getFirstAsync(
+    "SELECT 1 FROM exercises WHERE LOWER(name) = LOWER(?) AND is_deleted = 0 AND id != ?",
+    [name.trim(), exceptId]
+  );
+  if (clash) throw new Error(`An exercise named "${name.trim()}" already exists.`);
+}
+
 export async function createCustomExercise(
   name: string,
   muscleGroups: string[],
@@ -231,8 +270,9 @@ export async function createCustomExercise(
   targetType: string
 ): Promise<Exercise> {
   const db = await getDatabase();
-  const muscle_group = muscleGroups.join(", ");
-  const equipment_type = equipmentTypes.join(", ");
+  await assertNameFree(name);
+  const muscle_group = cleanCommaList(muscleGroups);
+  const equipment_type = cleanCommaList(equipmentTypes);
   const result = await db.runAsync(
     "INSERT INTO exercises (name, muscle_group, equipment_type, target_type, is_custom) VALUES (?, ?, ?, ?, 1)",
     [name.trim(), muscle_group, equipment_type, targetType]
@@ -301,9 +341,9 @@ export async function updateExercise(
   const db = await getDatabase();
   const sets: string[] = [];
   const args: (string | number)[] = [];
-  if (patch.name !== undefined) { sets.push("name = ?"); args.push(patch.name.trim()); }
-  if (patch.muscleGroup !== undefined) { sets.push("muscle_group = ?"); args.push(patch.muscleGroup.trim()); }
-  if (patch.equipmentType !== undefined) { sets.push("equipment_type = ?"); args.push(patch.equipmentType.trim()); }
+  if (patch.name !== undefined) { await assertNameFree(patch.name, id); sets.push("name = ?"); args.push(patch.name.trim()); }
+  if (patch.muscleGroup !== undefined) { sets.push("muscle_group = ?"); args.push(cleanCommaList(patch.muscleGroup)); }
+  if (patch.equipmentType !== undefined) { sets.push("equipment_type = ?"); args.push(cleanCommaList(patch.equipmentType)); }
   if (patch.targetType !== undefined) { sets.push("target_type = ?"); args.push(patch.targetType.trim()); }
   if (sets.length === 0) return;
   args.push(id);

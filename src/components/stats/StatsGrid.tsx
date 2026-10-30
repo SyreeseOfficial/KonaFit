@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
+import { compactNumber } from "../../utils/format";
 
 type Props = {
   totalLiftedLbs: number;
@@ -10,11 +11,7 @@ type Props = {
   prCount: number;
 };
 
-function formatLbs(lbs: number): string {
-  if (lbs >= 1_000_000) return `${(lbs / 1_000_000).toFixed(1)}M`;
-  if (lbs >= 1_000) return `${(lbs / 1_000).toFixed(1)}K`;
-  return String(Math.round(lbs));
-}
+const formatLbs = (lbs: number) => compactNumber(lbs, 1);
 
 function StatCell({ label, value, unit, onPress }: { label: string; value: string; unit?: string; onPress?: () => void }) {
   const Wrapper = onPress ? TouchableOpacity : View;

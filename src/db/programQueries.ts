@@ -291,33 +291,37 @@ export async function createProgramFromWorkout(
   programName: string
 ): Promise<number> {
   const db = await getDatabase();
-  const progResult = await db.runAsync(
-    "INSERT INTO programs (name) VALUES (?)",
-    [programName.trim()]
-  );
-  const programId = progResult.lastInsertRowId;
+  let programId = 0;
+  // One transaction: a failure must not leave an empty program behind.
+  await db.withTransactionAsync(async () => {
+    const progResult = await db.runAsync(
+      "INSERT INTO programs (name) VALUES (?)",
+      [programName.trim()]
+    );
+    programId = progResult.lastInsertRowId;
 
-  const dayResult = await db.runAsync(
-    "INSERT INTO program_days (program_id, name, order_index) VALUES (?, 'Day A', 0)",
-    [programId]
-  );
-  const dayId = dayResult.lastInsertRowId;
+    const dayResult = await db.runAsync(
+      "INSERT INTO program_days (program_id, name, order_index) VALUES (?, 'Day A', 0)",
+      [programId]
+    );
 
-  await db.runAsync(
-    `INSERT INTO program_exercises (program_day_id, exercise_id, exercise_name, order_index, target_sets)
-     SELECT
-       ? as program_day_id,
-       le.exercise_id,
-       le.exercise_name,
-       le.order_index,
-       COUNT(CASE WHEN ls.is_completed = 1 AND ls.is_warmup = 0 THEN 1 END) as target_sets
-     FROM logged_exercises le
-     LEFT JOIN logged_sets ls ON ls.logged_exercise_id = le.id
-     WHERE le.workout_id = ?
-     GROUP BY le.id
-     ORDER BY le.order_index`,
-    [dayId, workoutId]
-  );
+    // At least 1 set per exercise, even if none were ticked.
+    await db.runAsync(
+      `INSERT INTO program_exercises (program_day_id, exercise_id, exercise_name, order_index, target_sets)
+       SELECT
+         ? as program_day_id,
+         le.exercise_id,
+         le.exercise_name,
+         le.order_index,
+         MAX(1, COUNT(CASE WHEN ls.is_completed = 1 AND ls.is_warmup = 0 THEN 1 END)) as target_sets
+       FROM logged_exercises le
+       LEFT JOIN logged_sets ls ON ls.logged_exercise_id = le.id
+       WHERE le.workout_id = ?
+       GROUP BY le.id
+       ORDER BY le.order_index`,
+      [dayResult.lastInsertRowId, workoutId]
+    );
+  });
 
   return programId;
 }

@@ -87,7 +87,11 @@ export function moveExercise(session: ActiveSession, exerciseLocalId: string, di
 
 export type SwapTarget = Pick<ActiveExercise, "exerciseId" | "exerciseName" | "muscleGroup" | "ghostSets" | "histPRs" | "isBodyweight">;
 
-/** Replace the movement but keep the sets. */
+/** Replace the movement but keep the sets. PR badges were earned against the old movement, so they're cleared. */
 export function swapExercise(session: ActiveSession, exerciseLocalId: string, target: SwapTarget): ActiveSession {
-  return mapExercise(session, exerciseLocalId, (e) => ({ ...e, ...target }));
+  return mapExercise(session, exerciseLocalId, (e) => ({
+    ...e,
+    ...target,
+    sets: e.sets.some((s) => s.prBadges) ? e.sets.map((s) => (s.prBadges ? { ...s, prBadges: undefined } : s)) : e.sets,
+  }));
 }

@@ -66,8 +66,7 @@ describe("seeding", () => {
     expect(await adapter.getAllAsync("SELECT 1 FROM exercises WHERE name = 'Dip'")).toHaveLength(1);
   });
 
-  // Open item in FINDINGS.md (Round 2, "Fresh installs get duplicate exercises"). Remove `.failing` when it's fixed.
-  it.failing("a fresh install has no duplicate exercise names", async () => {
+  it("a fresh install has no duplicate exercise names", async () => {
     const { adapter } = await fresh();
     const dupes = await adapter.getAllAsync("SELECT LOWER(name) FROM exercises GROUP BY LOWER(name) HAVING COUNT(*) > 1");
     expect(dupes).toEqual([]);
@@ -77,9 +76,10 @@ describe("seeding", () => {
 describe("migrations", () => {
   const MIGRATION_COLUMNS: [string, string][] = [
     ["exercises", "target_type"], ["exercises", "is_custom"], ["exercises", "is_deleted"], ["exercises", "notes"],
-    ["lifestyle_logs", "caffeine_mg"], ["programs", "program_type"], ["programs", "workout_duration_min"],
+    ["programs", "program_type"], ["programs", "workout_duration_min"],
     ["programs", "focus_tags"], ["programs", "equipment"], ["programs", "difficulty"], ["programs", "archived"],
     ["goals", "target_reps"], ["logged_sets", "notes"],
+    ["logged_sets", "completed_at"], ["goals", "start_value"], ["goals", "direction"],
   ];
   const version = async (a: TestDb) => (await a.getFirstAsync<{ user_version: number }>("PRAGMA user_version"))!.user_version;
   const columns = async (a: TestDb, t: string) =>
@@ -145,7 +145,7 @@ describe("migrations", () => {
 });
 
 describe("finalizeWorkout", () => {
-  it("completes filled sets, stamps the finish, and names the workout from its muscles", async () => {
+  it("counts only ticked sets, stamps the finish, and names the workout from its muscles", async () => {
     const { adapter, q } = await fresh();
     const id = await q.workouts.createWorkout();
     const bench = await q.workouts.createLoggedExercise(id, await exId(adapter, "Barbell Bench Press"), "Barbell Bench Press", 0);
@@ -159,7 +159,40 @@ describe("finalizeWorkout", () => {
     expect(w.location).toBe("Home Gym");
     expect(w.name).toMatch(/^Chest · /);
     const done = await adapter.getAllAsync<{ is_completed: number }>("SELECT is_completed FROM logged_sets ORDER BY set_number");
-    expect(done.map((s) => s.is_completed)).toEqual([1, 0, 0]); // zero reps and blank weight are not auto-completed
+    expect(done.map((s) => s.is_completed)).toEqual([0, 0, 0]); // filled-in but never ticked: not counted
+  });
+
+  it("ends the workout 2 minutes after the last ticked set, not whenever Finish was tapped", async () => {
+    const { adapter, q } = await fresh();
+    const t = now();
+    const id = (await adapter.runAsync("INSERT INTO workouts (name, started_at) VALUES ('Workout', ?)", [t - 3 * 3600])).lastInsertRowId;
+    const le = await q.workouts.createLoggedExercise(id, await exId(adapter, "Barbell Bench Press"), "Barbell Bench Press", 0);
+    const setId = await q.workouts.createLoggedSet(le, 1);
+    await q.workouts.upsertLoggedSet({ dbId: setId, localId: "x", setNumber: 1, weightLbs: "135", reps: "5", rpe: "", isWarmup: false, isCompleted: true, loggedExerciseId: le });
+    await adapter.runAsync("UPDATE logged_sets SET completed_at = ?", [t - 2 * 3600]); // ticked 2 h ago, then lunch
+    await q.workouts.finalizeWorkout(id);
+    const w = (await adapter.getFirstAsync<{ finished_at: number; duration_seconds: number }>("SELECT finished_at, duration_seconds FROM workouts WHERE id = ?", [id]))!;
+    expect(w.duration_seconds).toBe(3600 + 120);
+    expect(w.finished_at).toBe(t - 3 * 3600 + 3600 + 120);
+  });
+
+  it("stamps completed_at when a set is first ticked and keeps it on later edits", async () => {
+    const { adapter, q } = await fresh();
+    const id = await q.workouts.createWorkout();
+    const le = await q.workouts.createLoggedExercise(id, await exId(adapter, "Barbell Bench Press"), "Barbell Bench Press", 0);
+    const setId = await q.workouts.createLoggedSet(le, 1);
+    const base = { dbId: setId, localId: "x", setNumber: 1, weightLbs: "135", reps: "5", rpe: "", isWarmup: false, loggedExerciseId: le };
+    const at = async () => (await adapter.getFirstAsync<{ c: number | null }>("SELECT completed_at c FROM logged_sets WHERE id = ?", [setId]))!.c;
+    await q.workouts.upsertLoggedSet({ ...base, isCompleted: false });
+    expect(await at()).toBeNull();
+    await q.workouts.upsertLoggedSet({ ...base, isCompleted: true });
+    const first = await at();
+    expect(first).not.toBeNull();
+    await adapter.runAsync("UPDATE logged_sets SET completed_at = ?", [first! - 50]);
+    await q.workouts.upsertLoggedSet({ ...base, reps: "6", isCompleted: true });
+    expect(await at()).toBe(first! - 50);
+    await q.workouts.upsertLoggedSet({ ...base, isCompleted: false });
+    expect(await at()).toBeNull();
   });
 
   it("keeps a name the user (or a program day) already set", async () => {
@@ -319,5 +352,186 @@ describe("adapter", () => {
     await a.execAsync("CREATE TABLE t (x INTEGER)");
     await expect(a.withTransactionAsync(async () => { await a.runAsync("INSERT INTO t VALUES (1)"); throw new Error("boom"); })).rejects.toThrow("boom");
     expect(await a.getAllAsync("SELECT * FROM t")).toEqual([]);
+  });
+});
+
+describe("startup", () => {
+  it("turns foreign keys on, so deleting a workout cascades", async () => {
+    const { adapter, q } = await fresh();
+    expect((await adapter.getFirstAsync<{ foreign_keys: number }>("PRAGMA foreign_keys"))!.foreign_keys).toBe(1);
+    const id = await addWorkout(adapter, { "Barbell Bench Press": [{ w: 100, r: 5 }] });
+    await q.workouts.deleteWorkout(id);
+    expect(await adapter.getAllAsync("SELECT 1 FROM logged_sets")).toHaveLength(0);
+  });
+
+  it("deleteUnfinishedWorkouts keeps finished ones and the one a saved session can resume", async () => {
+    const { adapter, q } = await fresh();
+    const done = await addWorkout(adapter, { "Barbell Bench Press": [{ w: 100, r: 5 }] });
+    const resumable = await addWorkout(adapter, { "Barbell Bench Press": [{ w: 100, r: 5 }] }, { finished: false });
+    const leftover = await addWorkout(adapter, {}, { finished: false });
+    await q.workouts.deleteUnfinishedWorkouts(resumable);
+    const ids = (await adapter.getAllAsync<{ id: number }>("SELECT id FROM workouts ORDER BY id")).map((r) => r.id);
+    expect(ids).toEqual([done, resumable]);
+    expect(ids).not.toContain(leftover);
+    await q.workouts.deleteUnfinishedWorkouts(null);
+    expect(await adapter.getAllAsync("SELECT 1 FROM workouts WHERE id = ?", [resumable])).toHaveLength(0);
+  });
+});
+
+describe("Wipe All Data", () => {
+  it("clears kvStore's cache, so wiped keys don't come back from memory, and keeps settings", async () => {
+    const { adapter } = await fresh();
+    const { kvStore } = await import("../utils/kvStore");
+    const { wipeAllData } = await import("../db/wipe");
+    await kvStore.setItem("@konafit_last_prs", "[\"Squat\"]");
+    await kvStore.setItem("@konafit_weekly_goal", "5");
+    expect(await kvStore.getItem("@konafit_last_prs")).toBe("[\"Squat\"]"); // now cached
+    await addWorkout(adapter, { "Barbell Bench Press": [{ w: 100, r: 5 }] });
+    await wipeAllData(["@konafit_weekly_goal"]);
+    expect(await kvStore.getItem("@konafit_last_prs")).toBeNull();
+    expect(await kvStore.getItem("@konafit_weekly_goal")).toBe("5");
+    expect(await adapter.getAllAsync("SELECT 1 FROM workouts")).toHaveLength(0);
+  });
+});
+
+describe("volume rule", () => {
+  it("counts only ticked working sets of finished workouts, everywhere", async () => {
+    const { adapter, q } = await fresh();
+    const id = await addWorkout(adapter, {
+      "Barbell Bench Press": [{ w: 100, r: 5 }, { w: 45, r: 10, warm: true }, { w: 100, r: 5, done: false }], // only 500 counts
+    });
+    await addWorkout(adapter, { "Barbell Bench Press": [{ w: 400, r: 5 }] }, { finished: false });            // in progress: 0
+    expect((await q.stats.getStatsTotals()).totalLifted).toBe(500);
+    expect((await q.history.getWorkoutHistory())[0].total_volume).toBe(500);
+    expect((await q.history.getWorkoutDetail(id))!.totalVolume).toBe(500);
+    expect((await q.stats.getVolumeTrend(null))[0].y).toBe(500);
+    expect((await q.stats.getVolumeByMuscle(30)).reduce((n, m) => n + m.volumeLbs, 0)).toBe(500);
+  });
+});
+
+describe("1RM", () => {
+  it("SQL and JS agree, and a 30-rep set is not a 2x max", async () => {
+    const { estimateOneRm } = await import("../utils/oneRm");
+    const { oneRmSql } = await import("../db/sqlFragments");
+    const { adapter } = await fresh();
+    for (const [w, r] of [[100, 1], [100, 5], [100, 12], [100, 30]] as const) {
+      const sql = (await adapter.getFirstAsync<{ v: number }>(`SELECT ${oneRmSql("?", "?")} AS v`, [w, r]))!.v;
+      expect(sql).toBeCloseTo(estimateOneRm(w, r), 6);
+    }
+    expect(estimateOneRm(100, 30)).toBeCloseTo(140); // capped at 12 reps
+  });
+});
+
+describe("PR count", () => {
+  it("ignores a typo'd weight instead of letting it block every later PR", async () => {
+    const { adapter, q } = await fresh();
+    const t = now();
+    const bench = "Barbell Bench Press";
+    await addWorkout(adapter, { [bench]: [{ w: 225, r: 5 }] }, { startedAt: t - 4 * DAY });
+    await addWorkout(adapter, { [bench]: [{ w: 2250, r: 5 }] }, { startedAt: t - 3 * DAY }); // meant 225
+    await addWorkout(adapter, { [bench]: [{ w: 230, r: 5 }] }, { startedAt: t - 2 * DAY });  // real PR
+    expect(await q.stats.getTotalPRCount()).toBe(1);
+  });
+});
+
+describe("live PR badges vs history", () => {
+  it("getHistPRs and getExercisePRs agree on the same working sets, and ignore unfinished workouts", async () => {
+    const { adapter, q } = await fresh();
+    const t = now();
+    const bench = "Barbell Bench Press";
+    await addWorkout(adapter, { [bench]: [{ w: 135, r: 8 }, { w: 185, r: 3 }, { w: 95, r: 12, warm: true }] }, { startedAt: t - DAY });
+    const open = await addWorkout(adapter, { [bench]: [{ w: 400, r: 20 }] }, { finished: false });
+    const id = await exId(adapter, bench);
+    const hist = await q.history.getHistPRs(id, open + 1);
+    const prs = await q.history.getExercisePRs(id);
+    expect(hist.maxWeight).toBe(prs.maxWeight.weightLbs);
+    expect(hist.maxReps).toBe(prs.maxReps.reps);
+    expect(hist.maxVolume).toBe(prs.maxVolume.weightLbs! * prs.maxVolume.reps!);
+    expect(hist.maxWeight).toBe(185);
+  });
+
+  it("a bodyweight exercise gets a volume PR from more reps at the same load", async () => {
+    const { computePRBadges } = await import("../utils/prBadges");
+    const { adapter, q } = await fresh();
+    await q.stats.logBodyweight(180);
+    await addWorkout(adapter, { "Pull-Up": [{ w: 0, r: 8 }] });
+    const id = await exId(adapter, "Pull-Up");
+    const hist = await q.history.getHistPRs(id, -1);
+    expect(hist.maxVolume).toBe(180 * 8);
+    const ex = { sets: [], isBodyweight: true } as never;
+    expect(computePRBadges(ex, "new", 0, 9, hist)).toContain("V");
+    expect(computePRBadges(ex, "new", 0, 8, hist)).not.toContain("V");
+    // no bodyweight logged: reps alone still rank
+    const { adapter: a2, q: q2 } = await fresh();
+    await addWorkout(a2, { "Pull-Up": [{ w: 0, r: 8 }] });
+    const h2 = await q2.history.getHistPRs(await exId(a2, "Pull-Up"), -1);
+    expect(h2.maxVolume).toBe(8);
+    expect(computePRBadges(ex, "new", 0, 9, h2)).toContain("V");
+  });
+});
+
+describe("repeat last workout", () => {
+  it("repeats ticked sets only, keeps warm-ups and supersets", async () => {
+    const { adapter, q } = await fresh();
+    await addWorkout(adapter, {
+      "Barbell Bench Press": [{ w: 45, r: 10, warm: true }, { w: 135, r: 5 }, { w: 135, r: 5 }, { w: 135, r: 5, done: false }],
+      "Dumbbell Fly": [{ w: 30, r: 10 }],
+    });
+    await q.workouts.setLoggedExerciseSuperset(
+      (await adapter.getAllAsync<{ id: number }>("SELECT id FROM logged_exercises")).map((r) => r.id), "ss1");
+    const last = await q.history.getLastWorkoutExercises();
+    expect(last.map((e) => [e.exerciseName, e.targetSets, e.warmupSets, e.supersetId])).toEqual([
+      ["Barbell Bench Press", 2, 1, "ss1"],
+      ["Dumbbell Fly", 1, 0, "ss1"],
+    ]);
+  });
+});
+
+describe("save as program", () => {
+  it("gives every exercise at least one set, even when none were ticked", async () => {
+    const { adapter } = await fresh();
+    const { createProgramFromWorkout } = await import("../db/programQueries");
+    const id = await addWorkout(adapter, { "Barbell Bench Press": [{ w: 100, r: 5, done: false }], "Dip": [{ w: 0, r: 5 }, { w: 0, r: 5 }] });
+    await createProgramFromWorkout(id, "P");
+    const sets = await adapter.getAllAsync<{ exercise_name: string; target_sets: number }>("SELECT exercise_name, target_sets FROM program_exercises ORDER BY order_index");
+    expect(sets.map((r) => r.target_sets)).toEqual([1, 2]);
+  });
+});
+
+describe("custom exercises", () => {
+  it("rejects a name that already exists (any case) and cleans muscle lists", async () => {
+    const { q } = await fresh();
+    await expect(q.workouts.createCustomExercise("barbell bench press", ["Chest"], ["barbell"], "reps")).rejects.toThrow(/already exists/);
+    const ex = await q.workouts.createCustomExercise("Cable Pullover", ["Lats", " ", "lats", "Chest "], ["cable"], "reps");
+    expect(ex.muscle_group).toBe("Lats, Chest");
+    await expect(q.workouts.updateExercise(ex.id, { name: "Dip" })).rejects.toThrow(/already exists/);
+    await q.workouts.updateExercise(ex.id, { muscleGroup: "Chest,, Lats ,Chest" });
+    expect((await q.workouts.getCustomExercises())[0].muscle_group).toBe("Chest, Lats");
+  });
+});
+
+describe("goals", () => {
+  it("bodyweight goals remember the start and the direction", async () => {
+    const { adapter, q } = await fresh();
+    await q.stats.logBodyweight(200);
+    const cut = await q.goals.createGoal({ type: "bodyweight", title: "cut", targetValue: 180 });
+    const bulk = await q.goals.createGoal({ type: "bodyweight", title: "bulk", targetValue: 220 });
+    const rows = await adapter.getAllAsync<{ start_value: number; direction: string }>("SELECT start_value, direction FROM goals ORDER BY id");
+    expect(rows).toEqual([{ start_value: 200, direction: "down" }, { start_value: 200, direction: "up" }]);
+    const [g1, g2] = await q.goals.getGoals();
+    const goal = (id: number) => [g1, g2].find((g) => g.id === id)!;
+    expect(q.goals.goalFraction(goal(cut), 190)).toBeCloseTo(0.5);
+    expect(q.goals.goalFraction(goal(bulk), 190)).toBe(0); // moving the wrong way is 0, not negative
+  });
+
+  it("dates a lift goal to the workout that reached it", async () => {
+    const { adapter, q } = await fresh();
+    const t = now();
+    const gid = await q.goals.createGoal({ type: "lift_pr", title: "bench", exerciseId: await exId(adapter, "Barbell Bench Press"), targetValue: 200, targetReps: 1 });
+    await adapter.runAsync("UPDATE goals SET created_at = ?", [t - 10 * DAY]);
+    await addWorkout(adapter, { "Barbell Bench Press": [{ w: 205, r: 1 }] }, { startedAt: t - 5 * DAY });
+    await q.goals.markGoalAchieved(gid);
+    const at = (await adapter.getFirstAsync<{ achieved_at: number }>("SELECT achieved_at FROM goals"))!.achieved_at;
+    expect(at).toBe(t - 5 * DAY + 3600);
   });
 });

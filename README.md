@@ -80,7 +80,7 @@ Then scan the QR code with your dev client app on your phone. The tunnel mode by
 * **Program Builder:** Create repeatable workout templates with custom day structures and exercise assignments.
 * **PR Summary:** Finish modal displays all new Personal Records achieved during the workout session.
 * **History Feed:** Reverse-chronological log of past workouts with expandable details and per-set notes.
-* **Data Export:** CSV/Excel export and tactical share sheets (Markdown + PNG image formats).
+* **Data Export:** CSV export and a Markdown share sheet (the workout summary card is made for taking a screenshot; there's no PNG export).
 
 ---
 

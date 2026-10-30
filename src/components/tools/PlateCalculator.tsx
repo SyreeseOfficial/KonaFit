@@ -7,7 +7,7 @@ import Svg, { Rect, Text as SvgText } from "react-native-svg";
 import { Settings2, Plus, X, Check } from "lucide-react-native";
 import { kvStore } from "../../utils/kvStore";
 import {
-  PLATES, OPTIONAL_PLATES, BAR_OPTIONS, calculatePlates, CUSTOM_PLATE_COLORS,
+  PLATES, OPTIONAL_PLATES, BAR_OPTIONS, planLoad, CUSTOM_PLATE_COLORS,
   type PlateConfig, type PlateResult,
 } from "../../utils/plateCalc";
 
@@ -19,6 +19,7 @@ const COLLAR_COLOR = "#94A3B8";
 
 const ENABLED_KEY = "@konafit_plate_enabled";
 const CUSTOM_KEY  = "@konafit_custom_plates";
+const BAR_KEY     = "@konafit_plate_bar";
 
 function PlateConfigPanel({
   visible, allPlates, enabled, onToggle, onAddCustom, onDeleteCustom, onClose,
@@ -160,9 +161,11 @@ export function PlateCalculator({ initialWeight }: Props) {
   const [customPlates, setCustomPlates] = useState<PlateConfig[]>([]);
 
   useEffect(() => {
-    Promise.all([kvStore.getItem(ENABLED_KEY), kvStore.getItem(CUSTOM_KEY)]).then(([e, c]) => {
+    Promise.all([kvStore.getItem(ENABLED_KEY), kvStore.getItem(CUSTOM_KEY), kvStore.getItem(BAR_KEY)]).then(([e, c, b]) => {
       if (e) setEnabled({ ...OPTIONAL_PLATES, ...JSON.parse(e) });
       if (c) setCustomPlates(JSON.parse(c));
+      const saved = BAR_OPTIONS.findIndex((o) => o.label === b);
+      if (saved >= 0) setBarIdx(saved);
     });
   }, []);
 
@@ -202,15 +205,15 @@ export function PlateCalculator({ initialWeight }: Props) {
   const targetLbs = parseFloat(targetInput);
   const isValid = !isNaN(targetLbs) && targetLbs > 0;
 
-  const results: PlateResult[] | null = useMemo(() => {
-    if (!isValid) return null;
-    return calculatePlates(targetLbs, barWeight, activePlates);
-  }, [targetLbs, barWeight, activePlates]);
-
+  const plan = useMemo(
+    () => (isValid ? planLoad(targetLbs, barWeight, activePlates) : null),
+    [isValid, targetLbs, barWeight, activePlates]
+  );
+  const results: PlateResult[] | null = plan?.results ?? null;
   const perSide = isValid ? (targetLbs - barWeight) / 2 : 0;
   const loadable = results !== null;
-  const totalPlateWeight = results?.reduce((sum, r) => sum + r.plate.weight * r.count * 2, 0) ?? 0;
-  const isExact = Math.abs(totalPlateWeight - (targetLbs - barWeight)) < 0.01;
+  const totalPlateWeight = plan ? plan.loadedLbs - barWeight : 0;
+  const isExact = !plan || plan.leftoverLbs < 0.01;
 
   const platesPerSide: PlateConfig[] = [];
   results?.forEach(({ plate, count }) => { for (let i = 0; i < count; i++) platesPerSide.push(plate); });
@@ -244,12 +247,12 @@ export function PlateCalculator({ initialWeight }: Props) {
       </View>
 
       {/* Bar selector + config */}
-      <View className="flex-row gap-2 mb-5 items-center">
+      <View className="flex-row flex-wrap gap-2 mb-5 items-center">
         <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs mr-1">BAR:</Text>
         {BAR_OPTIONS.map((opt, i) => (
           <TouchableOpacity
             key={opt.label}
-            onPress={() => setBarIdx(i)}
+            onPress={() => { setBarIdx(i); kvStore.setItem(BAR_KEY, opt.label).catch(console.error); }}
             className={`px-3 py-2 rounded-full ${barIdx === i ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
             activeOpacity={0.7}
           >
@@ -306,7 +309,7 @@ export function PlateCalculator({ initialWeight }: Props) {
       {isValid && !loadable && (
         <View className="bg-surface dark:bg-zinc-900 p-4 mb-4 rounded-2xl">
           <Text className="font-montserrat text-rose-500 text-sm text-center">
-            Target weight is less than bar weight ({barWeight} lbs)
+            Target is under the bar. Closest loadable: {barWeight} lb (the empty bar)
           </Text>
         </View>
       )}
@@ -314,7 +317,7 @@ export function PlateCalculator({ initialWeight }: Props) {
       {!isExact && isValid && loadable && (
         <View className="bg-surface dark:bg-zinc-900 px-5 py-3 mb-3 rounded-xl">
           <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs text-center">
-            Cannot load exactly — closest is {totalPlateWeight + barWeight} lbs
+            Closest loadable: {plan?.loadedLbs} lb ({plan?.leftoverLbs} lb short)
           </Text>
         </View>
       )}

@@ -15,10 +15,17 @@ import Constants from "expo-constants";
 import { kvStore } from "../src/utils/kvStore";
 import { getAllWorkoutDataForExport } from "../src/db/historyQueries";
 import { exportCsvAndShare } from "../src/utils/exportUtils";
-import { getDatabase } from "../src/db/database";
+import { wipeAllData } from "../src/db/wipe";
 import { THEME_KEY, loadTheme, setTheme, type ThemePref } from "../src/utils/theme";
 import {
   REST_TIMER_KEY,
+  PRESERVED_KEYS,
+  REST_DAYS_KEY,
+  getRestDays,
+  REST_STEP_KEY,
+  REST_STEP_OPTIONS,
+  DEFAULT_REST_STEP,
+  getRestStep,
   DEFAULT_REST_SECONDS,
   WEEKLY_GOAL_KEY,
   DEFAULT_WEEKLY_GOAL,
@@ -28,6 +35,7 @@ import {
 import { HAPTICS_KEY, loadHapticsSetting, setHapticsEnabled } from "../src/utils/haptics";
 
 const REST_STEP = 15;
+const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
 function Row({
   label,
@@ -111,6 +119,8 @@ export default function SettingsScreen() {
   const [hapticsOn, setHapticsOn] = useState(true);
   const [theme, setThemePref] = useState<ThemePref>("system");
   const [weeklyGoal, setWeeklyGoal] = useState(DEFAULT_WEEKLY_GOAL);
+  const [restDays, setRestDays] = useState<number[]>([]);
+  const [restStep, setRestStepState] = useState(DEFAULT_REST_STEP);
   const [wipeOpen, setWipeOpen] = useState(false);
   const [wipeText, setWipeText] = useState("");
 
@@ -119,7 +129,15 @@ export default function SettingsScreen() {
     loadHapticsSetting().then(setHapticsOn);
     loadTheme().then(setThemePref);
     getWeeklyGoal().then(setWeeklyGoal);
+    getRestDays().then(setRestDays);
+    getRestStep().then(setRestStepState);
   }, []);
+
+  const toggleRestDay = useCallback(async (day: number) => {
+    const next = restDays.includes(day) ? restDays.filter((d) => d !== day) : [...restDays, day].sort();
+    setRestDays(next);
+    await kvStore.setItem(REST_DAYS_KEY, next.join(","));
+  }, [restDays]);
 
   const handleTheme = useCallback(async (t: ThemePref) => {
     setThemePref(t);
@@ -143,6 +161,11 @@ export default function SettingsScreen() {
     await kvStore.setItem(REST_TIMER_KEY, String(next));
   }, [restSeconds]);
 
+  const handleRestStep = useCallback(async (v: string) => {
+    setRestStepState(Number(v));
+    await kvStore.setItem(REST_STEP_KEY, v);
+  }, []);
+
   const handleExport = useCallback(async () => {
     try {
       const rows = await getAllWorkoutDataForExport();
@@ -160,27 +183,7 @@ export default function SettingsScreen() {
     setWipeOpen(false);
     setWipeText("");
     try {
-      const db = await getDatabase();
-      // One transaction: either everything is wiped or nothing is.
-      await db.withTransactionAsync(async () => {
-        await db.execAsync(`
-          DELETE FROM logged_sets;
-          DELETE FROM logged_exercises;
-          DELETE FROM progress_photos;
-          DELETE FROM workouts;
-          DELETE FROM program_exercises;
-          DELETE FROM program_days;
-          DELETE FROM programs;
-          DELETE FROM bodyweight_logs;
-          DELETE FROM lifestyle_logs;
-          DELETE FROM locations;
-          DELETE FROM goals;
-          DELETE FROM exercises WHERE is_custom = 1;
-          UPDATE exercises SET use_count = 0;
-          DELETE FROM kv_store WHERE key NOT IN ('${REST_TIMER_KEY}','${HAPTICS_KEY}','${THEME_KEY}','${WEEKLY_GOAL_KEY}');
-        `);
-      });
-      kvStore.clearCache(); // wipe edited kv_store with raw SQL
+      await wipeAllData([...PRESERVED_KEYS, HAPTICS_KEY, THEME_KEY]);
       Alert.alert("Done", "All workout data has been deleted.");
     } catch (e) {
       Alert.alert("Error", String(e));
@@ -260,6 +263,26 @@ export default function SettingsScreen() {
               </View>
             }
           />
+          <View className="px-5 py-5 border-t border-surface-2 dark:border-zinc-800">
+            <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Rest Days</Text>
+            <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5 mb-3">
+              Planned days off won&apos;t break your streak
+            </Text>
+            <View className="flex-row justify-between">
+              {WEEKDAYS.map((label, day) => (
+                <TouchableOpacity
+                  key={day}
+                  onPress={() => toggleRestDay(day)}
+                  className={`w-10 h-10 items-center justify-center rounded-full ${restDays.includes(day) ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
+                  activeOpacity={0.7}
+                >
+                  <Text className={`font-montserrat-semibold text-sm ${restDays.includes(day) ? "text-white" : "text-text-secondary dark:text-zinc-400"}`}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
         </View>
 
         {/* ── Workout ─────────────────────────────────────────────────────── */}
@@ -292,6 +315,17 @@ export default function SettingsScreen() {
               </View>
             }
           />
+          <View className="flex-row items-center justify-between px-5 py-5 border-t border-surface-2 dark:border-zinc-800">
+            <View className="flex-1">
+              <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Timer +/- Step</Text>
+              <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5">Seconds per tap while resting</Text>
+            </View>
+            <ChipGroup
+              options={REST_STEP_OPTIONS.map((n) => ({ key: String(n), label: `${n}s` }))}
+              value={String(restStep)}
+              onChange={handleRestStep}
+            />
+          </View>
         </View>
 
         {/* ── Library ─────────────────────────────────────────────────────── */}

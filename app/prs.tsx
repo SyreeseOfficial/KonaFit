@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import { getTrackedExercises } from "../src/db/statsQueries";
 import { getExercisePRs, type ExercisePRs, type PRSet } from "../src/db/historyQueries";
+import { estimateOneRm } from "../src/utils/oneRm";
 
 type Exercise = { id: number; name: string };
 
@@ -120,7 +121,7 @@ export default function PRsScreen() {
                 )}
                 <PRCard label="Best Weight" value={`${prs.maxWeight.weightLbs} lbs`} set={prs.maxWeight} />
                 <PRCard label="Best Reps" value={`${prs.maxReps.reps} reps`} set={prs.maxReps} />
-                <PRCard label="Best Est. 1RM" value={`${Math.round(oneRM!.weightLbs! * (1 + oneRM!.reps! / 30))} lbs`} set={oneRM!} />
+                <PRCard label="Best Est. 1RM" value={`${Math.round(estimateOneRm(oneRM!.weightLbs!, oneRM!.reps!))} lbs`} set={oneRM!} />
                 <PRCard label="Best Volume (one set)" value={`${volume!.weightLbs! * volume!.reps!} lbs`} set={volume!} />
               </>
             )}

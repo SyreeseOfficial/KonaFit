@@ -19,14 +19,14 @@ import {
   markGoalAchieved,
   unmarkGoalAchieved,
   getGoalProgress,
+  goalFraction,
   type Goal,
   type GoalType,
 } from "../../db/goalQueries";
 import { AddExerciseSheet } from "../workout/AddExerciseSheet";
 import type { Exercise } from "../../types/workout";
 
-function ProgressBar({ current, target }: { current: number; target: number }) {
-  const pct = target > 0 ? Math.min(1, current / target) : 0;
+function ProgressBar({ pct }: { pct: number }) {
   return (
     <View className="h-1 bg-surface-2 dark:bg-zinc-800 mt-2 rounded-full overflow-hidden">
       <View
@@ -56,7 +56,7 @@ function GoalCard({
     goal.type === "lift_pr" ? "Best 1RM" :
     goal.type === "bodyweight" ? "Current" : null;
   const progressUnit = hasRepTarget ? "reps" : "lbs";
-  const progressTarget = hasRepTarget ? (goal.target_reps ?? 0) : (goal.target_value ?? 0);
+  const fraction = goalFraction(goal, progress);
 
   return (
     <View
@@ -88,9 +88,7 @@ function GoalCard({
               {goal.notes}
             </Text>
           ) : null}
-          {progressTarget > 0 && progress !== null && !isAchieved && (
-            <ProgressBar current={progress} target={progressTarget} />
-          )}
+          {fraction !== null && !isAchieved && <ProgressBar pct={fraction} />}
         </View>
         <View className="flex-row items-center" style={{ gap: 12 }}>
           <TouchableOpacity

@@ -34,8 +34,9 @@ A plain-English list of things to fix and build. Checked against commit `76e3e5f
 | 9 | [🚀 Release](#-release) | Get the app into the stores |
 | 10 | [📖 Docs](#-docs) | Fix the writing |
 | 11 | [🧹 Cleanup](#-cleanup) | Small tidy-up jobs |
-| 12 | [⏸️ Skipped for now](#️-skipped-for-now) | Parked on purpose |
-| 13 | [✅ Done](#-done) | Finished work |
+| 12 | [🙋 Needs my decision](#-needs-my-decision) | Claude got stuck or needs a choice from me |
+| 13 | [⏸️ Skipped for now](#️-skipped-for-now) | Parked on purpose |
+| 14 | [✅ Done](#-done) | Finished work |
 
 ---
 
@@ -58,55 +59,7 @@ If you only have a short time, do these first.
 
 Things that are broken or give wrong answers.
 
-### Can lose or ruin your data
-- ⭐ ❓ **Database not ready at startup.** `app/_layout.tsx` shows screens before `initializeDatabase()` finishes. Wait for it. If it fails, show a "Try again / export / report" screen, not a white screen.
-- ⭐ ❓ **"Copy last set to all" + Finish.** Finish marks every filled set as done, even ones you never ticked. Only count ticked sets, or ask at Finish.
-- ❓ **"Save as program" can make an exercise with 0 sets.** Use at least 1 set.
-- ❓ **Starting a workout isn't all-or-nothing.** If it fails halfway, you get a half-built workout. Wrap it in one transaction. Delete leftover unfinished workouts on startup.
-- ❓ **Finishing a workout has no error handling.** If saving fails, the sheet closes and nothing tells you.
-- ❓ **Swapping an exercise leaves old PR badges and counts behind.** Ask before swapping if sets exist. Reset the badges.
-- ❓ **"Repeat last workout" is not a true repeat.** It counts unticked sets, and it drops warm-ups and supersets.
-- 🟡 **Settings numbers can become `NaN`.** A bad saved value shows `NaN:NaN` on the timer. Fall back to the default.
-- 🟡 **App-wide cache can go stale after "Wipe All Data".** Check every raw `DELETE FROM kv_store` clears the cache. Add a test.
-- 🟡 **Typing in a set writes to the database on every key.** Save on blur and debounce.
-- 🟡 **Local ids could clash after restart.** Use a real random id (`crypto.randomUUID()`).
-- 🟡 **Check `PRAGMA foreign_keys` is on after startup.** Add a test.
-
-### Wrong numbers
-- ⭐ 🟡 **1RM formula copied in many places.** See "Start here." Put it in `sqlFragments.ts` and unit-test it.
-- 🟡 **"Volume" means four different things.** Some totals count warm-ups and unfinished workouts. Make one shared rule (working sets, finished only). Test that every screen agrees.
-- 🟡 **Workout time includes idle time.** Leave the app open over lunch and you "worked out" for hours. Save a `completed_at` for each set. Default the end time to "last set + 2 min" and let the user edit it.
-- ⚡ **PR count gets inflated by typos.** A weight of 2250 instead of 225 counts forever. Ignore anything over 3× your last best.
-- 🟡 **PR count and PR badges don't match.** They use different rules. Save PR events in a `pr_events` table and count from that.
-- 🟡 **Bodyweight exercises never get a volume PR.** Weight is 0, so volume is 0. Use reps (plus added load).
-- 🟡 **First-set PR badge may use an unfinished workout.** Make live badges and history PRs follow the same rules.
-- 🟡 **Streak uses the start time.** A workout that crosses midnight counts for the wrong day. Use the finish time and write down the rule.
-- 🟡 **Streak ignores planned rest days.** Add a "rest days" setting.
-- 🟡 **Goals have gaps.** "Custom" goals show no progress. Bodyweight goals don't know if you're cutting or bulking. Save a start value and a direction.
-- 🟡 **Achieved date uses "now."** Use the workout's finish time instead.
-- 🟡 **`formatVolume` shows "1.00M" for 999,999.9.** Round first, then pick the unit.
-- 🟡 **Weekly goal is saved but never shown.** Show "2 / 4 this week" on Train and Stats, or remove the setting. Check it stays between 1 and 7.
-- 🟡 **Plate calculator hides when it can't hit the target.** Return the leftover and show "closest loadable: 135 lb."
-- 🟡 **Plate calculator only knows one bar.** Add named bars (women's, trap, EZ, dumbbell handle). Remember the choice per exercise.
-- 🟡 **Percent chart (100% = 1 rep) is a rough guess.** Label it as an estimate. Let users pick Epley, Brzycki or Lombardi.
-
-### Timer
-- 🟡 **Rest timer `+/-` works even when the timer isn't running.** Make the step a setting. Cap the total at 20 min.
-- 🟡 **Rest timer ends with no buzz.** Add a haptic. Also recompute the time when the app comes back to the foreground.
-
-### Duplicates
-- ❓ **Fresh installs get duplicate exercises.** `Stiff-Leg Deadlift`, `Good Morning` and `Reverse Curl` each appear twice, so they get two separate histories. Near-duplicates exist too (`Band Pull-Apart` / `Banded Pull-Apart`, `Hyperextension` / `Back Extension`). Fix the list, merge old duplicates in a migration, add a unique index on `LOWER(name)`, and block duplicate custom exercises.
-- 🟡 **Muscle groups are one comma string** (`"Chest, Triceps"`). A stray comma gives an empty group. Clean it on save, or make a proper many-to-many table.
-
-### Look and theme
-- 🟡 **Wrong theme flashes on launch.** The saved theme loads after the first paint. Load it before the first screen.
-
-### Export and share
-- 🟡 **Does the share-as-PNG card work on Android?** The needed library isn't in `package.json`. Add it, or remove the README claim.
-
-### Setup and project
-- ⚡ **Unused database table `lifestyle_logs`.** The screens are gone. Drop the table or document it. Remove `caffeine_mg` from the migration test.
-- ⚡ **Unused font package `@expo-google-fonts/anton`.** Remove it. Run `knip` or `depcheck` in CI.
+*Empty: every bug was worked through. Finished ones are in ✅ Done, the ones that need a choice from you are in 🙋 Needs my decision.*
 
 ---
 
@@ -295,6 +248,28 @@ New things to build. Grouped by area.
 
 ---
 
+## 🙋 Needs my decision
+
+Claude parks jobs here when it needs a choice or help from me. Each entry: original job, which category it came from, the question, and Claude's recommended answer. Empty = nothing waiting.
+
+- **Category: 🐛 Bugs.** 🟡 **PR count and PR badges don't match.** They use different rules. Save PR events in a `pr_events` table and count from that.
+  - *Done already:* the PR count and the live badges now share the same "working set" rule, and a typo'd weight no longer inflates the count (see Done).
+  - *Question:* the badges can be Weight, Reps or Volume, but the Stats "PRs" number only counts weight records. Should one PR in `pr_events` be one badge (so a set that earns W+R+V counts as 3), or one per set? And should old history be replayed once to fill `pr_events`, or should the table start empty and count only from now?
+  - *Recommended:* one row per (set, kind). Replay history once in a migration (additive, easy to rebuild). The Stats number shows distinct sets with at least one real PR.
+
+- **Category: 🐛 Bugs.** ❓ **Fresh installs get duplicate exercises.** `Stiff-Leg Deadlift`, `Good Morning` and `Reverse Curl` each appear twice, so they get two separate histories. Near-duplicates exist too (`Band Pull-Apart` / `Banded Pull-Apart`, `Hyperextension` / `Back Extension`). Fix the list, merge old duplicates in a migration, add a unique index on `LOWER(name)`, and block duplicate custom exercises.
+  - *Done already:* the seed list is fixed (one row each; two-muscle moves list both groups, e.g. `Hamstrings, Lower Back`), the test for it passes, and creating or renaming a custom exercise to an existing name is blocked with a message.
+  - *Not done:* the migration that merges duplicates already on your phone, and the unique index. The merge repoints workout history, programs and goals to one exercise and deletes the other. If it fails halfway, the app can't start.
+  - *Question:* OK to add a migration that merges the existing duplicates (keeping the oldest id and repointing `logged_exercises`, `program_exercises`, `goals`), then adds `CREATE UNIQUE INDEX ... ON exercises(LOWER(name)) WHERE is_deleted = 0`?
+  - *Recommended:* yes, inside one transaction, after a one-time CSV export from Settings as a safety net. Do it as its own commit so it's easy to undo.
+
+- **Category: 🐛 Bugs.** 🟡 **Goals have gaps.** "Custom" goals show no progress. Bodyweight goals don't know if you're cutting or bulking. Save a start value and a direction.
+  - *Done already:* bodyweight goals now save a start value and a direction (cut or bulk), the progress bar goes from start to target, and old goals were backfilled from your bodyweight log.
+  - *Question:* a custom goal like "Run a 5K" has no number to measure. What should "progress" mean?
+  - *Recommended:* leave custom goals as a tick box (no bar). If you want a bar, add an optional "target number + unit" and a small "update progress" button on the card.
+
+---
+
 ## ⏸️ Skipped for now
 
 You marked these as "skip for now." They stay on the list so they aren't lost.
@@ -399,6 +374,40 @@ You marked these as "skip for now." They stay on the list so they aren't lost.
 
 Finished in earlier rounds. For reference only.
 
+
+**Bugs round** (everything below passed typecheck, lint and `npm test`)
+- [x] App waits for the database, theme and haptics before drawing screens (no white screen, no wrong-theme flash). If startup fails you get a "Try again / Share error" screen.
+- [x] Finish only counts sets you ticked. Nothing is auto-completed any more (this fixes "Copy last set to all" + Finish).
+- [x] "Save as program" gives every exercise at least 1 set, inside one transaction.
+- [x] Starting a workout is all-or-nothing: if it fails halfway the half-built workout is deleted and you get an alert. Unfinished leftover workouts are deleted on startup (except the one you can still resume). "Discard" on the resume prompt now really deletes it.
+- [x] Finishing a workout shows an alert if saving fails and keeps your sets on screen.
+- [x] Swapping an exercise that has logged sets asks first, and clears the old PR badges.
+- [x] "Repeat last workout" now repeats ticked sets only, plus warm-ups and supersets (supersets are now saved in the database; ones made before this version can't be restored).
+- [x] Bad saved numbers in Settings (rest time, weekly goal) fall back to the default instead of `NaN`. Weekly goal stays 1 to 7.
+- [x] "Wipe All Data" lives in `src/db/wipe.ts` and clears the kv cache. Test added.
+- [x] Typing in a set saves after a 400 ms pause, on blur, on Finish and when the app goes to the background (not on every key).
+- [x] Local ids are random (`crypto.randomUUID()` with a fallback), so they can't clash after a restart.
+- [x] Test that `PRAGMA foreign_keys` is on after startup.
+- [x] One 1RM formula (`src/utils/oneRm.ts` + `oneRmSql`), reps capped at 12, used by stats, goals, PRs and the PR screen. Unit-tested and checked against the SQL version.
+- [x] One volume rule (ticked, non-warm-up sets of finished workouts) in `sqlFragments.ts`. Test checks stats, history, detail, trend and muscle volume all agree.
+- [x] Workout length ends at "last ticked set + 2 min" (each set now stores `completed_at`, migration 5). You can still edit it on the workout screen.
+- [x] PR count ignores weights over 3x your previous best (typos).
+- [x] Bodyweight exercises can now earn a volume PR (reps count when added load is 0).
+- [x] Live PR badges and history PRs use the same rule; test checks unfinished workouts are ignored.
+- [x] Streak counts the day a workout was finished, and the rule is written next to the query.
+- [x] Streak has a "Rest Days" setting (Settings > Preferences).
+- [x] Bodyweight goals save a start weight and direction; progress bar works for cutting and bulking.
+- [x] Lift goals get their achieved date from the workout that reached the target.
+- [x] `formatVolume` and the Stats grid round first, then pick K/M (999,999.9 shows `1.00M`).
+- [x] Weekly goal shows as "2 / 4 this week" on Train and Stats.
+- [x] Plate calculator shows "Closest loadable: X lb (Y lb short)", and "closest is the empty bar" under the bar weight. Added EZ 25 and Trap 55 bars. The last bar you picked is remembered (one choice for everything, not per exercise).
+- [x] Percent chart is labelled as an estimate, shows reps from a formula (12+ capped), and lets you pick Epley, Brzycki or Lombardi.
+- [x] Rest timer +/- only works while running, total capped at 20 min, step is a setting (5/10/15/30 s). Haptic when rest ends, and the clock re-syncs when the app returns to the foreground.
+- [x] Fresh-install exercise list has no duplicates (see 🙋 for the migration part). Custom exercise names can't repeat, and muscle/equipment lists are cleaned on save.
+- [x] Share card: README no longer claims PNG export (the card is a screenshot view, so no library is needed).
+- [x] `lifestyle_logs` kept on purpose and documented in `database.ts`; `caffeine_mg` removed from the migration test.
+- [x] Removed `@expo-google-fonts/anton`. (Adding `knip`/`depcheck` to CI was not done.)
+
 **Fixes**
 - [x] Removing an exercise now deletes it from the database (with confirm and undo).
 - [x] Streak is correct in time zones east of UTC.
@@ -450,4 +459,4 @@ Finished in earlier rounds. For reference only.
 - [x] Reanimated used everywhere (no core `Animated`).
 - [x] PR badge text bigger (11 px). Touch targets 48 px.
 
-**Still open from these:** per-set `upsertLoggedSet` on every keystroke, and long-press discoverability for removing a set.
+**Still open from these:** long-press discoverability for removing a set. (The per-keystroke save is fixed, see Bugs round.)
