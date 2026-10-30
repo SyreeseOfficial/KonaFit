@@ -110,7 +110,7 @@ Tick as you go. Each line = one commit.
 - [x] 1.8 Export, import compat, and wipe
 
 **Phase 2: Timer engine (no UI)**
-- [ ] 2.1 Pure timer state machine + tests
+- [x] 2.1 Pure timer state machine + tests
 - [ ] 2.2 Boxing settings (kv) + helpers
 - [ ] 2.3 Sound/haptic cue util
 - [ ] 2.4 Active-boxing snapshot (save/load/clear) + tests
