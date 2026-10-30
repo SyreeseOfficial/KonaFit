@@ -6,6 +6,19 @@ This chronological ledger tracks major features, structural database migrations,
 
 ---
 
+### 2026-10-30 — Boxing timer: engine, start flow, session screen
+
+* **Status:** Implemented (Phases 2-4 of `BUILD_PLAN_BOXING.md`); sound is haptics-only pending decision D1 in `BOXING_BUILD_NOTES.md`
+* **Scope:** Train tab / new `app/boxing/*` routes / utils / hooks
+* **Files:** `src/utils/boxingTimer.ts` (pure state machine), `boxingSettings.ts`, `boxingCues.ts`, `boxingSnapshot.ts`, `boxingRoute.ts`, `src/hooks/useBoxingSession.ts`, `src/components/boxing/*`, `src/components/train/StartSheet.tsx`, `app/boxing/{_layout,setup,session}.tsx`, `app/(tabs)/train.tsx`
+* **Changes Executed:**
+  * Train's single "Start Empty Workout" is now **Start**, opening a Lift / Box sheet (plus "Repeat last boxing" once a setup exists). A running boxing snapshot counts as in-progress: starting anything else asks before discarding it. On launch Train offers to resume a saved boxing session.
+  * The timer is a pure module (state in, state out, `now` passed in) that chains phase times from the previous phase end, so a late `advance()` after backgrounding lands on the true round; pause/resume, skip rest, +30s and end early are state transitions on it. 
+  * `@konafit_active_boxing_v1` holds the snapshot (`kind: 'boxing'`, versioned), saved on every state change. Settings live under `@konafit_boxing_*` and survive Wipe All Data.
+* **Architectural Notes:** The hook and screens are thin shells over the pure module (acceptance #12 is tested at the module level). Sessions write a `workouts` row only at finish, so a crashed boxing session can never leave an unfinished row.
+
+---
+
 ### 2026-10-30 — Boxing data foundation (migrations 13-14, queries, export v2)
 
 * **Status:** Implemented (Phase 1 of `BUILD_PLAN_BOXING.md`; no boxing UI yet)

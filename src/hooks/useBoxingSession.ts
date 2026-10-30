@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { AppState } from "react-native";
 import {
   createTimer, advance as advanceTimer, cueFor, pause, resume, skipRest, addSeconds, endEarly,
   type TimerSetup, type TimerState,
@@ -75,7 +76,9 @@ export function useBoxingSession(newSetup: TimerSetup | null) {
       setNow(t);
     };
     const id = setInterval(tick, TICK_MS);
-    return () => clearInterval(id);
+    // Timers are throttled in the background: catch up to the true round the moment the app is visible again.
+    const sub = AppState.addEventListener("change", (s) => { if (s === "active") tick(); });
+    return () => { clearInterval(id); sub.remove(); };
   }, [running, commit]);
 
   /** Runs a user action on the freshly caught-up timer. */

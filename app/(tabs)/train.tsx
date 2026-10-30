@@ -11,7 +11,7 @@ import {
 import { WeeklyGoal } from "../../src/components/train/WeeklyGoal";
 import { GoalsSection } from "../../src/components/train/GoalsSection";
 import { StartSheet } from "../../src/components/train/StartSheet";
-import { loadSnapshot, clearSnapshot } from "../../src/utils/boxingSnapshot";
+import { loadSnapshot, clearSnapshot, type BoxingSnapshot } from "../../src/utils/boxingSnapshot";
 import { hasLastSetup, getLastSetup, getGetReadySec } from "../../src/utils/boxingSettings";
 import { sessionHref } from "../../src/utils/boxingRoute";
 import { formatTime } from "../../src/utils/time";
@@ -88,6 +88,8 @@ export default function TrainScreen() {
   const [exerciseSheetOpen, setExerciseSheetOpen] = useState(false);
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
   const [startSheetOpen, setStartSheetOpen] = useState(false);
+  const [boxingResume, setBoxingResume] = useState<BoxingSnapshot | null>(null);
+  useEffect(() => { loadSnapshot().then(setBoxingResume).catch(() => {}); }, []); // killed mid-session? offer to pick up where it left off
   const [lastBoxing, setLastBoxing] = useState<{ rounds: number; workSec: number; restSec: number } | null>(null);
 
   // A boxing session left running counts as "in progress" too: starting anything else asks before discarding it.
@@ -495,6 +497,34 @@ export default function TrainScreen() {
             <GoalsSection />
           </View>
         </ScrollView>
+
+        <Modal visible={boxingResume !== null} transparent animationType="fade" onRequestClose={() => setBoxingResume(null)}>
+          <View className="flex-1 bg-black/60 items-center justify-center px-6">
+            <View className="bg-surface dark:bg-zinc-900 w-full p-6 rounded-2xl shadow-lg">
+              <Text className="font-montserrat-bold text-text-primary dark:text-white text-2xl mb-1">Resume Boxing?</Text>
+              {boxingResume && (
+                <Text className="font-montserrat text-text-secondary dark:text-zinc-400 text-sm mb-6">
+                  Started at {new Date(boxingResume.timer.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ·{" "}
+                  {boxingResume.timer.setup.rounds} x {formatTime(boxingResume.timer.setup.workSec)} / {formatTime(boxingResume.timer.setup.restSec)}
+                </Text>
+              )}
+              <TouchableOpacity
+                onPress={() => { setBoxingResume(null); router.push("/boxing/session" as never); }}
+                className="bg-crimson dark:bg-blue-500 py-4 items-center mb-3 rounded-xl"
+                activeOpacity={0.8}
+              >
+                <Text className="font-montserrat-bold text-white text-sm">Resume</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => { clearSnapshot().catch(console.error); setBoxingResume(null); }}
+                className="bg-surface-2 dark:bg-zinc-800 py-4 items-center rounded-xl"
+                activeOpacity={0.8}
+              >
+                <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">Discard</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         <StartSheet
           visible={startSheetOpen}
