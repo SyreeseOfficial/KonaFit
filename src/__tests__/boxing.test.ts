@@ -3,6 +3,7 @@ import { setupDb } from "./helpers/sqlite";
 import type { BoxingSession } from "../types/boxing";
 import { buildRecap, sessionAvgRpe } from "../utils/boxingRecap";
 import { draftFromRound, draftToRound, newDraft, roundsDuration } from "../utils/boxingEdit";
+import { buildQuickSession } from "../utils/boxingQuickAdd";
 import { createTimer } from "../utils/boxingTimer";
 import { serializeSnapshot, parseSnapshot, updateRoundLog } from "../utils/boxingSnapshot";
 import { serializeSession, parseSession } from "../utils/sessionReducers";
@@ -424,5 +425,34 @@ describe("round drafts", () => {
   });
   it("duration sums effective work + rest", () => {
     expect(roundsDuration([orig, { ...orig, actualWorkSeconds: null }])).toBe(210 + 60 + 180 + 60);
+  });
+});
+
+describe("quick add", () => {
+  const base = { startedAt: new Date(2026, 5, 1, 7, 30).getTime() / 1000, rounds: 6, mode: "plan" as const, workSec: 180, restSec: 60, totalSec: 0, rpe: 7, tags: ["Heavy bag"] };
+
+  it("plan mode: n rounds, rest between rounds only, duration = n*work + (n-1)*rest", () => {
+    const s = buildQuickSession(base) as BoxingSession;
+    expect(s.rounds).toHaveLength(6);
+    expect(s.rounds.map((r) => r.restSeconds)).toEqual([60, 60, 60, 60, 60, 0]);
+    expect(s.durationSeconds).toBe(6 * 180 + 5 * 60);
+    expect(s.finishedAt - s.startedAt).toBe(s.durationSeconds);
+    expect(s.name).toBe("Morning Boxing");
+    expect(s.rounds.every((r) => r.rpe === null)).toBe(true);
+  });
+  it("total mode splits the time evenly with no rest", () => {
+    const s = buildQuickSession({ ...base, mode: "total", rounds: 4, totalSec: 1000 }) as BoxingSession;
+    expect(s.rounds.map((r) => r.workSeconds)).toEqual([250, 250, 250, 250]);
+    expect(s.durationSeconds).toBe(1000);
+  });
+  it("rejects impossible input with a message", () => {
+    for (const bad of [{ rounds: 0 }, { rounds: 100 }, { workSec: 5 }, { restSec: -1 }, { mode: "total" as const, rounds: 10, totalSec: 60 }])
+      expect(typeof buildQuickSession({ ...base, ...bad })).toBe("string");
+  });
+  it("saves through saveBoxingSession and shows up in last-setup", async () => {
+    const { q } = await fresh();
+    const id = await q.saveBoxingSession(buildQuickSession(base) as BoxingSession);
+    expect((await q.getBoxingSession(id))!.rounds).toHaveLength(6);
+    expect(await q.getLastBoxingSetup()).toEqual({ rounds: 6, workSec: 180, restSec: 60 });
   });
 });

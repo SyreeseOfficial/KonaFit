@@ -143,7 +143,7 @@ Tick as you go. Each line = one commit.
 
 **Phase 8: Editing**
 - [x] 8.1 Full edit of finished sessions
-- [ ] 8.2 Quick-add past session
+- [x] 8.2 Quick-add past session
 
 **Phase 9: Stats**
 - [ ] 9.1 Boxing stats queries + tests

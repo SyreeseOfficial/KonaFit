@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { View, Text, TouchableOpacity, FlatList, RefreshControl, Alert, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { ChevronLeft, ChevronRight, MapPin, Search } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, MapPin, Plus, Search } from "lucide-react-native";
 import { getWorkoutHistory, type WorkoutSummary, type WorkoutType } from "../src/db/historyQueries";
 import { deleteWorkout } from "../src/db/workoutQueries";
 import { formatDuration, formatShortDate, formatVolume } from "../src/utils/exportUtils";
@@ -109,6 +109,9 @@ export default function HistoryScreen() {
             </Text>
           )}
         </View>
+        <TouchableOpacity onPress={() => router.push("/boxing/quick-add" as never)} hitSlop={8} activeOpacity={0.7} accessibilityLabel="Log past boxing session">
+          <Plus size={22} color="#94A3B8" />
+        </TouchableOpacity>
       </View>
 
       <View className="flex-row mx-5 mt-3" style={{ gap: 8 }}>
