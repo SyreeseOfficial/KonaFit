@@ -6,6 +6,20 @@ This chronological ledger tracks major features, structural database migrations,
 
 ---
 
+### 2026-10-30 — Boxing data foundation (migrations 13-14, queries, export v2)
+
+* **Status:** Implemented (Phase 1 of `BUILD_PLAN_BOXING.md`; no boxing UI yet)
+* **Scope:** Database / Stats / History / Export / Wipe
+* **Files:** `src/db/database.ts`, `src/db/boxingQueries.ts`, `src/types/boxing.ts`, `src/db/statsQueries.ts`, `insightQueries.ts`, `historyQueries.ts`, `exportJson.ts`, `wipe.ts`, `docs/export-schema.md`, tests in `src/__tests__/boxing.test.ts` and `db.test.ts`
+* **Changes Executed:**
+  * Migration 13: `workouts.type` (default `lift`), `rpe`, `session_tags`, index on `(type, finished_at)`. Migration 14: `boxing_rounds` (cascades with its workout) and `boxing_focus_chips` seeded with the 13 defaults.
+  * Boxing sessions are `workouts` rows with zero sets, written with their rounds in one transaction at finish. Every lift-only query that scans `workouts` now filters `type = 'lift'`; queries that go through `logged_sets` already excluded them. Tests assert lift numbers are identical with boxing rows present.
+  * `getWorkoutHistory` takes an optional `type`; `WorkoutSummary`/`WorkoutDetail` carry `type`. "Repeat last workout" skips boxing.
+  * Export is format v2 (adds both tables); wipe deletes rounds and resets chips to the defaults.
+* **Architectural Notes:** `type` is the extension point for running/sauna later. Streak and weekly-goal counts still need a ticked lift set and are widened in Step 7.4.
+
+---
+
 ### 2026-06-08 — Expanded Default Exercise Library (262 exercises)
 
 * **Status:** Implemented

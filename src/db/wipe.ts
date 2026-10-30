@@ -1,4 +1,4 @@
-import { getDatabase } from "./database";
+import { getDatabase, seedBoxingChips } from "./database";
 import { kvStore } from "../utils/kvStore";
 
 /** Delete all user data in one transaction (all or nothing). kv_store keys in `keepKeys` (settings) survive. */
@@ -9,6 +9,7 @@ export async function wipeAllData(keepKeys: string[]): Promise<void> {
       DELETE FROM logged_sets;
       DELETE FROM logged_exercises;
       DELETE FROM progress_photos;
+      DELETE FROM boxing_rounds;
       DELETE FROM workouts;
       DELETE FROM program_exercises;
       DELETE FROM program_days;
@@ -19,7 +20,9 @@ export async function wipeAllData(keepKeys: string[]): Promise<void> {
       DELETE FROM goals;
       DELETE FROM exercises WHERE is_custom = 1;
       UPDATE exercises SET use_count = 0;
+      DELETE FROM boxing_focus_chips;
     `);
+    await seedBoxingChips(db); // chips go back to the 13 defaults rather than empty
     await db.runAsync(
       `DELETE FROM kv_store WHERE key NOT IN (${keepKeys.map(() => "?").join(",")})`,
       keepKeys

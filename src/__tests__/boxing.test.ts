@@ -174,3 +174,30 @@ describe("misc workouts reads ignore boxing rows", () => {
     expect(await adapter.getAllAsync("SELECT 1 FROM workouts WHERE id = ?", [box])).toHaveLength(1);
   });
 });
+
+describe("export and wipe cover boxing", () => {
+  it("export has the boxing tables and workout type", async () => {
+    const { q } = await fresh();
+    const id = await q.saveBoxingSession(session({ rounds: rounds(2) }));
+    const { buildFullExport } = await import("../db/exportJson");
+    const out = await buildFullExport("1.0.0");
+    expect(out.formatVersion).toBe(2);
+    expect(out.tables.boxing_rounds).toHaveLength(2);
+    expect(out.tables.boxing_focus_chips).toHaveLength(13);
+    expect(out.tables.workouts.find((w) => w.id === id)).toMatchObject({ type: "boxing", rpe: 7 });
+  });
+
+  it("wipe removes boxing sessions and resets chips to the 13 defaults", async () => {
+    const { adapter, q } = await fresh();
+    await q.saveBoxingSession(session());
+    await adapter.runAsync("INSERT INTO boxing_focus_chips (name, group_name, order_index) VALUES ('Slip', 'Movement', 99)");
+    await adapter.runAsync("UPDATE boxing_focus_chips SET is_hidden = 1, name = 'Renamed' WHERE name = 'Jab'");
+    await (await import("../db/wipe")).wipeAllData([]);
+    expect(await adapter.getAllAsync("SELECT 1 FROM boxing_rounds")).toHaveLength(0);
+    expect(await adapter.getAllAsync("SELECT 1 FROM workouts")).toHaveLength(0);
+    const chips = await q.getFocusChips();
+    expect(chips).toHaveLength(13);
+    expect(chips.map((c) => c.name)).toContain("Jab");
+    expect(chips.every((c) => c.isDefault)).toBe(true);
+  });
+});

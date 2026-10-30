@@ -107,7 +107,7 @@ Tick as you go. Each line = one commit.
 - [x] 1.5 Audit: `insightQueries.ts`
 - [x] 1.6 Audit: `historyQueries.ts` + `workoutQueries.ts`
 - [x] 1.7 Audit: `goalQueries.ts`, `programQueries.ts`, `app/_layout.tsx`, `train.tsx` reads
-- [ ] 1.8 Export, import compat, and wipe
+- [x] 1.8 Export, import compat, and wipe
 
 **Phase 2: Timer engine (no UI)**
 - [ ] 2.1 Pure timer state machine + tests

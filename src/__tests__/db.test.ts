@@ -756,7 +756,7 @@ describe("features round", () => {
     await addWorkout(adapter, { "Pull-Up": [{ w: 10, r: 5 }] });
     const { buildFullExport } = await import("../db/exportJson");
     const out = await buildFullExport("1.2.3");
-    expect(out).toMatchObject({ format: "konafit-export", formatVersion: 1, appVersion: "1.2.3" });
+    expect(out).toMatchObject({ format: "konafit-export", formatVersion: 2, appVersion: "1.2.3" });
     expect(out.schemaVersion).toBe((await adapter.getFirstAsync<{ user_version: number }>("PRAGMA user_version"))!.user_version);
     expect(out.tables.logged_sets).toHaveLength(1);
     expect(Object.keys(out.tables)).toEqual(expect.arrayContaining(["workouts", "readiness_checkins", "programs", "goals"]));
