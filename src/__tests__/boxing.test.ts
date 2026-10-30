@@ -2,7 +2,7 @@
 import { setupDb } from "./helpers/sqlite";
 import type { BoxingSession } from "../types/boxing";
 import { createTimer } from "../utils/boxingTimer";
-import { serializeSnapshot, parseSnapshot } from "../utils/boxingSnapshot";
+import { serializeSnapshot, parseSnapshot, updateRoundLog } from "../utils/boxingSnapshot";
 import { serializeSession, parseSession } from "../utils/sessionReducers";
 
 async function fresh() {
@@ -238,5 +238,25 @@ describe("boxing snapshot", () => {
       JSON.stringify({ ...good, roundLog: "x" }),
     ];
     for (const b of bad) expect(parseSnapshot(b)).toBeNull();
+  });
+});
+
+describe("round log carry-over", () => {
+  const blank = () => Array.from({ length: 4 }, () => ({ rpe: null as number | null, focusTags: [] as number[], focusNote: "" }));
+
+  it("chips picked for a round pre-select for the untouched rounds after it", () => {
+    const log = updateRoundLog(blank(), 0, { focusTags: [1, 2] });
+    expect(log.map((e) => e.focusTags)).toEqual([[1, 2], [1, 2], [1, 2], [1, 2]]);
+  });
+  it("stops at a round the user changed on its own, and never touches earlier rounds", () => {
+    let log = updateRoundLog(blank(), 0, { focusTags: [1] });
+    log = updateRoundLog(log, 2, { focusTags: [5] }); // round 3 diverges (and carries to round 4)
+    log = updateRoundLog(log, 1, { focusTags: [1, 3] }); // round 2 changes: round 3 diverged, so it keeps [5]
+    expect(log.map((e) => e.focusTags)).toEqual([[1], [1, 3], [5], [5]]);
+  });
+  it("rpe and notes are per round only", () => {
+    const log = updateRoundLog(blank(), 1, { rpe: 8, focusNote: "sharp" });
+    expect(log.map((e) => e.rpe)).toEqual([null, 8, null, null]);
+    expect(log.map((e) => e.focusNote)).toEqual(["", "sharp", "", ""]);
   });
 });

@@ -129,7 +129,7 @@ Tick as you go. Each line = one commit.
 
 **Phase 5: In-session logging**
 - [x] 5.1 Round RPE row + focus chips component
-- [ ] 5.2 Rest-time prompt + carry-over
+- [x] 5.2 Rest-time prompt + carry-over
 
 **Phase 6: Finish + recap**
 - [ ] 6.1 Finish sheet (overall RPE, tags, name) + save

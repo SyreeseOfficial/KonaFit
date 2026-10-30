@@ -17,6 +17,21 @@ export type BoxingSnapshot = {
   tagsDraft: string[];
 };
 
+const sameTags = (a: number[], b: number[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+/**
+ * Applies `patch` to round `index`. If it changes the focus chips, later rounds that still hold an untouched copy of the old
+ * chips follow along (so tapping round 1's chips pre-selects them for round 2, 3, ...), stopping at the first round the user
+ * changed on its own.
+ */
+export function updateRoundLog(log: RoundLogEntry[], index: number, patch: Partial<RoundLogEntry>): RoundLogEntry[] {
+  const out = log.map((e, i) => (i === index ? { ...e, ...patch } : e));
+  if (!patch.focusTags) return out;
+  const old = log[index].focusTags;
+  for (let j = index + 1; j < out.length && sameTags(out[j].focusTags, old); j++) out[j] = { ...out[j], focusTags: patch.focusTags };
+  return out;
+}
+
 export const serializeSnapshot = (s: Omit<BoxingSnapshot, "kind" | "v">): string =>
   JSON.stringify({ kind: "boxing", v: BOXING_SNAPSHOT_VERSION, ...s });
 

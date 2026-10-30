@@ -5,7 +5,7 @@ import {
   type TimerSetup, type TimerState,
 } from "../utils/boxingTimer";
 import { cues, loadCueSettings } from "../utils/boxingCues";
-import { saveSnapshot, loadSnapshot, clearSnapshot, type RoundLogEntry } from "../utils/boxingSnapshot";
+import { saveSnapshot, loadSnapshot, clearSnapshot, updateRoundLog, type RoundLogEntry } from "../utils/boxingSnapshot";
 
 const TICK_MS = 250;
 
@@ -93,7 +93,7 @@ export function useBoxingSession(newSetup: TimerSetup | null) {
   const setRoundLog = useCallback((index: number, patch: Partial<RoundLogEntry>) => {
     const cur = ref.current;
     if (!cur) return;
-    commit({ ...cur, roundLog: cur.roundLog.map((e, i) => (i === index ? { ...e, ...patch } : e)) });
+    commit({ ...cur, roundLog: updateRoundLog(cur.roundLog, index, patch) });
   }, [commit]);
 
   const setTagsDraft = useCallback((tags: string[]) => {
