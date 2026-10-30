@@ -456,3 +456,72 @@ describe("quick add", () => {
     expect(await q.getLastBoxingSetup()).toEqual({ rounds: 6, workSec: 180, restSec: 60 });
   });
 });
+
+describe("boxing stats", () => {
+  it("empty DB: no buckets, no sessions, no NaN", async () => {
+    await fresh();
+    const bs = await import("../db/boxingStats");
+    expect(await bs.getBoxingBuckets("week")).toEqual([]);
+    expect(await bs.getBoxingBuckets("month")).toEqual([]);
+    expect(await bs.hasBoxingSessions()).toBe(false);
+    expect(bs.rpeTrend([])).toEqual([]);
+  });
+
+  it("buckets per week and month with rounds, minutes, sessions and avg RPE", async () => {
+    const { q } = await fresh();
+    const bs = await import("../db/boxingStats");
+    const t = nowSecs();
+    const rp = (n: number, rpe: number | null) => rounds(n).map((r) => ({ ...r, rpe }));
+    await q.saveBoxingSession(session({ startedAt: t - 1, finishedAt: t, durationSeconds: 600, rounds: rp(3, 6) }));
+    await q.saveBoxingSession(session({ startedAt: t - 2, finishedAt: t, durationSeconds: 1200, rounds: rp(5, 8) }));
+    await q.saveBoxingSession(session({ startedAt: t - 15 * DAY, finishedAt: t - 15 * DAY + 60, durationSeconds: 900, rpe: 5, rounds: rp(4, null) }));
+    const weeks = await bs.getBoxingBuckets("week", 12);
+    expect(weeks).toHaveLength(2);
+    expect(weeks[0]).toMatchObject({ rounds: 4, minutes: 15, sessions: 1, avgRpe: 5 }); // no round RPEs -> overall
+    expect(weeks[1]).toMatchObject({ rounds: 8, minutes: 30, sessions: 2, avgRpe: 7 });
+    expect(bs.roundsTrend(weeks).map((p) => p.y)).toEqual([4, 8]);
+    expect(bs.minutesTrend(weeks).map((p) => p.y)).toEqual([15, 30]);
+    expect(bs.rpeTrend(weeks).map((p) => p.y)).toEqual([5, 7]);
+    expect(await bs.hasBoxingSessions()).toBe(true);
+    const months = await bs.getBoxingBuckets("month", 12);
+    expect(months.reduce((a, m) => a + m.rounds, 0)).toBe(12);
+  });
+});
+
+describe("training load", () => {
+  it("sessionLoad: overall RPE first, else average, else excluded", async () => {
+    const bs = await import("../db/boxingStats");
+    await fresh();
+    expect(bs.sessionLoad({ rpe: 8, avgRpe: 5, durationSec: 3600 })).toBe(480);
+    expect(bs.sessionLoad({ rpe: null, avgRpe: 5, durationSec: 1800 })).toBe(150);
+    expect(bs.sessionLoad({ rpe: null, avgRpe: null, durationSec: 3600 })).toBeNull();
+    expect(bs.sessionLoad({ rpe: 7, avgRpe: null, durationSec: 0 })).toBeNull();
+    expect(bs.sessionLoad({ rpe: 7, avgRpe: null, durationSec: null })).toBeNull();
+  });
+  it("change % is null (not Infinity/NaN) when last week is empty", async () => {
+    const bs = await import("../db/boxingStats");
+    await fresh();
+    expect(bs.loadChangePct(500, 0)).toBeNull();
+    expect(bs.loadChangePct(0, 0)).toBeNull();
+    expect(bs.loadChangePct(112, 100)).toBe(12);
+    expect(bs.loadChangePct(50, 100)).toBe(-50);
+  });
+  it("sums lifting (set RPE) and boxing this week vs last week from the DB", async () => {
+    const { adapter, q } = await fresh();
+    const bs = await import("../db/boxingStats");
+    const mon = (await import("../db/statsQueries")).weekStartSecs();
+    // this week: lift with set RPE 8 for 60 min = 480; boxing overall 6 for 30 min = 180; session with no RPE = excluded
+    const lift = await addLift(adapter, mon + 3600);
+    await adapter.runAsync("UPDATE logged_sets SET rpe = 8");
+    await adapter.runAsync("UPDATE workouts SET duration_seconds = 3600 WHERE id = ?", [lift]);
+    await q.saveBoxingSession(session({ startedAt: mon + 7200, finishedAt: mon + 9000, durationSeconds: 1800, rpe: 6, rounds: rounds(2) }));
+    await q.saveBoxingSession(session({ startedAt: mon + 8000, finishedAt: mon + 9000, durationSeconds: 1800, rpe: null, rounds: rounds(2) }));
+    // last week: boxing round RPE 5 x 20 min = 100
+    await q.saveBoxingSession(session({ startedAt: mon - 2 * DAY, finishedAt: mon - 2 * DAY + 1200, durationSeconds: 1200, rpe: null, rounds: rounds(2).map((r) => ({ ...r, rpe: 5 })) }));
+    expect(await bs.getTrainingLoad()).toEqual({ thisWeek: 660, lastWeek: 100, changePct: 560 });
+  });
+  it("no sessions at all: zeros and null change", async () => {
+    await fresh();
+    expect(await (await import("../db/boxingStats")).getTrainingLoad()).toEqual({ thisWeek: 0, lastWeek: 0, changePct: null });
+  });
+});

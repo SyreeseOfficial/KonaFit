@@ -146,9 +146,9 @@ Tick as you go. Each line = one commit.
 - [x] 8.2 Quick-add past session
 
 **Phase 9: Stats**
-- [ ] 9.1 Boxing stats queries + tests
+- [x] 9.1 Boxing stats queries + tests
 - [ ] 9.2 Boxing section on Stats
-- [ ] 9.3 Weekly training load query + tests
+- [x] 9.3 Weekly training load query + tests
 - [ ] 9.4 Weekly load section on Stats
 
 **Phase 10: Goals**
