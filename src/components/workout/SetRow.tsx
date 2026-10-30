@@ -87,7 +87,7 @@ export function SetRow({ set, bodyweight, ghost, prevSet, isNext, onUpdate, onCo
   const chipText = "font-mono-medium text-text-primary dark:text-white text-xs";
 
   return (
-    <View className={`border-b border-surface-2 dark:border-zinc-800 ${isNext && !completed ? "bg-blue-50 dark:bg-blue-950/40" : ""}`}>
+    <View className="border-b border-surface-2 dark:border-zinc-800">
     <View
       className={`flex-row items-center px-3 py-1 ${completed ? "opacity-50" : ""}`}
     >
@@ -115,8 +115,6 @@ export function SetRow({ set, bodyweight, ghost, prevSet, isNext, onUpdate, onCo
       {/* Lbs */}
       <TextInput
         className={`${inputBase} w-16 mr-1.5`}
-        placeholder={bodyweight ? "+lbs" : "lbs"}
-        placeholderTextColor="#94A3B8"
         value={set.weightLbs}
         onChangeText={(v) => { const c = cleanDecimal(v, MAX_WEIGHT, bodyweight); if (c !== null) onUpdate({ weightLbs: c }); }}
         keyboardType={bodyweight ? "numbers-and-punctuation" : "decimal-pad"}
@@ -133,8 +131,6 @@ export function SetRow({ set, bodyweight, ghost, prevSet, isNext, onUpdate, onCo
       <TextInput
         ref={repsRef}
         className={`${inputBase} w-12 mr-1.5`}
-        placeholder="reps"
-        placeholderTextColor="#94A3B8"
         value={set.reps}
         onChangeText={(v) => { const c = cleanInt(v, MAX_REPS); if (c !== null) onUpdate({ reps: c }); }}
         keyboardType="number-pad"
@@ -151,8 +147,6 @@ export function SetRow({ set, bodyweight, ghost, prevSet, isNext, onUpdate, onCo
       <TextInput
         ref={rpeRef}
         className={`${inputBase} w-10 mr-1.5`}
-        placeholder="RPE"
-        placeholderTextColor="#94A3B8"
         value={set.rpe}
         onChangeText={(v) => { const c = cleanDecimal(v, 10); if (c !== null) onUpdate({ rpe: c }); }}
         keyboardType="decimal-pad"

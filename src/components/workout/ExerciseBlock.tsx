@@ -89,21 +89,16 @@ export function ExerciseBlock({
   const setsDone = exercise.sets.length > 0 && doneCount === exercise.sets.length;
   const allDone = setsDone || !!exercise.isDone;
 
-  // Focus follows the lifter: open when it becomes the current exercise, fold when finished.
+  // Focus follows the lifter: open when it becomes the current exercise.
   useEffect(() => {
     if (reorderMode) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     if (isCurrent) setCollapsed(false);
-    else if (allDone) setCollapsed(true);
-  }, [isCurrent, allDone]);
+  }, [isCurrent]);
 
   return (
     <View
-      className={`mb-3 mx-5 rounded-2xl overflow-hidden ${
-        isCurrent && !reorderMode
-          ? "bg-surface dark:bg-zinc-900 border border-crimson dark:border-blue-500"
-          : "bg-surface dark:bg-zinc-900 border border-transparent"
-      }`}
+      className="mb-3 mx-5 rounded-2xl overflow-hidden bg-surface dark:bg-zinc-900"
     >
       {/* ── Exercise header ───────────── */}
       <View className="flex-row items-center justify-between px-4 pt-3 pb-2">
