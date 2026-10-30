@@ -1,7 +1,7 @@
 import { parseFlag, parseGetReady, parseLastSetup, DEFAULT_BOXING_PLAN, BOXING_PRESERVED_KEYS } from "../utils/boxingSettings";
 import {
   createTimer, advance, pause, resume, skipRest, addSeconds, endEarly, remainingSec, currentPhase, warningDue,
-  buildPhases, roundResults, activeSeconds, plannedTotalSec, validateSetup, type TimerSetup,
+  buildPhases, parseClock, roundResults, activeSeconds, plannedTotalSec, validateSetup, type TimerSetup,
 } from "../utils/boxingTimer";
 jest.mock("expo-sqlite", () => ({})); // boxingSettings -> kvStore -> database; these tests only use the pure parsers
 
@@ -27,6 +27,13 @@ describe("phases", () => {
     expect(validateSetup({ ...std, workSec: 9 })).not.toBeNull();
     expect(validateSetup({ ...std, getReadySec: 61 })).not.toBeNull();
     expect(validateSetup({ ...std, restSec: 0 })).toBeNull();
+  });
+});
+
+describe("parseClock", () => {
+  it("reads m:ss and plain seconds, NaN otherwise", () => {
+    expect([parseClock("3:00"), parseClock("0:30"), parseClock(" 2:5 "), parseClock("90"), parseClock("")]).toEqual([180, 30, 125, 90, NaN]);
+    expect([parseClock("abc"), parseClock("1:2:3"), parseClock("-5")].every(Number.isNaN)).toBe(true);
   });
 });
 

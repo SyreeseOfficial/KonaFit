@@ -117,7 +117,7 @@ Tick as you go. Each line = one commit.
 
 **Phase 3: Start flow**
 - [x] 3.1 Start picker on Train (Lift / Box)
-- [ ] 3.2 Boxing setup screen
+- [x] 3.2 Boxing setup screen
 - [ ] 3.3 Repeat-last-setup shortcut
 
 **Phase 4: Timer screen**

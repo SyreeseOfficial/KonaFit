@@ -46,6 +46,13 @@ export function validateSetup(s: TimerSetup): string | null {
   return null;
 }
 
+/** "3:00" -> 180, "90" -> 90 (plain numbers are seconds); anything else is NaN. */
+export function parseClock(text: string): number {
+  const m = /^\s*(\d{1,3})\s*:\s*(\d{1,2})\s*$/.exec(text);
+  if (m) return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  return /^\s*\d{1,5}\s*$/.test(text) ? parseInt(text, 10) : NaN;
+}
+
 /** getReady (skipped when 0), then work 1, rest 1, ..., work N. No rest after the last round, and no zero-length rests. */
 export function buildPhases(s: TimerSetup): Phase[] {
   const phases: Phase[] = [];
