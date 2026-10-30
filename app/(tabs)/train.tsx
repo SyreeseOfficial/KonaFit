@@ -11,7 +11,7 @@ import {
 import { WeeklyGoal } from "../../src/components/train/WeeklyGoal";
 import { GoalsSection } from "../../src/components/train/GoalsSection";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Plus, Settings, ChevronRight, MoreHorizontal, Copy, Archive, Trash2 } from "lucide-react-native";
+import { Plus, X, ArrowUpDown, Settings, ChevronRight, MoreHorizontal, Copy, Archive, Trash2 } from "lucide-react-native";
 import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
@@ -585,48 +585,42 @@ export default function TrainScreen() {
           />
         ))}
 
-        {/* Add Exercise */}
-        <TouchableOpacity
-          onPress={() => setExerciseSheetOpen(true)}
-          className="mx-5 mt-2 py-4 border border-surface-3 dark:border-zinc-700 rounded-2xl flex-row items-center justify-center gap-2 bg-surface dark:bg-zinc-900"
-          activeOpacity={0.7}
-        >
-          <Plus size={16} color="#64748B" />
-          <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">
-            Add Exercise
-          </Text>
-        </TouchableOpacity>
-
-        {/* Reorder toggle */}
-        <TouchableOpacity
-          onPress={() => setReorderMode((r) => !r)}
-          className={`mx-5 mt-2 py-4 border rounded-2xl flex-row items-center justify-center gap-2 ${
-            reorderMode
-              ? "border-crimson dark:border-blue-500 bg-blue-50 dark:bg-blue-950"
-              : "border-surface-3 dark:border-zinc-700 bg-surface dark:bg-zinc-900"
-          }`}
-          activeOpacity={0.7}
-        >
-          <Text className={`font-montserrat-semibold text-sm ${reorderMode ? "text-crimson dark:text-blue-400" : "text-text-secondary dark:text-zinc-400"}`}>
-            {reorderMode ? "Done Reordering" : "↕  Reorder Exercises"}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Cancel workout */}
-        <TouchableOpacity
-          onPress={() =>
-            Alert.alert("Cancel Workout", "Delete this workout and discard all sets?", [
-              { text: "Keep Going", style: "cancel" },
-              { text: "Cancel Workout", style: "destructive", onPress: discardWorkout },
-            ])
-          }
-          className="mx-5 mt-2 mb-2 py-4 border border-surface-3 dark:border-zinc-700 rounded-2xl flex-row items-center justify-center bg-surface dark:bg-zinc-900"
-          activeOpacity={0.7}
-        >
-          <Text className="font-montserrat-semibold text-rose-500 text-sm">
-            Cancel Workout
-          </Text>
-        </TouchableOpacity>
+        {/* Add / reorder / cancel */}
+        <View className="flex-row gap-2 mx-5 mt-2 mb-2">
+          <TouchableOpacity
+            onPress={() => setExerciseSheetOpen(true)}
+            accessibilityLabel="Add exercise"
+            className="flex-1 h-11 border border-surface-3 dark:border-zinc-700 rounded-xl items-center justify-center bg-surface dark:bg-zinc-900"
+            activeOpacity={0.7}
+          >
+            <Plus size={20} color="#64748B" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setReorderMode((r) => !r)}
+            accessibilityLabel={reorderMode ? "Done reordering" : "Reorder exercises"}
+            className={`flex-1 h-11 border rounded-xl items-center justify-center ${
+              reorderMode
+                ? "border-crimson dark:border-blue-500 bg-blue-50 dark:bg-blue-950"
+                : "border-surface-3 dark:border-zinc-700 bg-surface dark:bg-zinc-900"
+            }`}
+            activeOpacity={0.7}
+          >
+            <ArrowUpDown size={20} color={reorderMode ? "#3B82F6" : "#64748B"} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              Alert.alert("Cancel Workout", "Delete this workout and discard all sets?", [
+                { text: "Keep Going", style: "cancel" },
+                { text: "Cancel Workout", style: "destructive", onPress: discardWorkout },
+              ])
+            }
+            accessibilityLabel="Cancel workout"
+            className="flex-1 h-11 border border-surface-3 dark:border-zinc-700 rounded-xl items-center justify-center bg-surface dark:bg-zinc-900"
+            activeOpacity={0.7}
+          >
+            <X size={20} color="#F43F5E" />
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {pendingUndo && (
