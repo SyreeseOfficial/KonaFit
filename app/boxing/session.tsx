@@ -7,14 +7,13 @@ import { useBoxingSession } from "../../src/hooks/useBoxingSession";
 import { setupFromParams } from "../../src/utils/boxingRoute";
 import { currentPhase, remainingSec, sessionProgress, roundResults } from "../../src/utils/boxingTimer";
 import { RoundLogCard } from "../../src/components/boxing/RoundLogCard";
-import { getFocusChips } from "../../src/db/boxingQueries";
+import { getFocusChips, saveBoxingSession } from "../../src/db/boxingQueries";
 import type { FocusChip } from "../../src/types/boxing";
 import type { RoundLogEntry } from "../../src/utils/boxingSnapshot";
 import { FinishSheet } from "../../src/components/boxing/FinishSheet";
 import { toBoxingSession, type FinishInput } from "../../src/utils/boxingSave";
 import { boxingName } from "../../src/utils/boxingNames";
 import { APP_VERSION } from "../../src/utils/appVersion";
-import { saveBoxingSession } from "../../src/db/boxingQueries";
 import { TimerControls } from "../../src/components/boxing/TimerControls";
 import { TimerFace, PHASE_BG } from "../../src/components/boxing/TimerFace";
 
