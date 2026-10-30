@@ -22,7 +22,6 @@ import { useRestTimer } from "../../src/hooks/useRestTimer";
 import { WorkspaceHeader } from "../../src/components/workout/WorkspaceHeader";
 import { ExerciseBlock } from "../../src/components/workout/ExerciseBlock";
 import { AddExerciseSheet } from "../../src/components/workout/AddExerciseSheet";
-import { RestTimerBar } from "../../src/components/workout/RestTimerBar";
 import { UndoSnackbar } from "../../src/components/workout/UndoSnackbar";
 import { LocationSheet } from "../../src/components/workout/LocationSheet";
 import { saveWorkoutLocation } from "../../src/db/locationQueries";
@@ -544,6 +543,7 @@ export default function TrainScreen() {
         onFinish={handleFinish}
         onTools={() => router.push("/tools")}
         onCamera={handleCameraPress}
+        restTimer={restTimer}
       />
 
       <ScrollView
@@ -632,8 +632,6 @@ export default function TrainScreen() {
       {pendingUndo && (
         <UndoSnackbar id={pendingUndo.id} label={pendingUndo.label} onUndo={runUndo} onExpire={clearUndo} />
       )}
-
-      <RestTimerBar timer={restTimer} />
 
       <AddExerciseSheet
         visible={exerciseSheetOpen}

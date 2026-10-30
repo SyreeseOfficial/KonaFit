@@ -2,12 +2,15 @@ import { useState, useCallback } from "react";
 import { View, Text, TouchableOpacity, Modal, Pressable } from "react-native";
 import { Calculator, Pause, Play, RotateCcw, Camera, X, Minus, Plus } from "lucide-react-native";
 import { useWorkoutTimer } from "../../hooks/useWorkoutTimer";
+import { RestTimerButton } from "./RestTimerBar";
+import type { useRestTimer } from "../../hooks/useRestTimer";
 
 type Props = {
   startedAt: number;
   onFinish: () => void;
   onTools?: () => void;
   onCamera?: () => void;
+  restTimer: ReturnType<typeof useRestTimer>;
 };
 
 const MAX_MINS = 360;
@@ -22,7 +25,7 @@ const minuteLabel = (totalMins: number): string => {
 
 const ADJUSTMENTS = [-10, -5, -1, 1, 5, 10] as const;
 
-export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Props) {
+export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera, restTimer }: Props) {
   const { elapsed, formattedTime, isPaused, pause, resume, reset, setElapsed } = useWorkoutTimer(startedAt);
   const [adjustOpen, setAdjustOpen] = useState(false);
   // Target minutes shown in the picker — initialised when modal opens
@@ -44,64 +47,64 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera }: Prop
 
   return (
     <>
-      <View className="flex-row items-center justify-between px-5 pt-4 pb-4 border-b border-surface-2 dark:border-zinc-800 bg-surface dark:bg-zinc-900">
+      <View className="flex-row items-center gap-3 px-5 pt-4 pb-4 border-b border-surface-2 dark:border-zinc-800 bg-surface dark:bg-zinc-900">
         <Text className="font-montserrat-bold text-text-primary dark:text-white text-2xl">
           Train
         </Text>
 
-        <View className="items-end gap-2">
-          <View className="flex-row items-center gap-3">
-            {onTools && (
-              <TouchableOpacity onPress={onTools} hitSlop={8} activeOpacity={0.7}>
-                <Calculator size={18} color="#94A3B8" />
-              </TouchableOpacity>
-            )}
-
-            {onCamera && (
-              <TouchableOpacity onPress={onCamera} hitSlop={8} activeOpacity={0.7}>
-                <Camera size={18} color="#94A3B8" />
-              </TouchableOpacity>
-            )}
-
-            {isPaused && (
-              <TouchableOpacity onPress={reset} hitSlop={8} activeOpacity={0.7}>
-                <RotateCcw size={16} color="#94A3B8" />
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              onPress={isPaused ? resume : pause}
-              hitSlop={8}
-              activeOpacity={0.7}
-            >
-              {isPaused ? (
-                <Play size={18} color="#2563EB" fill="#2563EB" />
-              ) : (
-                <Pause size={18} color="#94A3B8" />
-              )}
+        <View className="flex-row items-center gap-3 flex-1 justify-end">
+          {onTools && (
+            <TouchableOpacity onPress={onTools} hitSlop={8} activeOpacity={0.7}>
+              <Calculator size={18} color="#94A3B8" />
             </TouchableOpacity>
+          )}
 
-            <TouchableOpacity onPress={openAdjust} hitSlop={4} activeOpacity={0.7}>
-              <Text
-                className={`font-mono-medium text-xl tracking-wider ${
-                  isPaused ? "text-text-muted dark:text-zinc-500" : "text-text-primary dark:text-white"
-                }`}
-              >
-                {formattedTime}
-              </Text>
+          {onCamera && (
+            <TouchableOpacity onPress={onCamera} hitSlop={8} activeOpacity={0.7}>
+              <Camera size={18} color="#94A3B8" />
             </TouchableOpacity>
-          </View>
+          )}
+
+          <RestTimerButton timer={restTimer} />
+
+          {isPaused && (
+            <TouchableOpacity onPress={reset} hitSlop={8} activeOpacity={0.7}>
+              <RotateCcw size={16} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
-            onPress={onFinish}
-            className="bg-crimson dark:bg-blue-500 px-5 py-2 rounded-xl"
-            activeOpacity={0.85}
+            onPress={isPaused ? resume : pause}
+            hitSlop={8}
+            activeOpacity={0.7}
           >
-            <Text className="font-montserrat-bold text-white text-sm">
-              Finish
+            {isPaused ? (
+              <Play size={18} color="#2563EB" fill="#2563EB" />
+            ) : (
+              <Pause size={18} color="#94A3B8" />
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={openAdjust} hitSlop={4} activeOpacity={0.7}>
+            <Text
+              className={`font-mono-medium text-xl tracking-wider ${
+                isPaused ? "text-text-muted dark:text-zinc-500" : "text-text-primary dark:text-white"
+              }`}
+            >
+              {formattedTime}
             </Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          onPress={onFinish}
+          className="bg-crimson dark:bg-blue-500 px-4 py-2 rounded-xl"
+          activeOpacity={0.85}
+        >
+          <Text className="font-montserrat-bold text-white text-sm">
+            Finish
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Timer adjustment modal */}
