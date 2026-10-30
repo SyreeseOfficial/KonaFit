@@ -131,6 +131,21 @@ describe("migrations", () => {
     expect((await adapter.getFirstAsync<{ is_completed: number }>("SELECT is_completed FROM logged_sets"))!.is_completed).toBe(0);
   });
 
+  it("migration 13 leaves every existing workout as a lift and is safe to re-run", async () => {
+    const { adapter, init } = await fresh();
+    const id = await addWorkout(adapter, { "Barbell Bench Press": [{ w: 135, r: 5 }] }, { name: "Push" });
+    await adapter.execAsync(
+      "DROP INDEX idx_workouts_type_finished; ALTER TABLE workouts DROP COLUMN type; ALTER TABLE workouts DROP COLUMN rpe; ALTER TABLE workouts DROP COLUMN session_tags; PRAGMA user_version = 12");
+    await init();
+    for (const c of ["type", "rpe", "session_tags", "duration_seconds", "notes"]) expect(await columns(adapter, "workouts")).toContain(c);
+    const w = await adapter.getFirstAsync<{ type: string; name: string; duration_seconds: number; rpe: number | null }>(
+      "SELECT type, name, duration_seconds, rpe FROM workouts WHERE id = ?", [id]);
+    expect(w).toEqual({ type: "lift", name: "Push", duration_seconds: 3600, rpe: null });
+    expect(await adapter.getAllAsync("SELECT 1 FROM sqlite_master WHERE name = 'idx_workouts_type_finished'")).toHaveLength(1);
+    await init(); // second launch: no-op
+    expect(await version(adapter)).toBeGreaterThanOrEqual(13);
+  });
+
   it("from an old user_version only runs the migrations after it", async () => {
     const { adapter, init } = await fresh();
     await addWorkout(adapter, { "Barbell Bench Press": [{ w: 135, r: 5, done: false }], "Dip": [{ w: null, r: 10 }] });
@@ -726,7 +741,7 @@ describe("features round", () => {
     const { buildFullExport } = await import("../db/exportJson");
     const out = await buildFullExport("1.2.3");
     expect(out).toMatchObject({ format: "konafit-export", formatVersion: 1, appVersion: "1.2.3" });
-    expect(out.schemaVersion).toBe(12);
+    expect(out.schemaVersion).toBe((await adapter.getFirstAsync<{ user_version: number }>("PRAGMA user_version"))!.user_version);
     expect(out.tables.logged_sets).toHaveLength(1);
     expect(Object.keys(out.tables)).toEqual(expect.arrayContaining(["workouts", "readiness_checkins", "programs", "goals"]));
     expect(database).toBeTruthy();

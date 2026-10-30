@@ -140,6 +140,13 @@ const MIGRATIONS: ((database: SQLite.SQLiteDatabase) => Promise<void>)[] = [
        );`
     );
   },
+  // 13: activity type on workouts ('lift' | 'boxing'; old rows are lifts), session RPE and tags. duration_seconds and notes already exist.
+  async (database) => {
+    await addColumn(database, "workouts", "type", "TEXT NOT NULL DEFAULT 'lift'");
+    await addColumn(database, "workouts", "rpe", "INTEGER");
+    await addColumn(database, "workouts", "session_tags", "TEXT");
+    await database.execAsync("CREATE INDEX IF NOT EXISTS idx_workouts_type_finished ON workouts(type, finished_at)");
+  },
 ];
 
 async function runMigrations(database: SQLite.SQLiteDatabase) {
