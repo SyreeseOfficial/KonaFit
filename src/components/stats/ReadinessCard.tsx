@@ -12,32 +12,25 @@ const FIELDS: { key: keyof Readiness; label: string; low: string; high: string }
   { key: "mood", label: "Mood", low: "low", high: "high" },
 ];
 
-/** Daily 1-5 check-in (sleep, soreness, mood) with a trend and how workouts rated on high- vs low-readiness days. */
-export function ReadinessCard({ refreshKey }: { refreshKey?: number }) {
+/** The three 1-5 questions and the save button. Also used by the optional check-in before a boxing session. */
+export function ReadinessForm({ onSaved }: { onSaved?: () => void }) {
   const [value, setValue] = useState<Partial<Readiness>>({});
   const [saved, setSaved] = useState(false);
-  const [trend, setTrend] = useState<TrendPoint[]>([]);
-  const [split, setSplit] = useState<{ high: number | null; low: number | null }>({ high: null, low: null });
 
-  const load = () => {
-    getReadinessTrend().then(setTrend).catch(console.error);
-    getReadinessVsRating().then(setSplit).catch(console.error);
-  };
   useEffect(() => {
     getTodayReadiness().then((r) => { if (r) { setValue(r); setSaved(true); } }).catch(console.error);
   }, []);
-  useEffect(load, [refreshKey]);
 
   const complete = value.sleep != null && value.soreness != null && value.mood != null;
   const save = async () => {
     if (!complete) return;
     await saveReadiness(value as Readiness);
     setSaved(true);
-    load();
+    onSaved?.();
   };
 
   return (
-    <View className="bg-surface dark:bg-zinc-900 rounded-2xl p-4">
+    <View>
       {FIELDS.map((f) => (
         <View key={f.key} className="mb-3">
           <Text className="font-montserrat-semibold text-text-primary dark:text-white text-sm mb-1.5">
@@ -67,6 +60,24 @@ export function ReadinessCard({ refreshKey }: { refreshKey?: number }) {
           {saved ? "Saved for today" : "Save check-in"}
         </Text>
       </TouchableOpacity>
+    </View>
+  );
+}
+
+/** Daily 1-5 check-in (sleep, soreness, mood) with a trend and how workouts rated on high- vs low-readiness days. */
+export function ReadinessCard({ refreshKey }: { refreshKey?: number }) {
+  const [trend, setTrend] = useState<TrendPoint[]>([]);
+  const [split, setSplit] = useState<{ high: number | null; low: number | null }>({ high: null, low: null });
+
+  const load = () => {
+    getReadinessTrend().then(setTrend).catch(console.error);
+    getReadinessVsRating().then(setSplit).catch(console.error);
+  };
+  useEffect(load, [refreshKey]);
+
+  return (
+    <View className="bg-surface dark:bg-zinc-900 rounded-2xl p-4">
+      <ReadinessForm onSaved={load} />
       <View className="mt-4">
         <LineChart data={trend} formatY={(v) => v.toFixed(1)} emptyText="Check in on two days to see a trend" />
       </View>

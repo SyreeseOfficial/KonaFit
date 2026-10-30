@@ -158,7 +158,7 @@ Tick as you go. Each line = one commit.
 **Phase 11: Polish**
 - [x] 11.1 Boxing timer settings screen section
 - [x] 11.2 Focus chip manager (add / edit / hide)
-- [ ] 11.3 Readiness prompt before boxing
+- [x] 11.3 Readiness prompt before boxing
 
 **Phase 12: Close-out**
 - [ ] 12.1 Docs updates

@@ -15,7 +15,9 @@ import { StartSheet } from "../../src/components/train/StartSheet";
 import { loadSnapshot, clearSnapshot, type BoxingSnapshot } from "../../src/utils/boxingSnapshot";
 import { hasLastSetup, getLastSetup, getGetReadySec } from "../../src/utils/boxingSettings";
 import { sessionHref } from "../../src/utils/boxingRoute";
-import { formatTime } from "../../src/utils/time";
+import { formatTime, localDateKey } from "../../src/utils/time";
+import { ReadinessForm } from "../../src/components/stats/ReadinessCard";
+import { getTodayReadiness } from "../../src/db/insightQueries";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus, X, ArrowUpDown, Settings, ChevronRight, MoreHorizontal, Copy, Archive, Trash2 } from "lucide-react-native";
 import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
@@ -42,6 +44,7 @@ import type { Exercise } from "../../src/types/workout";
 import type { ProgramSummary } from "../../src/types/program";
 
 const LAST_PRS_KEY = "@konafit_last_prs";
+const READINESS_SKIP_KEY = "@konafit_boxing_readiness_skip_day"; // local day the pre-boxing check-in was skipped
 
 export default function TrainScreen() {
   const {
@@ -89,6 +92,22 @@ export default function TrainScreen() {
   const [exerciseSheetOpen, setExerciseSheetOpen] = useState(false);
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
   const [startSheetOpen, setStartSheetOpen] = useState(false);
+  const [readinessGo, setReadinessGo] = useState<(() => void) | null>(null); // boxing start waiting on the optional check-in
+  const [readinessSaved, setReadinessSaved] = useState(false);
+
+  // Once a day, before boxing: offer the readiness check-in. Skipping never blocks, and isn't asked again that day.
+  const withReadiness = useCallback(async (go: () => void) => {
+    const [today, skipped] = await Promise.all([getTodayReadiness(), kvStore.getItem(READINESS_SKIP_KEY)]).catch(() => [null, null] as const);
+    if (today || skipped === localDateKey(new Date())) return go();
+    setReadinessSaved(false);
+    setReadinessGo(() => go);
+  }, []);
+  const finishReadiness = useCallback(async () => {
+    const go = readinessGo;
+    setReadinessGo(null);
+    if (!readinessSaved) await kvStore.setItem(READINESS_SKIP_KEY, localDateKey(new Date())).catch(() => {});
+    go?.();
+  }, [readinessGo, readinessSaved]);
   const [boxingResume, setBoxingResume] = useState<BoxingSnapshot | null>(null);
   useEffect(() => { loadSnapshot().then(setBoxingResume).catch(() => {}); }, []); // killed mid-session? offer to pick up where it left off
   const [lastBoxing, setLastBoxing] = useState<{ rounds: number; workSec: number; restSec: number } | null>(null);
@@ -528,13 +547,26 @@ export default function TrainScreen() {
           </View>
         </Modal>
 
+        <Modal visible={readinessGo !== null} transparent animationType="slide" onRequestClose={finishReadiness}>
+          <View className="flex-1 bg-black/60 justify-end">
+            <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl px-5 pt-6 pb-10">
+              <Text className="font-montserrat-bold text-text-primary dark:text-white text-xl mb-1">Quick check-in</Text>
+              <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mb-5">How are you today? Optional, takes a few seconds.</Text>
+              <ReadinessForm onSaved={() => setReadinessSaved(true)} />
+              <TouchableOpacity onPress={finishReadiness} className="py-3.5 items-center mt-3" activeOpacity={0.7}>
+                <Text className="font-montserrat-semibold text-crimson dark:text-blue-400 text-base">{readinessSaved ? "Continue" : "Skip"}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
         <StartSheet
           visible={startSheetOpen}
           onClose={() => setStartSheetOpen(false)}
           onLift={() => startUnlessBoxingRunning(startWorkout)}
-          onBox={() => startUnlessBoxingRunning(() => router.push("/boxing/setup" as never))}
+          onBox={() => startUnlessBoxingRunning(() => withReadiness(() => router.push("/boxing/setup" as never)))}
           repeatLabel={lastBoxing ? `${lastBoxing.rounds} x ${formatTime(lastBoxing.workSec)} / ${formatTime(lastBoxing.restSec)}` : null}
-          onRepeat={() => lastBoxing && startUnlessBoxingRunning(async () => router.push(sessionHref({ ...lastBoxing, getReadySec: await getGetReadySec() })))}
+          onRepeat={() => lastBoxing && startUnlessBoxingRunning(() => withReadiness(async () => router.push(sessionHref({ ...lastBoxing, getReadySec: await getGetReadySec() }))))}
         />
 
         {/* Programs context menu */}
