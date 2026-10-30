@@ -13,7 +13,10 @@ export type WorkoutSummary = {
   total_volume: number;
   location: string | null;
   rating: number | null; // 1-5 "how did it feel", from the finish sheet
+  type: WorkoutType;
 };
+
+export type WorkoutType = "lift" | "boxing";
 
 export type SetRecord = {
   id: number;
@@ -39,6 +42,7 @@ export type ExerciseRecord = {
 export type WorkoutDetail = {
   id: number;
   name: string;
+  type: WorkoutType; // a boxing id gets an empty lift-shaped detail; callers branch on this (Step 7.2)
   started_at: number;
   finished_at: number;
   duration_seconds: number;
@@ -48,7 +52,7 @@ export type WorkoutDetail = {
 };
 
 /** Newest first. `exerciseQuery` keeps only workouts with an exercise whose name contains every word. */
-export async function getWorkoutHistory(limit = 20, offset = 0, exerciseQuery = ""): Promise<WorkoutSummary[]> {
+export async function getWorkoutHistory(limit = 20, offset = 0, exerciseQuery = "", type?: WorkoutType): Promise<WorkoutSummary[]> {
   const db = await getDatabase();
   const words = exerciseQuery.toLowerCase().replace(/[%_]/g, "").split(/\s+/).filter(Boolean);
   const filter = words.length
@@ -56,7 +60,7 @@ export async function getWorkoutHistory(limit = 20, offset = 0, exerciseQuery = 
     : "";
   return db.getAllAsync<WorkoutSummary>(
     `SELECT
-       w.id, w.name, w.started_at, w.finished_at, w.location, w.rating,
+       w.id, w.name, w.type, w.started_at, w.finished_at, w.location, w.rating,
        COALESCE(w.duration_seconds, 0) as duration_seconds,
        COUNT(DISTINCT le.id) as exercise_count,
        COUNT(DISTINCT ls.id) as set_count,
@@ -64,11 +68,11 @@ export async function getWorkoutHistory(limit = 20, offset = 0, exerciseQuery = 
      FROM workouts w
      LEFT JOIN logged_exercises le ON le.workout_id = w.id
      LEFT JOIN logged_sets ls ON ls.logged_exercise_id = le.id
-     WHERE w.finished_at IS NOT NULL ${filter}
+     WHERE w.finished_at IS NOT NULL ${type ? "AND w.type = ?" : ""} ${filter}
      GROUP BY w.id
      ORDER BY w.started_at DESC, w.id DESC
      LIMIT ? OFFSET ?`,
-    [...words.map((w) => `%${w}%`), limit, offset]
+    [...(type ? [type] : []), ...words.map((w) => `%${w}%`), limit, offset]
   );
 }
 
@@ -95,7 +99,7 @@ export async function getLastWorkoutExercises(): Promise<RepeatExercise[]> {
      LEFT JOIN logged_sets ls ON ls.logged_exercise_id = le.id
      WHERE le.exercise_id IS NOT NULL
        AND le.workout_id = (
-         SELECT id FROM workouts WHERE finished_at IS NOT NULL ORDER BY started_at DESC LIMIT 1
+         SELECT id FROM workouts WHERE finished_at IS NOT NULL AND type = 'lift' ORDER BY started_at DESC LIMIT 1
        )
      GROUP BY le.id
      ORDER BY le.order_index ASC`
@@ -106,10 +110,10 @@ export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail
   const db = await getDatabase();
 
   const workout = await db.getFirstAsync<{
-    id: number; name: string; started_at: number;
+    id: number; name: string; type: WorkoutType; started_at: number;
     finished_at: number; duration_seconds: number; location: string | null;
   }>(
-    "SELECT id, name, started_at, finished_at, duration_seconds, location FROM workouts WHERE id = ?",
+    "SELECT id, name, type, started_at, finished_at, duration_seconds, location FROM workouts WHERE id = ?",
     [workoutId]
   );
   if (!workout) return null;
@@ -150,6 +154,7 @@ export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail
   return {
     id: workout.id,
     name: workout.name,
+    type: workout.type,
     started_at: workout.started_at,
     finished_at: workout.finished_at,
     duration_seconds: workout.duration_seconds ?? 0,

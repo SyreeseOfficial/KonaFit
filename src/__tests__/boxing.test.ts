@@ -117,3 +117,41 @@ describe("stats queries ignore boxing rows", () => {
     expect(before.volume).toHaveLength(3);
   });
 });
+
+describe("insight + history queries ignore boxing rows", () => {
+  it("insights, history rows, repeat-last and PR/ghost lookups are unchanged; detail of a boxing id does not crash", async () => {
+    const { before, after } = await liftUnchangedByBoxing(async (ctx) => {
+      const ins = await import("../db/insightQueries");
+      const hist = await import("../db/historyQueries");
+      const w = await import("../db/workoutQueries");
+      const benchId = (await ctx.adapter.getFirstAsync<{ id: number }>("SELECT id FROM exercises WHERE name = 'Barbell Bench Press'"))!.id;
+      const lastLift = (await ctx.adapter.getFirstAsync<{ id: number }>("SELECT id FROM workouts WHERE type = 'lift' ORDER BY started_at DESC"))!.id;
+      return {
+        rvr: await ins.getReadinessVsRating(),
+        prior: await ins.getPriorVolumes(lastLift),
+        liftHistory: await hist.getWorkoutHistory(50, 0, "", "lift"),
+        search: await hist.getWorkoutHistory(50, 0, "bench"),
+        repeat: await hist.getLastWorkoutExercises(),
+        prs: await hist.getExercisePRs(benchId),
+        csv: await hist.getAllWorkoutDataForExport(),
+        ghost: await w.getGhostSets(benchId, lastLift),
+      };
+    });
+    expect(after).toEqual(before);
+    expect(before.liftHistory).toHaveLength(3);
+    expect(before.liftHistory.every((r) => r.type === "lift")).toBe(true);
+  });
+
+  it("'repeat last workout' skips a newer boxing session; type filter and detail work on boxing ids", async () => {
+    const { adapter, q } = await fresh();
+    const t = nowSecs();
+    await addLift(adapter, t - 2 * DAY);
+    const box = await q.saveBoxingSession(session({ startedAt: t - 3600, finishedAt: t - 1800, rounds: rounds(2) }));
+    const hist = await import("../db/historyQueries");
+    expect((await hist.getLastWorkoutExercises()).map((e) => e.exerciseName)).toEqual(["Barbell Bench Press"]);
+    expect((await hist.getWorkoutHistory(50, 0, "", "boxing")).map((r) => r.id)).toEqual([box]);
+    expect(await hist.getWorkoutHistory(50, 0)).toHaveLength(2);
+    const d = await hist.getWorkoutDetail(box);
+    expect(d).toMatchObject({ type: "boxing", exercises: [], totalVolume: 0 });
+  });
+});

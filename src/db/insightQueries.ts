@@ -118,7 +118,7 @@ export async function getReadinessVsRating(): Promise<{ high: number | null; low
     `SELECT (r.sleep + (6 - r.soreness) + r.mood) / 3.0 AS score, w.rating
      FROM workouts w
      JOIN readiness_checkins r ON r.day = date(w.started_at, 'unixepoch', 'localtime')
-     WHERE w.finished_at IS NOT NULL AND w.rating IS NOT NULL`
+     WHERE w.finished_at IS NOT NULL AND w.type = 'lift' AND w.rating IS NOT NULL`
   );
   const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
   return {
@@ -137,7 +137,7 @@ export async function getPriorVolumes(workoutId: number, n = 4): Promise<number[
      FROM workouts w
      LEFT JOIN logged_exercises le ON le.workout_id = w.id
      LEFT JOIN logged_sets ls ON ls.logged_exercise_id = le.id
-     WHERE w.finished_at IS NOT NULL
+     WHERE w.finished_at IS NOT NULL AND w.type = 'lift'
        AND w.name = (SELECT name FROM workouts WHERE id = ?)
        AND w.started_at < (SELECT started_at FROM workouts WHERE id = ?)
      GROUP BY w.id ORDER BY w.started_at DESC LIMIT ?`,
