@@ -6,6 +6,17 @@ This chronological ledger tracks major features, structural database migrations,
 
 ---
 
+### 2026-10-30 — Boxing release (v1)
+
+* **Status:** Implemented. Acceptance walk and open follow-ups are in `docs/BOXING_BUILD_NOTES.md`
+* **Scope:** Whole app (data, Train, History, Stats, Goals, Settings, export)
+* **Changes Executed:**
+  * Phases 1-12 of `docs/BUILD_PLAN_BOXING.md`: `workouts.type` + `boxing_rounds` + `boxing_focus_chips` (migrations 13-15), boxing timer and logging, recap, history/detail/edit/quick-add, week strip, streaks, Stats boxing + weekly load sections, boxing goals with date ranges, boxing settings, chip manager, optional readiness check-in, export format v2.
+  * Reused the readiness form (`ReadinessForm` split out of `ReadinessCard`) and the workout editor's date model (`src/utils/dateEdit.ts`) instead of duplicating them.
+* **Architectural Notes:** Boxing rows have no sets, so every lift-only query filters `type = 'lift'` and is tested against boxing rows. Audible bell is deferred (haptics-only) pending an audio-dependency decision.
+
+---
+
 ### 2026-10-30 — Boxing timer: engine, start flow, session screen
 
 * **Status:** Implemented (Phases 2-4 of `BUILD_PLAN_BOXING.md`); sound is haptics-only pending decision D1 in `BOXING_BUILD_NOTES.md`

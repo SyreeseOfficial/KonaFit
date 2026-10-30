@@ -93,3 +93,22 @@ v                               | id (PK)           |
 
 3. **No UI Interruption:** Database updates must run off-main-thread asynchronously to ensure the rest timer and layout transitions never stutter during intense training workflows.
 
+
+---
+
+## 🥊 Boxing (migrations 13-15)
+
+Boxing is a second `workouts.type` (`'lift'` default, `'boxing'`), so History, streaks, goals and export read one table. Running and sauna later are new `type` values with their own child tables.
+
+| Table / column | Notes |
+|---|---|
+| `workouts.type`, `rpe`, `session_tags` | Migration 13. `rpe` = overall 1-10, `session_tags` = JSON array (Heavy bag, Shadowboxing, Drills, Skipping). `duration_seconds` is active time (pauses excluded). Index on `(type, finished_at)`. |
+| `boxing_rounds` | Migration 14. One row per round: `round_number`, `rpe`, `focus_tags` (JSON of chip ids), `focus_note`, planned `work_seconds`/`rest_seconds` (last round has 0 rest), `actual_*` only where reality differed. Cascades with the workout. |
+| `boxing_focus_chips` | Migration 14. 13 seeded defaults (Punches, Movement, Intent, Technical); `is_hidden` hides, never deletes, so old rounds keep their labels. |
+| `goals.start_date`, `end_date` | Migration 15. Boxing goal types: `boxing_rounds`, `boxing_sessions`, `boxing_minutes` (this week's total inside the range) and `boxing_avg_rpe` (range average; `direction` `down` = ceiling, `up` = floor). |
+
+**Rules.** A boxing row has zero sets: every lift-only query on `workouts` filters `type = 'lift'` (tests in `src/__tests__/boxing.test.ts` assert lift numbers are unchanged with boxing rows present). The workout row and its rounds are written in one transaction at finish; a running session exists only as the kv snapshot.
+
+**Timer.** `src/utils/boxingTimer.ts` is a pure state machine (state in, state out, `now` passed in; no React). Phase times chain from the previous phase end, so a late `advance()` after backgrounding lands on the true round. `src/hooks/useBoxingSession.ts` is the thin shell (250ms tick, AppState catch-up, snapshot on every change).
+
+**Snapshot keys.** `@konafit_active_session_v1` (lifting) and `@konafit_active_boxing_v1` (boxing, `{kind: 'boxing', v: 1, ...}`). Neither parser accepts the other's string. Boxing settings: `@konafit_boxing_{bell_enabled,warning_enabled,get_ready_sec,last_setup,readiness_skip_day}`; the first four survive Wipe All Data.

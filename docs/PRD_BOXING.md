@@ -1,6 +1,6 @@
 # PRD: Boxing in KonaFit
 
-Status: Draft v1 (brainstorm complete, nothing built yet)
+Status: Built (v1 implemented per `BUILD_PLAN_BOXING.md`; open follow-ups in `BOXING_BUILD_NOTES.md`)
 Owner: Syreese Delos Santos
 Date: 2026-10-30
 Source: two ~30-question multiple-choice interview rounds plus the owner's opening thought dump. Every decision below traces to one of them. Section 15 lists what was explicitly declined so it doesn't creep back in.

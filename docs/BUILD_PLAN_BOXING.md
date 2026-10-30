@@ -161,7 +161,7 @@ Tick as you go. Each line = one commit.
 - [x] 11.3 Readiness prompt before boxing
 
 **Phase 12: Close-out**
-- [ ] 12.1 Docs updates
+- [x] 12.1 Docs updates
 - [ ] 12.2 Acceptance pass + cleanup
 
 ---

@@ -94,3 +94,13 @@ Tucked neatly into the daily habit loops, these lightweight parameter loggers in
   1. A beautifully formatted, unindented Markdown raw text string optimized for quick copying to text-based clipboards.
   2. A crisp, flat PNG image output displaying the session summary framed in the dark Obsidian / Crimson signature style.
 
+
+---
+
+## 🥊 Boxing in History, Stats and Goals
+
+* **History:** All / Lift / Boxing chips; boxing rows show rounds, duration and average RPE. The detail screen is a summary card with a collapsed round list.
+* **Week strip (Train):** Mon-Sun dots, blue for lifting, orange for boxing, both on a day with both.
+* **Streaks / weekly goal:** any finished lift (with a ticked set) or boxing session counts for the day and the week.
+* **Stats:** a **Boxing** section (rounds, minutes and average RPE per week or month; hidden until the first session) and a **Weekly load** section (session RPE x minutes across lifting and boxing, change vs last week, "n/a" when last week is empty). A session's RPE is its overall RPE, else the average of its set/round RPEs, else it is left out.
+* **Goals:** boxing goals (rounds, sessions or minutes per week; average RPE ceiling or floor) with a start and end date.

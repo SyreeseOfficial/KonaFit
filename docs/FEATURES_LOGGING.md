@@ -78,3 +78,15 @@ Every exercise block features a small, minimalist tactical menu trigger icon (ve
 * **Visual Callout:** Renders as a thin, highly legible numeric ticker or countdown banner directly over the footer bar using `JetBrains Mono` typography.
 * **Completion State:** Upon hitting `00:00`, the text turns flash-crimson, firing off a subtle hardware vibration pulse to signal the start of the next working set.
 
+
+---
+
+## 🥊 Boxing sessions
+
+* **Start:** Train's **Start** button opens a Lift / Box sheet (plus "Repeat last boxing" once one has been started). A running boxing snapshot counts as an in-progress session: starting anything else asks to resume or discard it, and on launch Train offers to resume it.
+* **Setup:** rounds, work, rest (m:ss or seconds) and a 0-60s get-ready countdown, with presets (3:00/1:00, 2:00/0:30, ...). The last values are remembered.
+* **Timer:** phase-colored full screen, pause/resume, skip rest (rest only), +30s, end early (keeps finished rounds). Bell and 10s warning cues, screen kept awake, true-time catch-up after backgrounding, resume after a kill. Sound is currently haptics-only (see `SPIKE_BOXING_SOUNDS.md`).
+* **Logging:** during rest an optional card logs the round just finished (RPE 1-10, focus chips, note); chips carry forward to later untouched rounds. Everything stays editable afterward.
+* **Finish:** overall RPE, session tags, name (Morning/Afternoon/Evening Boxing), notes; then a recap (RPE per round, work vs rest, focus per round, "harder/easier than usual" once there are 3 earlier sessions).
+* **Past sessions:** History **+** opens quick-add (date, rounds, work/rest or total time, RPE, tags). Finished sessions are fully editable from their detail screen (rounds can be added, removed, renumbered).
+* **Settings:** Settings > Boxing timer (bell, 10s warning, get-ready) and Focus chips (add, rename, hide). A once-a-day readiness check-in is offered before boxing and can be skipped.

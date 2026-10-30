@@ -53,3 +53,9 @@ Rules: every colored surface or text needs both a light and a `dark:` class. Har
 * **gutter:** 1rem (4px)
 * **margin-mobile:** 1.5rem (6px)
 
+
+---
+
+## 🥊 Boxing timer
+
+Phase colors reuse existing tokens: **work** = accent blue (`bg-crimson` / `dark:bg-blue-500`, white text), **rest** = neutral (`bg-surface-3` / `dark:bg-zinc-800`), **get ready** = amber (`bg-amber-500`, the PR badge color). The remaining time is 112px `mono-medium`, with a thin whole-session progress bar along the bottom edge. Controls are translucent black pills so they sit on any phase color. The only new color is `BOXING_DOT` (see the color table).

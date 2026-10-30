@@ -70,6 +70,12 @@ Then scan the QR code with your dev client app on your phone. The tunnel mode by
 * **Habit Tracker:** A stark, minimalist calendar grid dropping visual checkmarks on active training days.
 * **Lifetime Stats Grid:** Total lifted, workout count, current streak, and bodyweight tracking in `JetBrains Mono`.
 
+### Boxing (inside Train)
+
+* **Round Timer:** Rounds, work, rest and get-ready countdown with phase colors, pause, skip rest, +30s, end early, a 10s warning, and true-time catch-up after backgrounding or a kill.
+* **Round Logging:** Optional per-round RPE and focus chips; a recap with RPE per round and "harder than usual" comparison.
+* **Everywhere Else:** Boxing shows in History (All / Lift / Boxing), the week strip, streaks, Stats (boxing section and weekly training load), goals and the JSON export.
+
 ### 3. Tactical Tools (Calculators)
 
 * **Visual Plate Engine:** Instantly translates target weights into a proportional, color-coded graphic representation of an Olympic barbell sleeve.
