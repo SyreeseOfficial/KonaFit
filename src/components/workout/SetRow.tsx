@@ -41,6 +41,7 @@ type Props = {
   bodyweight?: boolean; // weight is added load: may be negative (assisted)
   ghost?: GhostSet;
   prevSet?: ActiveSet;
+  isNext?: boolean; // the set to do now
   onUpdate: (patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe" | "notes" | "setType">>) => void;
   onCommitEdit: () => void;
   onToggleComplete: () => void;
@@ -48,7 +49,7 @@ type Props = {
   onRemove: () => void;
 };
 
-export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit, onToggleComplete, onToggleWarmup, onRemove }: Props) {
+export function SetRow({ set, bodyweight, ghost, prevSet, isNext, onUpdate, onCommitEdit, onToggleComplete, onToggleWarmup, onRemove }: Props) {
   const completed = set.isCompleted;
   const [focused, setFocused] = useState<"weight" | "reps" | "rpe" | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
@@ -73,7 +74,7 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
     ? `${ghost.weightLbs} lb`
     : "—";
 
-  const inputBase = "h-11 bg-surface-2 dark:bg-zinc-800 text-center font-mono text-text-primary dark:text-white text-sm rounded-lg";
+  const inputBase = "h-12 bg-surface-2 dark:bg-zinc-800 text-center font-mono-medium text-text-primary dark:text-white text-base rounded-lg";
   const focusBorder = { borderWidth: 1, borderColor: useColorScheme() === "dark" ? "#3B82F6" : "#2563EB" };
 
   // Completed sets stay editable; re-run the PR check once the user leaves the field.
@@ -86,17 +87,17 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
   const chipText = "font-mono-medium text-text-primary dark:text-white text-xs";
 
   return (
-    <View className="border-b border-surface-2 dark:border-zinc-800">
+    <View className={`border-b border-surface-2 dark:border-zinc-800 ${isNext && !completed ? "bg-blue-50 dark:bg-blue-950/40" : ""}`}>
     <View
       className={`flex-row items-center px-3 py-1 ${completed ? "opacity-50" : ""}`}
     >
       {/* Set number: tap for set type, warm-up and delete */}
       <TouchableOpacity
         onPress={() => setSheetOpen(true)}
-        className="w-12 h-12 items-center justify-center"
+        className="w-10 h-12 items-center justify-center"
       >
         <Text
-          className={`font-mono-medium text-sm ${
+          className={`font-mono-medium text-base ${
             set.isWarmup ? "text-amber-500" : "text-text-secondary dark:text-zinc-400"
           }`}
         >
@@ -105,7 +106,7 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
       </TouchableOpacity>
 
       {/* Previous (ghost) */}
-      <View className="flex-1 mx-2 items-center">
+      <View className="flex-1 mx-1 items-center">
         <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs" numberOfLines={1}>
           {previousText}
         </Text>
@@ -113,7 +114,7 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
 
       {/* Lbs */}
       <TextInput
-        className={`${inputBase} w-14 mr-1.5`}
+        className={`${inputBase} w-16 mr-1.5`}
         placeholder={bodyweight ? "+lbs" : "lbs"}
         placeholderTextColor="#94A3B8"
         value={set.weightLbs}
@@ -149,7 +150,7 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
       {/* RPE */}
       <TextInput
         ref={rpeRef}
-        className={`${inputBase} w-11 mr-1.5`}
+        className={`${inputBase} w-10 mr-1.5`}
         placeholder="RPE"
         placeholderTextColor="#94A3B8"
         value={set.rpe}
@@ -159,7 +160,7 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
         returnKeyType="done"
         onFocus={() => setFocused("rpe")}
         onBlur={handleBlur}
-        style={focused === "rpe" ? focusBorder : undefined}
+        style={[{ fontSize: 14 }, focused === "rpe" ? focusBorder : undefined]}
       />
 
       {/* Complete */}

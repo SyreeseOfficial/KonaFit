@@ -19,7 +19,7 @@ import { ExerciseHint } from "./ExerciseHint";
 import type { ActiveExercise, ActiveSet } from "../../types/workout";
 
 type Props = {
-  index: number;
+  isCurrent?: boolean;
   exercise: ActiveExercise;
   supersetId?: string;
   reorderMode?: boolean;
@@ -45,7 +45,7 @@ type Props = {
 };
 
 export function ExerciseBlock({
-  index,
+  isCurrent = false,
   exercise,
   supersetId,
   reorderMode = false,
@@ -69,7 +69,8 @@ export function ExerciseBlock({
   onSwap,
   onAddSuperset,
 }: Props) {
-  const [collapsed, setCollapsed] = useState(false);
+  // Only the exercise in play starts open; finished and upcoming ones fold to a single row.
+  const [collapsed, setCollapsed] = useState(!isCurrent);
 
   useEffect(() => {
     if (reorderMode) {
@@ -88,27 +89,38 @@ export function ExerciseBlock({
   const setsDone = exercise.sets.length > 0 && doneCount === exercise.sets.length;
   const allDone = setsDone || !!exercise.isDone;
 
+  // Focus follows the lifter: open when it becomes the current exercise, fold when finished.
+  useEffect(() => {
+    if (reorderMode) return;
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (isCurrent) setCollapsed(false);
+    else if (allDone) setCollapsed(true);
+  }, [isCurrent, allDone]);
+
   return (
     <View
-      className="mb-3 mx-5 bg-surface dark:bg-zinc-900 rounded-2xl overflow-hidden"
-      style={supersetId ? { borderLeftWidth: 3, borderLeftColor: "#FF0000" } : undefined}
+      className={`mb-3 mx-5 rounded-2xl overflow-hidden ${
+        isCurrent && !reorderMode
+          ? "bg-surface dark:bg-zinc-900 border border-crimson dark:border-blue-500"
+          : "bg-surface dark:bg-zinc-900 border border-transparent"
+      }`}
     >
       {/* ── Exercise header ───────────── */}
-      <View className="flex-row items-center justify-between px-4 pt-4 pb-3">
+      <View className="flex-row items-center justify-between px-4 pt-3 pb-2">
         <TouchableOpacity
           onPress={() => { if (!reorderMode) { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setCollapsed((c) => !c); } }}
-          className="flex-1 flex-row items-center gap-2"
+          className="flex-1 flex-row items-center gap-2 min-h-11"
           activeOpacity={reorderMode ? 1 : 0.7}
         >
-          <Text className="font-mono text-text-muted dark:text-zinc-500 text-base">{index}</Text>
+          {supersetId && <Link size={14} color="#2563EB" />}
           <Text
-            className={`font-montserrat-bold text-base flex-shrink ${allDone ? "text-text-muted dark:text-zinc-500" : "text-text-primary dark:text-white"}`}
+            className={`font-montserrat-bold text-lg flex-shrink ${allDone ? "text-text-muted dark:text-zinc-500" : "text-text-primary dark:text-white"}`}
             numberOfLines={1}
           >
             {exercise.exerciseName}
           </Text>
           {!allDone && doneCount > 0 && (
-            <Text className="font-mono text-crimson dark:text-blue-400 text-xs">{doneCount}/{exercise.sets.length}</Text>
+            <Text className="font-mono text-crimson dark:text-blue-400 text-sm">{doneCount}/{exercise.sets.length}</Text>
           )}
           {!reorderMode && (
             collapsed
@@ -146,17 +158,17 @@ export function ExerciseBlock({
             }}
             disabled={setsDone}
             hitSlop={8}
-            className={`w-8 h-8 ml-2 rounded-full items-center justify-center ${allDone ? "bg-emerald-500" : "border-2 border-surface-3 dark:border-zinc-700"}`}
+            className={`w-11 h-11 ml-1 rounded-full items-center justify-center ${allDone ? "bg-emerald-500" : "bg-surface-2 dark:bg-zinc-800"}`}
             activeOpacity={0.7}
           >
-            <Check size={16} color={allDone ? "#FFFFFF" : "#94A3B8"} strokeWidth={3} />
+            <Check size={18} color={allDone ? "#FFFFFF" : "#94A3B8"} strokeWidth={3} />
           </TouchableOpacity>
         )}
       </View>
 
       {/* ── Collapsed: set count summary ───────────── */}
       {collapsed && (
-        <View className="flex-row items-center px-4 pb-4 gap-2">
+        <View className="flex-row items-center px-4 pb-3 gap-2">
           <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm">
             {exercise.sets.length} {exercise.sets.length === 1 ? "set" : "sets"}
           </Text>
@@ -175,14 +187,12 @@ export function ExerciseBlock({
 
           {/* Column headers */}
           <View className="flex-row items-center px-3 pt-1 pb-2">
-            <Text className="w-12 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Set</Text>
-            <Text className="flex-1 mx-2 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Previous</Text>
-            <Text className="w-14 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">{exercise.perHand ? "Lbs/hd" : "Lbs"}</Text>
+            <Text className="w-10 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Set</Text>
+            <Text className="flex-1 mx-1 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Previous</Text>
+            <Text className="w-16 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">{exercise.perHand ? "Lbs/hd" : "Lbs"}</Text>
             <Text className="w-12 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Reps</Text>
-            <Text className="w-11 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">RPE</Text>
-            <View className="w-12 items-center">
-              <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">✓</Text>
-            </View>
+            <Text className="w-10 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">RPE</Text>
+            <View className="w-12" />
           </View>
 
           {/* Sets */}
@@ -192,6 +202,7 @@ export function ExerciseBlock({
               set={set}
               bodyweight={exercise.isBodyweight}
               prevSet={exercise.sets[i - 1]}
+              isNext={isCurrent && i === exercise.sets.findIndex((x) => !x.isCompleted)}
               ghost={exercise.ghostSets.find((g) => g.setNumber === set.setNumber)}
               onUpdate={(patch) => onUpdateSet(set.localId, patch)}
               onCommitEdit={() => onCommitSetEdit(set.localId)}
@@ -216,26 +227,22 @@ export function ExerciseBlock({
           )}
 
           {/* Footer */}
-          <View className="flex-row items-center px-4 py-4 border-t border-surface-2 dark:border-zinc-800 gap-4">
-            <TouchableOpacity onPress={onAddSet} className="flex-row items-center gap-1.5" activeOpacity={0.7}>
+          <View className="flex-row items-center px-3 py-3 border-t border-surface-2 dark:border-zinc-800 gap-2">
+            <TouchableOpacity onPress={onAddSet} className="flex-1 flex-row items-center justify-center gap-1.5 h-11 rounded-xl bg-surface-2 dark:bg-zinc-800" activeOpacity={0.7}>
               <PlusCircle size={16} color="#64748B" />
-              <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">Add Set</Text>
+              <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">Add set</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={onSwap} className="flex-row items-center gap-1.5" activeOpacity={0.7}>
-              <ArrowLeftRight size={15} color="#64748B" />
-              <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">Swap</Text>
+            <TouchableOpacity onPress={() => setHistoryOpen(true)} accessibilityLabel="Exercise history" className="w-11 h-11 items-center justify-center" activeOpacity={0.7}>
+              <History size={18} color="#64748B" />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => setHistoryOpen(true)} className="flex-row items-center gap-1.5" activeOpacity={0.7}>
-              <History size={15} color="#64748B" />
-              <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">History</Text>
+            <TouchableOpacity onPress={onSwap} accessibilityLabel="Swap exercise" className="w-11 h-11 items-center justify-center" activeOpacity={0.7}>
+              <ArrowLeftRight size={18} color="#64748B" />
             </TouchableOpacity>
 
-            <View className="flex-1" />
-
-            <TouchableOpacity onPress={() => setMenuOpen(true)} className="w-10 h-10 items-center justify-center" activeOpacity={0.7}>
-              <MoreHorizontal size={18} color="#94A3B8" />
+            <TouchableOpacity onPress={() => setMenuOpen(true)} accessibilityLabel="More actions" className="w-11 h-11 items-center justify-center" activeOpacity={0.7}>
+              <MoreHorizontal size={20} color="#94A3B8" />
             </TouchableOpacity>
           </View>
         </>

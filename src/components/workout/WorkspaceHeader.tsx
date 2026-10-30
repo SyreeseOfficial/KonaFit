@@ -12,6 +12,8 @@ type Props = {
   onCamera?: () => void;
   onPauseChange?: (paused: boolean) => void;
   restTimer: ReturnType<typeof useRestTimer>;
+  setsDone?: number;
+  setsTotal?: number;
 };
 
 const MAX_MINS = 360;
@@ -26,7 +28,7 @@ const minuteLabel = (totalMins: number): string => {
 
 const ADJUSTMENTS = [-10, -5, -1, 1, 5, 10] as const;
 
-export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera, onPauseChange, restTimer }: Props) {
+export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera, onPauseChange, restTimer, setsDone = 0, setsTotal = 0 }: Props) {
   const { elapsed, formattedTime, isPaused, pause, resume, reset, setElapsed } = useWorkoutTimer(startedAt);
   const [adjustOpen, setAdjustOpen] = useState(false);
   // Target minutes shown in the picker — initialised when modal opens
@@ -48,64 +50,71 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera, onPaus
 
   return (
     <>
-      <View className="flex-row items-center gap-3 px-5 pt-4 pb-4 border-b border-surface-2 dark:border-zinc-800 bg-surface dark:bg-zinc-900">
-        <Text className="font-montserrat-bold text-text-primary dark:text-white text-2xl">
-          Train
-        </Text>
-
-        <View className="flex-row items-center gap-3 flex-1 justify-end">
-          {onTools && (
-            <TouchableOpacity onPress={onTools} hitSlop={8} activeOpacity={0.7}>
-              <Calculator size={18} color="#94A3B8" />
-            </TouchableOpacity>
-          )}
-
-          {onCamera && (
-            <TouchableOpacity onPress={onCamera} hitSlop={8} activeOpacity={0.7}>
-              <Camera size={18} color="#94A3B8" />
-            </TouchableOpacity>
-          )}
-
-          <RestTimerButton timer={restTimer} />
-
-          {isPaused && (
-            <TouchableOpacity onPress={reset} hitSlop={8} activeOpacity={0.7}>
-              <RotateCcw size={16} color="#94A3B8" />
-            </TouchableOpacity>
-          )}
-
+      <View className="px-5 pt-3 pb-3 bg-surface dark:bg-zinc-900">
+        <View className="flex-row items-center">
           <TouchableOpacity
             onPress={() => { (isPaused ? resume : pause)(); onPauseChange?.(!isPaused); }}
-            hitSlop={8}
+            accessibilityLabel={isPaused ? "Resume timer" : "Pause timer"}
+            className="w-11 h-11 -ml-2 items-center justify-center"
             activeOpacity={0.7}
           >
             {isPaused ? (
-              <Play size={18} color="#2563EB" fill="#2563EB" />
+              <Play size={20} color="#2563EB" fill="#2563EB" />
             ) : (
-              <Pause size={18} color="#94A3B8" />
+              <Pause size={20} color="#94A3B8" />
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={openAdjust} hitSlop={4} activeOpacity={0.7}>
+          <TouchableOpacity onPress={openAdjust} accessibilityLabel="Adjust workout time" hitSlop={4} activeOpacity={0.7}>
             <Text
-              className={`font-mono-medium text-xl tracking-wider ${
+              className={`font-mono-medium text-3xl tracking-wider ${
                 isPaused ? "text-text-muted dark:text-zinc-500" : "text-text-primary dark:text-white"
               }`}
             >
               {formattedTime}
             </Text>
           </TouchableOpacity>
+
+          {isPaused && (
+            <TouchableOpacity onPress={reset} accessibilityLabel="Reset timer" className="w-11 h-11 items-center justify-center" activeOpacity={0.7}>
+              <RotateCcw size={16} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
+
+          <View className="flex-1" />
+
+          <TouchableOpacity
+            onPress={onFinish}
+            className="bg-crimson dark:bg-blue-500 h-11 px-5 rounded-xl items-center justify-center"
+            activeOpacity={0.85}
+          >
+            <Text className="font-montserrat-bold text-white text-base">Finish</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          onPress={onFinish}
-          className="bg-crimson dark:bg-blue-500 px-4 py-2 rounded-xl"
-          activeOpacity={0.85}
-        >
-          <Text className="font-montserrat-bold text-white text-sm">
-            Finish
-          </Text>
-        </TouchableOpacity>
+        <View className="flex-row items-center mt-2 -mx-2">
+          <RestTimerButton timer={restTimer} />
+          {onTools && (
+            <TouchableOpacity onPress={onTools} accessibilityLabel="Calculators" className="w-11 h-11 items-center justify-center" activeOpacity={0.7}>
+              <Calculator size={19} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
+          {onCamera && (
+            <TouchableOpacity onPress={onCamera} accessibilityLabel="Progress photo" className="w-11 h-11 items-center justify-center" activeOpacity={0.7}>
+              <Camera size={19} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
+          <View className="flex-1" />
+          {setsTotal > 0 && (
+            <Text className="font-mono text-text-secondary dark:text-zinc-400 text-sm mr-2">
+              {setsDone}/{setsTotal} sets
+            </Text>
+          )}
+        </View>
+
+        <View className="h-1 -mx-5 mt-1 bg-surface-2 dark:bg-zinc-800">
+          <View className="h-1 bg-crimson dark:bg-blue-500" style={{ width: `${setsTotal ? (setsDone / setsTotal) * 100 : 0}%` }} />
+        </View>
       </View>
 
       {/* Timer adjustment modal */}

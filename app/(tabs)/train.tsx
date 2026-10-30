@@ -622,6 +622,10 @@ export default function TrainScreen() {
   }
 
   // ─── Active workspace ──────────────────────────────────────────────
+  const isExerciseDone = (e: (typeof session.exercises)[number]) =>
+    !!e.isDone || (e.sets.length > 0 && e.sets.every((x) => x.isCompleted));
+  const currentIdx = session.exercises.findIndex((e) => !isExerciseDone(e));
+  const allSets = session.exercises.flatMap((e) => e.sets);
   return (
     <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950" edges={["top"]}>
       <WorkspaceHeader
@@ -631,11 +635,13 @@ export default function TrainScreen() {
         onCamera={handleCameraPress}
         onPauseChange={(paused) => { logSessionEvent(session.workoutId, paused ? "pause" : "resume").catch(console.error); }}
         restTimer={restTimer}
+        setsDone={allSets.filter((x) => x.isCompleted).length}
+        setsTotal={allSets.length}
       />
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingTop: 12, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingTop: 16, paddingBottom: 32 }}
         keyboardShouldPersistTaps="handled"
       >
         {session.exercises.length === 0 && (
@@ -649,7 +655,7 @@ export default function TrainScreen() {
         {session.exercises.map((exercise, i) => (
           <ExerciseBlock
             key={exercise.localId}
-            index={i + 1}
+            isCurrent={i === currentIdx}
             exercise={exercise}
             supersetId={exercise.supersetId}
             reorderMode={reorderMode}
@@ -678,26 +684,24 @@ export default function TrainScreen() {
         ))}
 
         {/* Add / reorder / cancel */}
-        <View className="flex-row gap-2 mx-5 mt-2 mb-2">
-          <TouchableOpacity
-            onPress={() => setExerciseSheetOpen(true)}
-            accessibilityLabel="Add exercise"
-            className="flex-1 h-11 border border-surface-3 dark:border-zinc-700 rounded-xl items-center justify-center bg-surface dark:bg-zinc-900"
-            activeOpacity={0.7}
-          >
-            <Plus size={20} color="#64748B" />
-          </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setExerciseSheetOpen(true)}
+          className="flex-row items-center justify-center gap-2 mx-5 mt-1 h-12 rounded-xl bg-surface dark:bg-zinc-900 border border-surface-3 dark:border-zinc-700"
+          activeOpacity={0.7}
+        >
+          <Plus size={18} color="#2563EB" />
+          <Text className="font-montserrat-semibold text-crimson dark:text-blue-400 text-base">Add exercise</Text>
+        </TouchableOpacity>
+        <View className="flex-row items-center justify-between mx-5 mt-2">
           <TouchableOpacity
             onPress={() => setReorderMode((r) => !r)}
-            accessibilityLabel={reorderMode ? "Done reordering" : "Reorder exercises"}
-            className={`flex-1 h-11 border rounded-xl items-center justify-center ${
-              reorderMode
-                ? "border-crimson dark:border-blue-500 bg-blue-50 dark:bg-blue-950"
-                : "border-surface-3 dark:border-zinc-700 bg-surface dark:bg-zinc-900"
-            }`}
+            className="flex-row items-center gap-2 h-11 pr-3"
             activeOpacity={0.7}
           >
-            <ArrowUpDown size={20} color={reorderMode ? "#3B82F6" : "#64748B"} />
+            <ArrowUpDown size={16} color={reorderMode ? "#2563EB" : "#64748B"} />
+            <Text className={`font-montserrat-semibold text-sm ${reorderMode ? "text-crimson dark:text-blue-400" : "text-text-secondary dark:text-zinc-400"}`}>
+              {reorderMode ? "Done reordering" : "Reorder"}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() =>
@@ -706,11 +710,11 @@ export default function TrainScreen() {
                 { text: "Cancel Workout", style: "destructive", onPress: discardWorkout },
               ])
             }
-            accessibilityLabel="Cancel workout"
-            className="flex-1 h-11 border border-surface-3 dark:border-zinc-700 rounded-xl items-center justify-center bg-surface dark:bg-zinc-900"
+            className="flex-row items-center gap-2 h-11 pl-3"
             activeOpacity={0.7}
           >
-            <X size={20} color="#F43F5E" />
+            <X size={16} color="#F43F5E" />
+            <Text className="font-montserrat-semibold text-rose-500 text-sm">Cancel workout</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

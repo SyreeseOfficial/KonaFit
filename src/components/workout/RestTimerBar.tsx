@@ -60,16 +60,16 @@ export function RestTimerButton({ timer }: Props) {
 
   return (
     <>
-      <TouchableOpacity onPress={() => setOpen(true)} hitSlop={8} activeOpacity={0.7}>
+      <TouchableOpacity onPress={() => setOpen(true)} accessibilityLabel="Rest timer" className="h-11 min-w-11 px-2 items-center justify-center" activeOpacity={0.7}>
         {timer.isRunning ? (
-          <View className="flex-row items-center gap-1">
-            <Timer size={16} color="#2563EB" />
-            <Text className="font-mono-medium text-sm text-crimson dark:text-blue-500">
+          <View className="flex-row items-center gap-1.5">
+            <Timer size={19} color="#2563EB" />
+            <Text className="font-mono-medium text-base text-crimson dark:text-blue-500">
               {timer.formattedTime}
             </Text>
           </View>
         ) : (
-          <Timer size={18} color="#94A3B8" />
+          <Timer size={19} color="#94A3B8" />
         )}
       </TouchableOpacity>
 
