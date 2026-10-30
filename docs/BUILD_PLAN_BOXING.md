@@ -133,7 +133,7 @@ Tick as you go. Each line = one commit.
 
 **Phase 6: Finish + recap**
 - [x] 6.1 Finish sheet (overall RPE, tags, name) + save
-- [ ] 6.2 Boxing recap screen
+- [x] 6.2 Boxing recap screen
 
 **Phase 7: History, calendar, streaks**
 - [ ] 7.1 History filter chips + boxing row

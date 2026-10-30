@@ -86,3 +86,16 @@ export async function getLastBoxingSetup(): Promise<BoxingPlan | null> {
   if (!n || !first) return null;
   return { rounds: n.n, workSec: first.work_seconds, restSec: first.rest_seconds };
 }
+
+/** Average RPE of the newest `limit` finished boxing sessions before `beforeStartedAt` (round average, else overall; null if neither). */
+export async function getPriorAvgRpes(beforeStartedAt: number, excludeId: number, limit = 5): Promise<(number | null)[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{ avg: number | null }>(
+    `SELECT COALESCE((SELECT AVG(rpe) FROM boxing_rounds r WHERE r.workout_id = w.id), w.rpe) AS avg
+     FROM workouts w
+     WHERE w.type = 'boxing' AND w.finished_at IS NOT NULL AND w.id != ? AND w.started_at < ?
+     ORDER BY w.started_at DESC, w.id DESC LIMIT ?`,
+    [excludeId, beforeStartedAt, limit]
+  );
+  return rows.map((r) => r.avg);
+}

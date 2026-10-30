@@ -1,6 +1,7 @@
 // Boxing DB tests: runs the real queries against in-memory SQLite.
 import { setupDb } from "./helpers/sqlite";
 import type { BoxingSession } from "../types/boxing";
+import { buildRecap, sessionAvgRpe } from "../utils/boxingRecap";
 import { createTimer } from "../utils/boxingTimer";
 import { serializeSnapshot, parseSnapshot, updateRoundLog } from "../utils/boxingSnapshot";
 import { serializeSession, parseSession } from "../utils/sessionReducers";
@@ -258,5 +259,49 @@ describe("round log carry-over", () => {
     const log = updateRoundLog(blank(), 1, { rpe: 8, focusNote: "sharp" });
     expect(log.map((e) => e.rpe)).toEqual([null, 8, null, null]);
     expect(log.map((e) => e.focusNote)).toEqual(["", "sharp", "", ""]);
+  });
+});
+
+describe("boxing recap", () => {
+  const withRpes = (rpes: (number | null)[], o: Partial<BoxingSession> = {}) =>
+    session({ rounds: rpes.map((rpe, i) => ({ ...rounds(1)[0], roundNumber: i + 1, rpe })), ...o });
+
+  it("sums work/rest using actual seconds where they differ, and averages only rounds that have an RPE", () => {
+    const s = session({ rpe: null, rounds: [
+      { ...rounds(1)[0], roundNumber: 1, rpe: 6, actualWorkSeconds: 210 },
+      { ...rounds(1)[0], roundNumber: 2, rpe: null, restSeconds: 60, actualRestSeconds: 20 },
+      { ...rounds(1)[0], roundNumber: 3, rpe: 8, restSeconds: 0 },
+    ] });
+    const r = buildRecap(s, []);
+    expect(r).toMatchObject({ rounds: 3, workSec: 210 + 180 + 180, restSec: 60 + 20 + 0, avgRpe: 7, comparison: null });
+    expect(r.rpePoints.map((p) => p.rpe)).toEqual([6, null, 8]);
+  });
+
+  it("no round RPEs: falls back to the overall RPE, else null, and never NaN", () => {
+    expect(buildRecap(withRpes([null, null], { rpe: 8 }), []).avgRpe).toBe(8);
+    expect(buildRecap(withRpes([null, null], { rpe: null }), []).avgRpe).toBeNull();
+    expect(buildRecap(withRpes([]), []).rounds).toBe(0);
+    expect(sessionAvgRpe([], null)).toBeNull();
+  });
+
+  it("comparison needs 3 prior sessions with an RPE; then harder / easier / about the same", () => {
+    const s = withRpes([8, 8]);
+    expect(buildRecap(s, [6, 6]).comparison).toBeNull();
+    expect(buildRecap(s, [6, null, 6, null]).comparison).toBeNull(); // only 2 usable
+    expect(buildRecap(s, [6, 6, 6]).comparison).toMatchObject({ verdict: "harder", usualRpe: 6 });
+    expect(buildRecap(s, [9, 9, 9]).comparison?.verdict).toBe("easier");
+    expect(buildRecap(s, [8, 7.8, 8.2]).comparison?.verdict).toBe("about the same");
+    expect(buildRecap(withRpes([null], { rpe: null }), [6, 6, 6]).comparison).toBeNull(); // nothing to compare
+  });
+
+  it("getPriorAvgRpes: newest first, excludes itself and later sessions", async () => {
+    const { q } = await fresh();
+    const a = await q.saveBoxingSession(withRpes([4, 6], { startedAt: 1000 }));
+    const b = await q.saveBoxingSession(withRpes([null], { startedAt: 2000, rpe: 7 }));
+    const c = await q.saveBoxingSession(withRpes([9], { startedAt: 3000 }));
+    const later = await q.saveBoxingSession(withRpes([1], { startedAt: 9000 }));
+    expect(later).toBeGreaterThan(c);
+    expect(await q.getPriorAvgRpes(3000, c)).toEqual([7, 5]);
+    expect(a).toBeLessThan(b);
   });
 });

@@ -66,9 +66,9 @@ export default function BoxingSessionScreen() {
   const save = async (input: FinishInput) => {
     setSaving(true);
     try {
-      await saveBoxingSession(toBoxingSession(t, b.roundLog, input, Date.now()), APP_VERSION);
+      const id = await saveBoxingSession(toBoxingSession(t, b.roundLog, input, Date.now()), APP_VERSION);
       await b.clear();
-      router.back();
+      router.replace({ pathname: "/boxing/complete", params: { id: String(id) } } as never);
     } catch (e) {
       console.error("Failed to save boxing session", e);
       setSaving(false);
