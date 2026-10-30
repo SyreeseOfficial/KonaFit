@@ -4,6 +4,7 @@ import type { BoxingSession } from "../types/boxing";
 import { buildRecap, sessionAvgRpe } from "../utils/boxingRecap";
 import { draftFromRound, draftToRound, newDraft, roundsDuration } from "../utils/boxingEdit";
 import { buildQuickSession } from "../utils/boxingQuickAdd";
+import { toDateFields, fromDateFields } from "../utils/dateEdit";
 import { createTimer } from "../utils/boxingTimer";
 import { serializeSnapshot, parseSnapshot, updateRoundLog } from "../utils/boxingSnapshot";
 import { serializeSession, parseSession } from "../utils/sessionReducers";
@@ -591,5 +592,17 @@ describe("boxing goals", () => {
     expect((await goalsQ.getGoals()).find((x) => x.id === bw)).toMatchObject({ start_date: null, end_date: null });
     expect(await goalsQ.getGoalProgress((await goalsQ.getGoals()).find((x) => x.id === bw)!)).toBeNull();
     expect(await adapter.getFirstAsync("SELECT 1 FROM pragma_table_info('goals') WHERE name = 'end_date'")).not.toBeNull();
+  });
+});
+
+describe("goal date fields", () => {
+  it("round-trips a date, covers the whole end day, and rejects impossible dates", () => {
+    const secs = new Date(2026, 9, 30, 15).getTime() / 1000;
+    const f = toDateFields(secs);
+    expect(f).toEqual({ month: "10", day: "30", year: "2026" });
+    expect(fromDateFields(f)).toBe(new Date(2026, 9, 30).getTime() / 1000);
+    expect(fromDateFields(f, true)).toBe(new Date(2026, 9, 30, 23, 59, 59).getTime() / 1000);
+    for (const bad of [{ month: "2", day: "31", year: "2026" }, { month: "", day: "1", year: "2026" }, { month: "13", day: "1", year: "2026" }, { month: "1", day: "1", year: "1999" }])
+      expect(fromDateFields(bad)).toBeNull();
   });
 });

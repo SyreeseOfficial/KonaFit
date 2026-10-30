@@ -19,6 +19,8 @@ Written during the unattended run of `BUILD_PLAN_BOXING.md`. Newest at the botto
 
 - **J-quickadd:** Quick-add lives behind a **+** in the History header (least cluttered; Start sheet is for starting). Say if you want it elsewhere.
 
+- **D3 (decide, low priority):** Goal date range uses plain MM/DD/YYYY text fields (same as the workout editor). `@expo/ui` (native date picker) is not installed. Want me to add it and use a native picker for goals and workout dates?
+
 ## Judgment calls I made
 - Step 3.1: the plan says tapping Box with a lift in progress asks to discard. That state is not reachable: Train hides the idle screen (and Start) while a lift runs. The guard I built covers the reverse (boxing running, starting a lift or a program day).
 - Steps 1.5 + 1.6 are one commit (their tests share fixtures).

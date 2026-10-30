@@ -36,3 +36,18 @@ export function dateEditsToTimestamp(edits: InfoEdits): { startedAt: number; dur
   const dM = parseInt(edits.durMins, 10) || 0;
   return { startedAt, durationSeconds: Math.max(0, dH * 3600 + dM * 60) };
 }
+
+export type DateFields = { month: string; day: string; year: string };
+
+export const toDateFields = (unixSecs: number): DateFields => {
+  const d = new Date(unixSecs * 1000);
+  return { month: String(d.getMonth() + 1), day: String(d.getDate()), year: String(d.getFullYear()) };
+};
+
+/** Unix seconds for local midnight (or 23:59:59 with `endOfDay`) of the typed date; null if it isn't a real calendar date. */
+export function fromDateFields(f: DateFields, endOfDay = false): number | null {
+  const month = parseInt(f.month, 10), day = parseInt(f.day, 10), year = parseInt(f.year, 10);
+  if ([month, day, year].some(isNaN) || year < 2000 || year > 2100) return null;
+  const d = new Date(year, month - 1, day, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0);
+  return d.getMonth() === month - 1 && d.getDate() === day ? Math.floor(d.getTime() / 1000) : null; // rejects Feb 31 etc.
+}

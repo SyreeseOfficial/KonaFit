@@ -153,7 +153,7 @@ Tick as you go. Each line = one commit.
 
 **Phase 10: Goals**
 - [x] 10.1 Migration 15 + goal types + progress queries + tests
-- [ ] 10.2 Create-goal UI and display
+- [x] 10.2 Create-goal UI and display
 
 **Phase 11: Polish**
 - [ ] 11.1 Boxing timer settings screen section
