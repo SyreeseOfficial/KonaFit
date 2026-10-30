@@ -5,7 +5,7 @@ import { router } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import { getLastSetup, getGetReadySec, setLastSetup, setGetReadySec } from "../../src/utils/boxingSettings";
 import { validateSetup, parseClock, type TimerSetup } from "../../src/utils/boxingTimer";
-import { cleanInt } from "../../src/utils/numberInput";
+import { cleanInt, cleanClock } from "../../src/utils/numberInput";
 import { formatTime } from "../../src/utils/time";
 import { sessionHref } from "../../src/utils/boxingRoute";
 import { haptics } from "../../src/utils/haptics";
@@ -15,6 +15,9 @@ const PRESETS: [number, number][] = [[180, 60], [120, 30], [180, 30], [120, 60],
 
 const labelClass = "font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase mb-2";
 const inputClass = "bg-surface-2 dark:bg-zinc-800 px-4 py-3 font-mono-medium text-text-primary dark:text-white text-lg rounded-xl";
+
+/** "1:90" -> "2:30" once the field loses focus. */
+const tidy = (t: string) => (Number.isFinite(parseClock(t)) ? formatTime(parseClock(t)) : t);
 
 export default function BoxingSetupScreen() {
   const [rounds, setRounds] = useState("6");
@@ -84,11 +87,11 @@ export default function BoxingSetupScreen() {
           <View className="flex-row" style={{ gap: 12 }}>
             <View className="flex-1">
               <Text className={labelClass}>Work (m:ss)</Text>
-              <TextInput className={inputClass} value={work} onChangeText={setWork} keyboardType="numbers-and-punctuation" />
+              <TextInput className={inputClass} value={work} onChangeText={(v) => setWork(cleanClock(v))} onBlur={() => setWork(tidy(work))} keyboardType="number-pad" />
             </View>
             <View className="flex-1">
               <Text className={labelClass}>Rest (m:ss)</Text>
-              <TextInput className={inputClass} value={rest} onChangeText={setRest} keyboardType="numbers-and-punctuation" />
+              <TextInput className={inputClass} value={rest} onChangeText={(v) => setRest(cleanClock(v))} onBlur={() => setRest(tidy(rest))} keyboardType="number-pad" />
             </View>
           </View>
           <View>

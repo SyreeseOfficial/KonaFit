@@ -6,6 +6,7 @@ import { RpeRow } from "./RpeRow";
 import { FocusChips } from "./FocusChips";
 import { DateTimeFields } from "./DateTimeFields";
 import { SESSION_TAGS, type BoxingRound, type BoxingSession, type FocusChip } from "../../types/boxing";
+import { cleanClock } from "../../utils/numberInput";
 import { initDateEdits, dateEditsToTimestamp, type InfoEdits } from "../../utils/dateEdit";
 import { draftFromRound, draftToRound, newDraft, roundsDuration, type RoundDraft } from "../../utils/boxingEdit";
 
@@ -108,9 +109,9 @@ export function BoxingEdit({ session, chips, onCancel, onSave }: Props) {
                       <RpeRow value={r.rpe} onChange={(v) => patch(i, { rpe: v })} />
                       <View className="flex-row items-center" style={{ gap: 10 }}>
                         <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm">Work</Text>
-                        <TextInput className={timeInput} value={r.work} onChangeText={(v) => patch(i, { work: v })} keyboardType="numbers-and-punctuation" />
+                        <TextInput className={timeInput} value={r.work} onChangeText={(v) => patch(i, { work: cleanClock(v) })} keyboardType="number-pad" />
                         <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm">Rest</Text>
-                        <TextInput className={timeInput} value={r.rest} onChangeText={(v) => patch(i, { rest: v })} keyboardType="numbers-and-punctuation" />
+                        <TextInput className={timeInput} value={r.rest} onChangeText={(v) => patch(i, { rest: cleanClock(v) })} keyboardType="number-pad" />
                       </View>
                       <FocusChips
                         chips={chips.filter((c) => !c.isHidden || r.focusTags.includes(c.id))}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Alert, ScrollView } from "react-native";
+import { View, Alert, ScrollView, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
@@ -24,8 +24,9 @@ function RestLog({ finishedRound, log, chips, onChange }: {
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<number | null>(null);
   const round = picked ?? finishedRound;
+  const { height } = useWindowDimensions();
   return (
-    <ScrollView style={{ maxHeight: 360, flexGrow: 0 }} keyboardShouldPersistTaps="handled">
+    <ScrollView style={{ maxHeight: height * 0.55, flexGrow: 0 }} keyboardShouldPersistTaps="handled">
       <RoundLogCard
         rounds={Array.from({ length: finishedRound }, (_, i) => i + 1)}
         round={round}
@@ -91,11 +92,14 @@ export default function BoxingSessionScreen() {
     return (
       <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">
         <FinishSheet
-          visible
           defaultName={boxingName(t.startedAt)}
           roundCount={roundResults(t).length}
           saving={saving}
           initialTags={b.tagsDraft}
+          log={b.roundLog}
+          chips={chips}
+          onLogChange={b.setRoundLog}
+          onManageChips={() => router.push("/boxing/chips" as never)}
           onSave={save}
           onDiscard={discard}
         />

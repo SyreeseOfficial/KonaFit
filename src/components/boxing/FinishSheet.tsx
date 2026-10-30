@@ -1,31 +1,38 @@
 import { useState } from "react";
-import { View, Text, Modal, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { RpeRow } from "./RpeRow";
-import { SESSION_TAGS } from "../../types/boxing";
+import { RoundLogCard } from "./RoundLogCard";
+import { SESSION_TAGS, type FocusChip } from "../../types/boxing";
+import type { RoundLogEntry } from "../../utils/boxingSnapshot";
 import type { FinishInput } from "../../utils/boxingSave";
 
 type Props = {
-  visible: boolean;
   defaultName: string;
   roundCount: number;
   saving: boolean;
   initialTags: string[];
+  /** Per-round RPE + focus, so the last round (which has no rest to log in) can be filled in too. */
+  log: RoundLogEntry[];
+  chips: FocusChip[];
+  onLogChange: (index: number, patch: Partial<RoundLogEntry>) => void;
+  onManageChips: () => void;
   onSave: (input: FinishInput) => void;
   onDiscard: () => void;
 };
 
 /** Shown when a session ends (naturally or early): overall effort, what it was, a note and a name. Everything is optional. */
-export function FinishSheet({ visible, defaultName, roundCount, saving, initialTags, onSave, onDiscard }: Props) {
+export function FinishSheet({ defaultName, roundCount, saving, initialTags, log, chips, onLogChange, onManageChips, onSave, onDiscard }: Props) {
   const [name, setName] = useState(defaultName);
   const [rpe, setRpe] = useState<number | null>(null);
   const [tags, setTags] = useState<string[]>(initialTags);
   const [notes, setNotes] = useState("");
+  const [round, setRound] = useState(roundCount);
+  const [logOpen, setLogOpen] = useState(true);
   const canSave = roundCount > 0 && !saving;
   const label = "font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase mb-2";
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={() => {}}>
-      <KeyboardAvoidingView className="flex-1 justify-end bg-black/50" behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView className="flex-1 justify-end bg-black/50" behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl" style={{ maxHeight: "90%" }}>
           <ScrollView contentContainerStyle={{ padding: 20, gap: 20 }} keyboardShouldPersistTaps="handled">
             <View>
@@ -39,6 +46,20 @@ export function FinishSheet({ visible, defaultName, roundCount, saving, initialT
                 <View>
                   <Text className={label}>How did it feel overall? (RPE)</Text>
                   <RpeRow value={rpe} onChange={setRpe} />
+                </View>
+                <View className="-mx-5">
+                  <Text className={`${label} mx-5`}>Rounds</Text>
+                  <RoundLogCard
+                    rounds={Array.from({ length: roundCount }, (_, i) => i + 1)}
+                    round={round}
+                    onSelectRound={setRound}
+                    entry={log[round - 1]}
+                    onChange={(patch) => onLogChange(round - 1, patch)}
+                    chips={chips}
+                    open={logOpen}
+                    onToggleOpen={() => setLogOpen((o) => !o)}
+                    onManageChips={onManageChips}
+                  />
                 </View>
                 <View>
                   <Text className={label}>What was it?</Text>
@@ -89,6 +110,5 @@ export function FinishSheet({ visible, defaultName, roundCount, saving, initialT
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
-    </Modal>
   );
 }

@@ -11,7 +11,7 @@ import { parseClock } from "../../src/utils/boxingTimer";
 import { buildQuickSession } from "../../src/utils/boxingQuickAdd";
 import { saveBoxingSession } from "../../src/db/boxingQueries";
 import { APP_VERSION } from "../../src/utils/appVersion";
-import { cleanInt } from "../../src/utils/numberInput";
+import { cleanInt, cleanClock } from "../../src/utils/numberInput";
 
 const label = "font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase mb-2";
 const input = "bg-surface-2 dark:bg-zinc-800 px-4 py-3 font-mono-medium text-text-primary dark:text-white text-lg rounded-xl";
@@ -72,8 +72,8 @@ export default function QuickAddBoxing() {
           </View>
           {mode === "plan" ? (
             <View className="flex-row" style={{ gap: 12 }}>
-              <View className="flex-1"><Text className={label}>Work (m:ss)</Text><TextInput className={input} value={work} onChangeText={setWork} keyboardType="numbers-and-punctuation" /></View>
-              <View className="flex-1"><Text className={label}>Rest (m:ss)</Text><TextInput className={input} value={rest} onChangeText={setRest} keyboardType="numbers-and-punctuation" /></View>
+              <View className="flex-1"><Text className={label}>Work (m:ss)</Text><TextInput className={input} value={work} onChangeText={(v) => setWork(cleanClock(v))} keyboardType="number-pad" /></View>
+              <View className="flex-1"><Text className={label}>Rest (m:ss)</Text><TextInput className={input} value={rest} onChangeText={(v) => setRest(cleanClock(v))} keyboardType="number-pad" /></View>
             </View>
           ) : (
             <View><Text className={label}>Total minutes</Text><TextInput className={input} value={totalMin} onChangeText={(v) => { const c = cleanInt(v, 600); if (c !== null) setTotalMin(c); }} keyboardType="number-pad" placeholder="e.g. 30" placeholderTextColor="#94A3B8" /></View>

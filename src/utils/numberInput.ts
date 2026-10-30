@@ -17,6 +17,13 @@ export function cleanDecimal(v: string, max: number, allowNegative = false): str
   return Math.abs(parseFloat(s)) > max ? null : s;
 }
 
+/** Microwave-style m:ss from digits only (number-pad has no colon): "5" -> "0:05", "300" -> "3:00". Empty when no digits. */
+export function cleanClock(v: string): string {
+  if (!/\d/.test(v)) return "";
+  const d = v.replace(/\D/g, "").replace(/^0+/, "").slice(-4).padStart(3, "0");
+  return `${d.slice(0, -2)}:${d.slice(-2)}`;
+}
+
 /** Digits only; null when above `max`. */
 export function cleanInt(v: string, max: number): string | null {
   const s = v.replace(/\D/g, "");

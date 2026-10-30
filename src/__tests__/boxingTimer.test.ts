@@ -264,3 +264,15 @@ describe("toBoxingSession", () => {
     expect(toBoxingSession(t, log, meta, T0 + S).rounds).toEqual([]);
   });
 });
+
+describe("cleanClock", () => {
+  const { cleanClock } = require("../utils/numberInput");
+  it("builds m:ss from digits and round-trips through parseClock", () => {
+    expect(cleanClock("")).toBe("");
+    expect(cleanClock("5")).toBe("0:05");
+    expect(cleanClock("0:30")).toBe("0:30"); // typed over the previous value
+    expect(cleanClock("3:000")).toBe("30:00");
+    expect(cleanClock("300")).toBe("3:00");
+    expect(parseClock(cleanClock("130"))).toBe(90);
+  });
+});
