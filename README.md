@@ -36,6 +36,22 @@ When building or modifying components, refer to these specialized context files 
 
 ---
 
+## 🔧 Development Setup
+
+### Running the Dev Server
+
+To test changes on your development build device, use the tunnel connection mode:
+
+```bash
+npx expo start --tunnel
+```
+
+Then scan the QR code with your dev client app on your phone. The tunnel mode bypasses local network limitations and should connect within 5 seconds.
+
+**Note:** Regular `npx expo start` (direct IP) may not work depending on your network setup. Always use `--tunnel` if the direct connection fails.
+
+---
+
 ## 🚀 Key Feature Overview
 
 ### 1. The Workspace (Train)
