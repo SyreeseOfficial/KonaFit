@@ -17,7 +17,9 @@ import { getAllWorkoutDataForExport } from "../src/db/historyQueries";
 import { exportCsvAndShare, exportJsonAndShare } from "../src/utils/exportUtils";
 import { wipeAllData } from "../src/db/wipe";
 import { removeOrphanPhotos } from "../src/utils/photoFiles";
-import { BOXING_PRESERVED_KEYS } from "../src/utils/boxingSettings";
+import {
+  BOXING_PRESERVED_KEYS, getBellEnabled, setBellEnabled, getWarningEnabled, setWarningEnabled, getGetReadySec, setGetReadySec,
+} from "../src/utils/boxingSettings";
 import { THEME_KEY, loadTheme, setTheme, type ThemePref } from "../src/utils/theme";
 import {
   REST_TIMER_KEY,
@@ -123,6 +125,9 @@ export default function SettingsScreen() {
   const [weeklyGoal, setWeeklyGoal] = useState(DEFAULT_WEEKLY_GOAL);
   const [restDays, setRestDays] = useState<number[]>([]);
   const [restStep, setRestStepState] = useState(DEFAULT_REST_STEP);
+  const [bellOn, setBellOn] = useState(true);
+  const [warningOn, setWarningOn] = useState(true);
+  const [getReady, setGetReady] = useState(10);
   const [wipeOpen, setWipeOpen] = useState(false);
   const [wipeText, setWipeText] = useState("");
 
@@ -133,6 +138,9 @@ export default function SettingsScreen() {
     getWeeklyGoal().then(setWeeklyGoal);
     getRestDays().then(setRestDays);
     getRestStep().then(setRestStepState);
+    getBellEnabled().then(setBellOn);
+    getWarningEnabled().then(setWarningOn);
+    getGetReadySec().then(setGetReady);
   }, []);
 
   const toggleRestDay = useCallback(async (day: number) => {
@@ -156,6 +164,12 @@ export default function SettingsScreen() {
     setHapticsOn(v === "on");
     await setHapticsEnabled(v === "on");
   }, []);
+
+  const adjustGetReady = useCallback(async (delta: number) => {
+    const next = Math.min(60, Math.max(0, getReady + delta));
+    setGetReady(next);
+    await setGetReadySec(next);
+  }, [getReady]);
 
   const adjustRest = useCallback(async (delta: number) => {
     const next = Math.max(REST_STEP, restSeconds + delta);
@@ -337,6 +351,48 @@ export default function SettingsScreen() {
               onChange={handleRestStep}
             />
           </View>
+        </View>
+
+        {/* ── Boxing timer ────────────────────────────────────────────────── */}
+        <SectionLabel title="Boxing timer" />
+        <View className="bg-surface dark:bg-zinc-900 mx-5 rounded-2xl overflow-hidden">
+          <View className="flex-row items-center justify-between px-5 py-5">
+            <View className="flex-1">
+              <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Round bell</Text>
+              <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5">Cue at the start and end of each round</Text>
+            </View>
+            <ChipGroup
+              options={[{ key: "on", label: "On" }, { key: "off", label: "Off" }]}
+              value={bellOn ? "on" : "off"}
+              onChange={async (v) => { setBellOn(v === "on"); await setBellEnabled(v === "on"); }}
+            />
+          </View>
+          <View className="flex-row items-center justify-between px-5 py-5 border-t border-surface-2 dark:border-zinc-800">
+            <View className="flex-1">
+              <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">10-second warning</Text>
+              <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-0.5">Clapper cue before a round ends</Text>
+            </View>
+            <ChipGroup
+              options={[{ key: "on", label: "On" }, { key: "off", label: "Off" }]}
+              value={warningOn ? "on" : "off"}
+              onChange={async (v) => { setWarningOn(v === "on"); await setWarningEnabled(v === "on"); }}
+            />
+          </View>
+          <Row
+            label="Get ready"
+            sublabel="Countdown before round 1 (0 to 60s)"
+            right={
+              <View className="flex-row items-center gap-3">
+                <TouchableOpacity onPress={() => adjustGetReady(-5)} className="w-9 h-9 bg-surface-2 dark:bg-zinc-800 rounded-full items-center justify-center" hitSlop={8} activeOpacity={0.7}>
+                  <Minus size={14} color="#64748B" />
+                </TouchableOpacity>
+                <Text className="font-mono-medium text-text-primary dark:text-white text-base w-14 text-center">{getReady}s</Text>
+                <TouchableOpacity onPress={() => adjustGetReady(5)} className="w-9 h-9 bg-surface-2 dark:bg-zinc-800 rounded-full items-center justify-center" hitSlop={8} activeOpacity={0.7}>
+                  <Plus size={14} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+            }
+          />
         </View>
 
         {/* ── Library ─────────────────────────────────────────────────────── */}

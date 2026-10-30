@@ -156,7 +156,7 @@ Tick as you go. Each line = one commit.
 - [x] 10.2 Create-goal UI and display
 
 **Phase 11: Polish**
-- [ ] 11.1 Boxing timer settings screen section
+- [x] 11.1 Boxing timer settings screen section
 - [ ] 11.2 Focus chip manager (add / edit / hide)
 - [ ] 11.3 Readiness prompt before boxing
 
