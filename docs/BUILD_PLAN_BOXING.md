@@ -97,7 +97,7 @@ Tick as you go. Each line = one commit.
 
 **Phase 0: Prep**
 - [x] 0.1 Commit PRD + this plan
-- [ ] 0.2 Spike: sounds in SDK 56 (decision only, no app code)
+- [x] 0.2 Spike: sounds in SDK 56 (decision only, no app code)
 
 **Phase 1: Data foundation**
 - [ ] 1.1 Migration 13: `workouts.type` + boxing columns
