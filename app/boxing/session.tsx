@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { View, Alert, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useBoxingSession } from "../../src/hooks/useBoxingSession";
 import { setupFromParams } from "../../src/utils/boxingRoute";
@@ -35,6 +35,7 @@ function RestLog({ finishedRound, log, chips, onChange }: {
         chips={chips}
         open={open}
         onToggleOpen={() => setOpen((o) => !o)}
+        onManageChips={() => router.push("/boxing/chips" as never)}
       />
     </ScrollView>
   );
@@ -48,7 +49,7 @@ export default function BoxingSessionScreen() {
 
   const [saving, setSaving] = useState(false);
   const [chips, setChips] = useState<FocusChip[]>([]);
-  useEffect(() => { getFocusChips().then(setChips).catch(console.error); }, []);
+  useFocusEffect(useCallback(() => { getFocusChips().then(setChips).catch(console.error); }, [])); // reload after Manage chips
 
   // Screen stays on while a session is live.
   const live = !!b.timer && !b.timer.done;

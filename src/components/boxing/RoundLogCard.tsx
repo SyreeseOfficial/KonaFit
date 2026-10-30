@@ -15,10 +15,11 @@ type Props = {
   chips: FocusChip[];
   open: boolean;
   onToggleOpen: () => void;
+  onManageChips?: () => void;
 };
 
 /** Optional RPE + focus entry for one round, with a strip to jump to earlier rounds. Collapsed by default so the clock stays big. */
-export function RoundLogCard({ rounds, round, onSelectRound, entry, onChange, chips, open, onToggleOpen }: Props) {
+export function RoundLogCard({ rounds, round, onSelectRound, entry, onChange, chips, open, onToggleOpen, onManageChips }: Props) {
   const toggleChip = (id: number) =>
     onChange({ focusTags: entry.focusTags.includes(id) ? entry.focusTags.filter((x) => x !== id) : [...entry.focusTags, id] });
   return (
@@ -46,7 +47,7 @@ export function RoundLogCard({ rounds, round, onSelectRound, entry, onChange, ch
             </View>
           )}
           <RpeRow value={entry.rpe} onChange={(rpe) => onChange({ rpe })} />
-          <FocusChips chips={chips} selected={entry.focusTags} onToggle={toggleChip} note={entry.focusNote} onNoteChange={(focusNote) => onChange({ focusNote })} />
+          <FocusChips chips={chips} selected={entry.focusTags} onToggle={toggleChip} note={entry.focusNote} onNoteChange={(focusNote) => onChange({ focusNote })} onManage={onManageChips} />
         </View>
       )}
     </View>

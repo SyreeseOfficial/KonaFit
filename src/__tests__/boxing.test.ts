@@ -606,3 +606,33 @@ describe("goal date fields", () => {
       expect(fromDateFields(bad)).toBeNull();
   });
 });
+
+describe("focus chip management", () => {
+  it("adds a custom chip at the end of its group list; names are trimmed and unique (case-insensitive)", async () => {
+    const { q } = await fresh();
+    const id = await q.addFocusChip("  Slip  ", "Movement");
+    expect(typeof id).toBe("number");
+    const chip = (await q.getFocusChips()).find((c) => c.id === id)!;
+    expect(chip).toMatchObject({ name: "Slip", group: "Movement", isDefault: false, isHidden: false });
+    expect(chip.order).toBe(13);
+    for (const bad of [["slip", "Movement"], ["", "Intent"], ["x".repeat(25), "Intent"], ["Fresh", "Nope"]] as const)
+      expect(typeof (await q.addFocusChip(bad[0], bad[1]))).toBe("string");
+    expect(await q.getFocusChips()).toHaveLength(14);
+  });
+
+  it("renames a default (but not onto another chip's name); hiding keeps names resolvable for old rounds", async () => {
+    const { q } = await fresh();
+    const jab = (await q.getFocusChips()).find((c) => c.name === "Jab")!;
+    expect(await q.renameFocusChip(jab.id, "Lead jab")).toBeNull();
+    expect(typeof (await q.renameFocusChip(jab.id, "cross"))).toBe("string");
+    expect(await q.renameFocusChip(jab.id, "lead JAB")).toBeNull(); // own name, different case
+    const sid = await q.saveBoxingSession(session({ rounds: [{ ...rounds(1)[0], focusTags: [jab.id] }] }));
+    await q.setFocusChipHidden(jab.id, true);
+    expect((await q.getFocusChips()).some((c) => c.id === jab.id)).toBe(false);
+    const all = await q.getFocusChips({ includeHidden: true });
+    const used = (await q.getBoxingSession(sid))!.rounds[0].focusTags[0];
+    expect(all.find((c) => c.id === used)?.name).toBe("lead JAB");
+    await q.setFocusChipHidden(jab.id, false);
+    expect((await q.getFocusChips()).some((c) => c.id === jab.id)).toBe(true);
+  });
+});

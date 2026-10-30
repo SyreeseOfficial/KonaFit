@@ -1,4 +1,5 @@
 import { getDatabase } from "./database";
+import { BOXING_CHIP_GROUPS } from "../types/boxing";
 import type { BoxingPlan, BoxingRound, BoxingSession, FocusChip } from "../types/boxing";
 
 const parseJson = <T>(s: string | null, fallback: T): T => {
@@ -126,4 +127,47 @@ export async function getPriorAvgRpes(beforeStartedAt: number, excludeId: number
     [excludeId, beforeStartedAt, limit]
   );
   return rows.map((r) => r.avg);
+}
+
+// ─── Focus chip management ────────────────────────────────────────────────────
+// Chips are never deleted: hiding keeps old rounds' labels readable (recap/detail look names up with includeHidden).
+
+const MAX_CHIP_NAME = 24;
+
+/** Trimmed name, or a message when it's empty, too long or already used (any chip, hidden or not, case-insensitive). */
+async function checkChipName(name: string, exceptId?: number): Promise<string | { name: string }> {
+  const n = name.trim();
+  if (!n) return "Give the chip a name";
+  if (n.length > MAX_CHIP_NAME) return `Keep it under ${MAX_CHIP_NAME} characters`;
+  const db = await getDatabase();
+  const clash = await db.getFirstAsync("SELECT 1 FROM boxing_focus_chips WHERE LOWER(name) = LOWER(?) AND id IS NOT ?", [n, exceptId ?? null]);
+  return clash ? "That chip already exists" : { name: n };
+}
+
+/** Returns the new chip's id, or an error message. */
+export async function addFocusChip(name: string, group: string): Promise<number | string> {
+  const checked = await checkChipName(name);
+  if (typeof checked === "string") return checked;
+  if (!BOXING_CHIP_GROUPS.includes(group as (typeof BOXING_CHIP_GROUPS)[number])) return "Pick a group";
+  const db = await getDatabase();
+  const r = await db.runAsync(
+    `INSERT INTO boxing_focus_chips (name, group_name, is_default, order_index)
+     VALUES (?, ?, 0, (SELECT COALESCE(MAX(order_index), -1) + 1 FROM boxing_focus_chips))`,
+    [checked.name, group]
+  );
+  return r.lastInsertRowId;
+}
+
+/** Renaming a default is allowed. Returns null on success or an error message. */
+export async function renameFocusChip(id: number, name: string): Promise<string | null> {
+  const checked = await checkChipName(name, id);
+  if (typeof checked === "string") return checked;
+  const db = await getDatabase();
+  await db.runAsync("UPDATE boxing_focus_chips SET name = ? WHERE id = ?", [checked.name, id]);
+  return null;
+}
+
+export async function setFocusChipHidden(id: number, hidden: boolean): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("UPDATE boxing_focus_chips SET is_hidden = ? WHERE id = ?", [hidden ? 1 : 0, id]);
 }

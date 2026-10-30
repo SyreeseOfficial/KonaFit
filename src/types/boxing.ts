@@ -42,3 +42,5 @@ export type FocusChip = {
 
 /** What the session was (multi-select at finish). */
 export const SESSION_TAGS = ["Heavy bag", "Shadowboxing", "Drills", "Skipping"] as const;
+
+export const BOXING_CHIP_GROUPS = ["Punches", "Movement", "Intent", "Technical"] as const;

@@ -393,6 +393,7 @@ export default function SettingsScreen() {
               </View>
             }
           />
+          <Row label="Focus chips" sublabel="Add, rename or hide the tags used on rounds" onPress={() => router.push("/boxing/chips" as never)} />
         </View>
 
         {/* ── Library ─────────────────────────────────────────────────────── */}
