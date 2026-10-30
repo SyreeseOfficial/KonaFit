@@ -379,3 +379,16 @@ export async function getExercisePRs(exerciseId: number): Promise<ExercisePRs> {
     lastTrainedAt: lastRow?.t ? lastRow.t * 1000 : null,
   };
 }
+
+export type ExerciseSetRow = { weightLbs: number | null; reps: number | null; achievedAt: number }; // achievedAt: unix ms
+
+/** Most recent working sets for an exercise, newest first (same set rule as the PRs). */
+export async function getExerciseSets(exerciseId: number, limit: number): Promise<ExerciseSetRow[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{ weight_lbs: number | null; reps: number | null; started_at: number }>(
+    `SELECT ls.weight_lbs, ls.reps, w.started_at ${PR_BASE}
+     ORDER BY w.started_at DESC, ls.id DESC LIMIT ?`,
+    [exerciseId, limit]
+  );
+  return rows.map((r) => ({ weightLbs: r.weight_lbs, reps: r.reps, achievedAt: r.started_at * 1000 }));
+}
