@@ -162,7 +162,7 @@ Tick as you go. Each line = one commit.
 
 **Phase 12: Close-out**
 - [x] 12.1 Docs updates
-- [ ] 12.2 Acceptance pass + cleanup
+- [x] 12.2 Acceptance pass + cleanup
 
 ---
 
