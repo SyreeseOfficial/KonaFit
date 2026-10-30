@@ -1,15 +1,20 @@
 import { useEffect, useState } from "react";
-import { View, Text, Alert, TouchableOpacity, ScrollView } from "react-native";
+import { View, Alert, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useBoxingSession } from "../../src/hooks/useBoxingSession";
 import { setupFromParams } from "../../src/utils/boxingRoute";
-import { currentPhase, remainingSec, sessionProgress } from "../../src/utils/boxingTimer";
+import { currentPhase, remainingSec, sessionProgress, roundResults } from "../../src/utils/boxingTimer";
 import { RoundLogCard } from "../../src/components/boxing/RoundLogCard";
 import { getFocusChips } from "../../src/db/boxingQueries";
 import type { FocusChip } from "../../src/types/boxing";
 import type { RoundLogEntry } from "../../src/utils/boxingSnapshot";
+import { FinishSheet } from "../../src/components/boxing/FinishSheet";
+import { toBoxingSession, type FinishInput } from "../../src/utils/boxingSave";
+import { boxingName } from "../../src/utils/boxingNames";
+import { APP_VERSION } from "../../src/utils/appVersion";
+import { saveBoxingSession } from "../../src/db/boxingQueries";
 import { TimerControls } from "../../src/components/boxing/TimerControls";
 import { TimerFace, PHASE_BG } from "../../src/components/boxing/TimerFace";
 
@@ -42,6 +47,7 @@ export default function BoxingSessionScreen() {
 
   useEffect(() => { if (b.status === "none") router.back(); }, [b.status]);
 
+  const [saving, setSaving] = useState(false);
   const [chips, setChips] = useState<FocusChip[]>([]);
   useEffect(() => { getFocusChips().then(setChips).catch(console.error); }, []);
 
@@ -57,8 +63,24 @@ export default function BoxingSessionScreen() {
   const t = b.timer;
   const p = currentPhase(t);
 
-  // TODO(Step 6.1): replace this stand-in with the finish sheet + save; right now ended sessions are just dropped.
   const leave = async () => { await b.clear(); router.back(); };
+  const save = async (input: FinishInput) => {
+    setSaving(true);
+    try {
+      await saveBoxingSession(toBoxingSession(t, b.roundLog, input, Date.now()), APP_VERSION);
+      await b.clear();
+      router.back();
+    } catch (e) {
+      console.error("Failed to save boxing session", e);
+      setSaving(false);
+      Alert.alert("Couldn't save session", "Nothing was lost. Tap Save to try again.");
+    }
+  };
+  const discard = () =>
+    Alert.alert("Discard session?", "This session won't be saved.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Discard", style: "destructive", onPress: leave },
+    ]);
   const confirmEnd = () =>
     Alert.alert("End session?", "Rounds finished so far are kept.", [
       { text: "Keep Going", style: "cancel" },
@@ -67,11 +89,16 @@ export default function BoxingSessionScreen() {
 
   if (t.done) {
     return (
-      <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950 items-center justify-center px-8">
-        <Text className="font-montserrat-bold text-text-primary dark:text-white text-2xl mb-6">{t.endedEarly ? "Session ended" : "Session complete"}</Text>
-        <TouchableOpacity onPress={leave} className="bg-crimson dark:bg-blue-500 py-4 px-10 rounded-2xl" activeOpacity={0.85}>
-          <Text className="font-montserrat-bold text-white text-base">Close</Text>
-        </TouchableOpacity>
+      <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">
+        <FinishSheet
+          visible
+          defaultName={boxingName(t.startedAt)}
+          roundCount={roundResults(t).length}
+          saving={saving}
+          initialTags={b.tagsDraft}
+          onSave={save}
+          onDiscard={discard}
+        />
       </SafeAreaView>
     );
   }

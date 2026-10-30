@@ -132,7 +132,7 @@ Tick as you go. Each line = one commit.
 - [x] 5.2 Rest-time prompt + carry-over
 
 **Phase 6: Finish + recap**
-- [ ] 6.1 Finish sheet (overall RPE, tags, name) + save
+- [x] 6.1 Finish sheet (overall RPE, tags, name) + save
 - [ ] 6.2 Boxing recap screen
 
 **Phase 7: History, calendar, streaks**

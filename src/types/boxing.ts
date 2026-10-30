@@ -39,3 +39,6 @@ export type FocusChip = {
   isHidden: boolean;
   order: number;
 };
+
+/** What the session was (multi-select at finish). */
+export const SESSION_TAGS = ["Heavy bag", "Shadowboxing", "Drills", "Skipping"] as const;

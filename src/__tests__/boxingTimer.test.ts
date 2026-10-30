@@ -1,3 +1,5 @@
+import { boxingName } from "../utils/boxingNames";
+import { toBoxingSession } from "../utils/boxingSave";
 import { parseFlag, parseGetReady, parseLastSetup, DEFAULT_BOXING_PLAN, BOXING_PRESERVED_KEYS } from "../utils/boxingSettings";
 import {
   createTimer, advance, pause, resume, skipRest, addSeconds, endEarly, remainingSec, currentPhase, warningDue,
@@ -211,4 +213,54 @@ describe("boxing settings parsing", () => {
       expect(parseLastSetup(bad)).toEqual(DEFAULT_BOXING_PLAN);
   });
   it("all four keys are preserved on wipe", () => expect(BOXING_PRESERVED_KEYS).toHaveLength(4));
+});
+
+
+describe("boxingName", () => {
+  const at = (h: number, m = 0) => new Date(2026, 5, 1, h, m).getTime();
+  it("names by local start hour", () => {
+    expect([at(0), at(5), at(11, 59)].map(boxingName)).toEqual(Array(3).fill("Morning Boxing"));
+    expect([at(12), at(16, 59)].map(boxingName)).toEqual(Array(2).fill("Afternoon Boxing"));
+    expect([at(17), at(23, 59)].map(boxingName)).toEqual(Array(2).fill("Evening Boxing"));
+  });
+});
+
+describe("toBoxingSession", () => {
+  const setup = { rounds: 3, workSec: 60, restSec: 20, getReadySec: 0 };
+  const log = [
+    { rpe: 6, focusTags: [1], focusNote: " jab ", },
+    { rpe: null, focusTags: [], focusNote: "" },
+    { rpe: 9, focusTags: [2, 3], focusNote: "" },
+  ];
+  const meta = { name: " ", rpe: 7, tags: ["Heavy bag"], notes: "  " };
+
+  it("a natural finish: all rounds, nothing marked actual, no rest after the last", () => {
+    const t = advance(createTimer(setup, T0), T0 + 9999 * S).state;
+    const s = toBoxingSession(t, log, meta, T0 + 9999 * S);
+    expect(s.rounds).toHaveLength(3);
+    expect(s.rounds.map((r) => r.restSeconds)).toEqual([20, 20, 0]);
+    expect(s.rounds.every((r) => r.actualWorkSeconds === null && r.actualRestSeconds === null)).toBe(true);
+    expect(s.durationSeconds).toBe(3 * 60 + 2 * 20);
+    expect(s.name).toBe("Boxing");
+    expect(s.notes).toBeNull();
+    expect(s.rounds[0]).toMatchObject({ rpe: 6, focusTags: [1], focusNote: "jab" });
+    expect(s.rounds[1]).toMatchObject({ rpe: null, focusNote: null });
+  });
+
+  it("ended early mid round 2 with +30s and a skipped rest: keeps 2 rounds and records the differences", () => {
+    let t = advance(createTimer(setup, T0), T0 + 70 * S).state; // rest 1 (60-80), 10s in
+    t = skipRest(t, T0 + 70 * S); // rest actual 10s, round 2 starts at 70
+    t = addSeconds(t); // round 2 work now 90s
+    t = endEarly(advance(t, T0 + 100 * S).state, T0 + 100 * S); // 30s into round 2
+    const s = toBoxingSession(t, log, meta, T0 + 100 * S);
+    expect(s.rounds.map((r) => r.roundNumber)).toEqual([1, 2]);
+    expect(s.rounds[0]).toMatchObject({ actualWorkSeconds: null, actualRestSeconds: 10 });
+    expect(s.rounds[1]).toMatchObject({ workSeconds: 60, actualWorkSeconds: 30, actualRestSeconds: 0 });
+    expect(s.durationSeconds).toBe(60 + 10 + 30);
+  });
+
+  it("ended before any round started has no rounds", () => {
+    const t = endEarly(createTimer({ ...setup, getReadySec: 5 }, T0), T0 + S);
+    expect(toBoxingSession(t, log, meta, T0 + S).rounds).toEqual([]);
+  });
 });
