@@ -112,7 +112,7 @@ describe("saved session format", () => {
   });
 });
 
-describe("applySuggestion / insertWarmups / applyRpeToAll", () => {
+describe("applySuggestion / insertWarmups", () => {
   it("applySuggestion fills only unticked working sets", () => {
     const s = session(ex("bench", [
       set(1, { weightLbs: "45", reps: "10", isWarmup: true }),
@@ -128,12 +128,5 @@ describe("applySuggestion / insertWarmups / applyRpeToAll", () => {
     const s = session(ex("bench", [set(1, { localId: "w1" })]));
     const next = R.insertWarmups(s, "bench", [set(0, { localId: "a", isWarmup: true }), set(0, { localId: "b", isWarmup: true })]);
     expect(next.exercises[0].sets.map((x) => [x.localId, x.setNumber])).toEqual([["a", 1], ["b", 2], ["w1", 3]]);
-  });
-
-  it("applyRpeToAll copies the last RPE onto working sets, not warm-ups", () => {
-    const s = session(ex("bench", [set(1, { isWarmup: true }), set(2, { rpe: "8" }), set(3), set(4, { rpe: "9" })]));
-    const sets = R.applyRpeToAll(s, "bench").exercises[0].sets;
-    expect(sets.map((x) => x.rpe)).toEqual(["", "9", "9", "9"]);
-    expect(sets[3]).toBe(s.exercises[0].sets[3]);
   });
 });

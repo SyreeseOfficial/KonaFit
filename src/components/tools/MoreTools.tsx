@@ -53,21 +53,21 @@ export function WarmupCalculator() {
   const [work, setWork] = useState("");
   const bar = 45;
   const w = parseFloat(work);
-  const ramp = w > 0 ? warmupRamp(w, bar) : [];
+  const ramp = w > 0 ? warmupRamp(w, 3, bar) : [];
   return (
     <View>
       <View className="flex-row items-center gap-3 mb-4">
         <TextInput className={input} placeholder="First working weight" placeholderTextColor="#94A3B8" value={work} onChangeText={setWork} keyboardType="decimal-pad" selectTextOnFocus />
         <Text className={mono}>lbs</Text>
       </View>
-      <Text className={`${mono} mb-4`}>Rounded to 5 lb, never below the 45 lb bar.</Text>
+      <Text className={`${mono} mb-4`}>Rounded to 5 lb. Heavy lifts never go below the 45 lb bar.</Text>
       {ramp.map((s, i) => (
         <View key={i} className={row}>
           <Text className={mono}>Warm-up {i + 1}</Text>
           <Text className="font-mono-medium text-text-primary dark:text-white text-lg">{s.weight} × {s.reps}</Text>
         </View>
       ))}
-      {w > 0 && ramp.length === 0 && <Text className={mono}>Working weight is at or under the bar. No warm-up needed.</Text>}
+      {w > 0 && ramp.length === 0 && <Text className={mono}>Too light to need a warm-up.</Text>}
     </View>
   );
 }

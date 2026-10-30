@@ -31,11 +31,18 @@ describe("warmupRamp", () => {
   it("builds 40/60/80% ramps rounded to 5", () => {
     expect(warmupRamp(225)).toEqual([{ weight: 90, reps: 8 }, { weight: 135, reps: 5 }, { weight: 180, reps: 3 }]);
   });
-  it("never goes below the bar and drops duplicates", () => {
-    expect(warmupRamp(65)).toEqual([{ weight: 45, reps: 8 }, { weight: 50, reps: 3 }]);
+  it("keeps light (non-barbell) weights at 3 distinct steps", () => {
+    expect(warmupRamp(65)).toEqual([{ weight: 25, reps: 8 }, { weight: 40, reps: 5 }, { weight: 50, reps: 3 }]);
   });
-  it("is empty when the work weight is the bar or lighter", () => {
-    expect(warmupRamp(45)).toEqual([]);
+  it("floors at the bar for heavy work and drops duplicates", () => {
+    expect(warmupRamp(95)).toEqual([{ weight: 45, reps: 8 }, { weight: 55, reps: 5 }, { weight: 75, reps: 3 }]);
+  });
+  it("honours the requested count", () => {
+    expect(warmupRamp(200, 1)).toEqual([{ weight: 120, reps: 5 }]);
+    expect(warmupRamp(200, 4).map((s) => s.weight)).toEqual([60, 100, 140, 170]);
+  });
+  it("is empty when there is nothing to ramp to", () => {
+    expect(warmupRamp(5)).toEqual([]);
   });
 });
 

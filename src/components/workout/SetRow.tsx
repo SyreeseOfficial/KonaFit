@@ -1,16 +1,25 @@
-import { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, useColorScheme } from "react-native";
+import { useState, useEffect, useRef } from "react";
+import { View, Text, TextInput, TouchableOpacity, Modal, Pressable, useColorScheme } from "react-native";
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
-import { Check } from "lucide-react-native";
+import { Check, Trash2 } from "lucide-react-native";
 import { haptics } from "../../utils/haptics";
 import { cleanDecimal, cleanInt, MAX_WEIGHT, MAX_REPS } from "../../utils/numberInput";
 import type { ActiveSet, GhostSet, PRBadge, SetType } from "../../types/workout";
 
 const PR_LABELS: Record<PRBadge, string> = { W: "PR WT", R: "PR REP", V: "PR VOL", F: "FIRST TIME" };
 
-const SET_TYPES: (SetType | undefined)[] = [undefined, "drop", "failure", "amrap", "backoff", "myo"];
 const TYPE_LABELS: Record<SetType, string> = { drop: "DROP", failure: "FAILURE", amrap: "AMRAP", backoff: "BACKOFF", myo: "MYO-REPS" };
-const RPE_CHIPS = ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10"];
+
+type Kind = "normal" | "warmup" | SetType;
+const KINDS: { key: Kind; label: string }[] = [
+  { key: "normal", label: "Normal" },
+  { key: "warmup", label: "Warm-up" },
+  { key: "drop", label: "Drop" },
+  { key: "failure", label: "Failure" },
+  { key: "amrap", label: "AMRAP" },
+  { key: "backoff", label: "Backoff" },
+  { key: "myo", label: "Myo-reps" },
+];
 
 function PRBadgeChip({ badge }: { badge: PRBadge }) {
   const scale = useSharedValue(0);
@@ -43,6 +52,17 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
   const completed = set.isCompleted;
   const [focused, setFocused] = useState<"weight" | "reps" | "rpe" | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const repsRef = useRef<TextInput>(null);
+  const rpeRef = useRef<TextInput>(null);
+  const kind: Kind = set.isWarmup ? "warmup" : set.setType ?? "normal";
+
+  const pickKind = (k: Kind) => {
+    setSheetOpen(false);
+    if ((k === "warmup") !== set.isWarmup) onToggleWarmup();
+    const type = k === "warmup" || k === "normal" ? undefined : k;
+    if (type !== set.setType) onUpdate({ setType: type });
+  };
   const note = set.notes ?? "";
 
   const previousText = set.isGhostFilled
@@ -70,10 +90,9 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
     <View
       className={`flex-row items-center px-3 py-1 ${completed ? "opacity-50" : ""}`}
     >
-      {/* Set number / warmup — long press to remove, tap to toggle warmup */}
+      {/* Set number: tap for set type, warm-up and delete */}
       <TouchableOpacity
-        onPress={onToggleWarmup}
-        onLongPress={onRemove}
+        onPress={() => setSheetOpen(true)}
         className="w-12 h-12 items-center justify-center"
       >
         <Text
@@ -101,6 +120,9 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
         onChangeText={(v) => { const c = cleanDecimal(v, MAX_WEIGHT, bodyweight); if (c !== null) onUpdate({ weightLbs: c }); }}
         keyboardType={bodyweight ? "numbers-and-punctuation" : "decimal-pad"}
         selectTextOnFocus
+        returnKeyType="next"
+        blurOnSubmit={false}
+        onSubmitEditing={() => repsRef.current?.focus()}
         onFocus={() => setFocused("weight")}
         onBlur={handleBlur}
         style={[set.isGhostFilled ? { opacity: 0.45 } : undefined, focused === "weight" ? focusBorder : undefined]}
@@ -108,6 +130,7 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
 
       {/* Reps */}
       <TextInput
+        ref={repsRef}
         className={`${inputBase} w-12 mr-1.5`}
         placeholder="reps"
         placeholderTextColor="#94A3B8"
@@ -115,6 +138,9 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
         onChangeText={(v) => { const c = cleanInt(v, MAX_REPS); if (c !== null) onUpdate({ reps: c }); }}
         keyboardType="number-pad"
         selectTextOnFocus
+        returnKeyType="next"
+        blurOnSubmit={false}
+        onSubmitEditing={() => rpeRef.current?.focus()}
         onFocus={() => setFocused("reps")}
         onBlur={handleBlur}
         style={[set.isGhostFilled ? { opacity: 0.45 } : undefined, focused === "reps" ? focusBorder : undefined]}
@@ -122,6 +148,7 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
 
       {/* RPE */}
       <TextInput
+        ref={rpeRef}
         className={`${inputBase} w-11 mr-1.5`}
         placeholder="RPE"
         placeholderTextColor="#94A3B8"
@@ -129,6 +156,7 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
         onChangeText={(v) => { const c = cleanDecimal(v, 10); if (c !== null) onUpdate({ rpe: c }); }}
         keyboardType="decimal-pad"
         selectTextOnFocus
+        returnKeyType="done"
         onFocus={() => setFocused("rpe")}
         onBlur={handleBlur}
         style={focused === "rpe" ? focusBorder : undefined}
@@ -166,7 +194,7 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
       </View>
     )}
 
-    {/* Quick-entry toolbar: repeat previous set + note */}
+    {/* Quick-entry toolbar: repeat previous set + note (ml-auto keeps Note right when alone) */}
     {focused !== null && (
       <View className="flex-row items-center px-3 pb-2">
         {prevSet && prevSet.weightLbs !== "" && prevSet.reps !== "" && (
@@ -178,35 +206,17 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
             <Text className={chipText}>Same as prev</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity
-          onPress={() => onUpdate({ setType: SET_TYPES[(SET_TYPES.indexOf(set.setType) + 1) % SET_TYPES.length] })}
-          className={chip}
-          activeOpacity={0.7}
-        >
-          <Text className={chipText}>{set.setType ? TYPE_LABELS[set.setType] : "Normal"}</Text>
-        </TouchableOpacity>
         <TouchableOpacity onPress={() => setNoteOpen(true)} className={`${chip} ml-auto mr-0`} activeOpacity={0.7}>
           <Text className={chipText}>{note ? "Edit note" : "Note"}</Text>
         </TouchableOpacity>
       </View>
     )}
 
-    {/* RPE quick pick (half steps) with the matching reps in reserve */}
-    {focused === "rpe" && (
-      <View className="pb-2">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always" contentContainerStyle={{ paddingHorizontal: 12 }}>
-          {RPE_CHIPS.map((v) => (
-            <TouchableOpacity key={v} onPress={() => onUpdate({ rpe: v })} className={chip} activeOpacity={0.7}>
-              <Text className={chipText}>{v}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-        {set.rpe !== "" && !isNaN(parseFloat(set.rpe)) && (
-          <Text className="px-3 font-mono text-text-muted dark:text-zinc-500 text-xs">
-            ≈ {Math.max(0, 10 - parseFloat(set.rpe))} reps in reserve
-          </Text>
-        )}
-      </View>
+    {/* Reps in reserve for the typed RPE */}
+    {focused === "rpe" && set.rpe !== "" && !isNaN(parseFloat(set.rpe)) && (
+      <Text className="px-3 pb-2 font-mono text-text-muted dark:text-zinc-500 text-xs">
+        ≈ {Math.max(0, 10 - parseFloat(set.rpe))} reps in reserve
+      </Text>
     )}
 
     {/* Per-set note: shown when set, editable via the Note chip or by tapping it */}
@@ -226,6 +236,39 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
         <Text className="font-mono text-text-secondary dark:text-zinc-400 text-xs italic" numberOfLines={2}>{note}</Text>
       </TouchableOpacity>
     ) : null}
+
+    {/* Set type / delete */}
+    <Modal visible={sheetOpen} transparent animationType="fade" onRequestClose={() => setSheetOpen(false)}>
+      <Pressable className="flex-1 bg-black/50 justify-end" onPress={() => setSheetOpen(false)}>
+        <Pressable>
+          <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl pb-10">
+            <Text className="font-montserrat-bold text-text-primary dark:text-white text-base px-5 py-5 border-b border-surface-2 dark:border-zinc-800">
+              Set {set.setNumber}
+            </Text>
+            <View className="flex-row flex-wrap gap-2 px-5 py-4">
+              {KINDS.map((k) => (
+                <TouchableOpacity
+                  key={k.key}
+                  onPress={() => pickKind(k.key)}
+                  className={`px-4 h-11 items-center justify-center rounded-full ${kind === k.key ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
+                  activeOpacity={0.7}
+                >
+                  <Text className={`font-montserrat-semibold text-sm ${kind === k.key ? "text-white" : "text-text-primary dark:text-white"}`}>{k.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              onPress={() => { setSheetOpen(false); haptics.warn(); onRemove(); }}
+              className="flex-row items-center gap-3 px-5 py-4 border-t border-surface-2 dark:border-zinc-800"
+              activeOpacity={0.5}
+            >
+              <Trash2 size={16} color="#F43F5E" />
+              <Text className="font-montserrat-semibold text-rose-500 text-base">Delete set</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
 
     </View>
   );

@@ -308,15 +308,16 @@ export async function createCustomExercise(
   name: string,
   muscleGroups: string[],
   equipmentTypes: string[],
-  targetType: string
+  targetType: string,
+  perHand = false
 ): Promise<Exercise> {
   const db = await getDatabase();
   await assertNameFree(name);
   const muscle_group = cleanCommaList(muscleGroups);
   const equipment_type = cleanCommaList(equipmentTypes);
   const result = await db.runAsync(
-    "INSERT INTO exercises (name, muscle_group, equipment_type, target_type, is_custom) VALUES (?, ?, ?, ?, 1)",
-    [name.trim(), muscle_group, equipment_type, targetType]
+    "INSERT INTO exercises (name, muscle_group, equipment_type, target_type, per_hand, is_custom) VALUES (?, ?, ?, ?, ?, 1)",
+    [name.trim(), muscle_group, equipment_type, targetType, perHand ? 1 : 0]
   );
   return {
     id: result.lastInsertRowId,
@@ -326,6 +327,7 @@ export async function createCustomExercise(
     target_type: targetType,
     use_count: 0,
     is_custom: 1,
+    per_hand: perHand ? 1 : 0,
   };
 }
 
@@ -390,7 +392,7 @@ export async function getCustomExercises(): Promise<Exercise[]> {
 
 export async function updateExercise(
   id: number,
-  patch: { name?: string; muscleGroup?: string; equipmentType?: string; targetType?: string }
+  patch: { name?: string; muscleGroup?: string; equipmentType?: string; targetType?: string; perHand?: boolean }
 ): Promise<void> {
   const db = await getDatabase();
   const sets: string[] = [];
@@ -399,6 +401,7 @@ export async function updateExercise(
   if (patch.muscleGroup !== undefined) { sets.push("muscle_group = ?"); args.push(cleanCommaList(patch.muscleGroup)); }
   if (patch.equipmentType !== undefined) { sets.push("equipment_type = ?"); args.push(cleanCommaList(patch.equipmentType)); }
   if (patch.targetType !== undefined) { sets.push("target_type = ?"); args.push(patch.targetType.trim()); }
+  if (patch.perHand !== undefined) { sets.push("per_hand = ?"); args.push(patch.perHand ? 1 : 0); }
   if (sets.length === 0) return;
   args.push(id);
   await db.runAsync(`UPDATE exercises SET ${sets.join(", ")} WHERE id = ?`, args);

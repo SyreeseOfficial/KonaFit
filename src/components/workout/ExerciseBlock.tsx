@@ -32,8 +32,7 @@ type Props = {
   onUpdateSet: (setLocalId: string, patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe" | "notes" | "setType">>) => void;
   onCopyLastToAll: () => void;
   onApplySuggestion: (weight: number, reps: number) => void;
-  onAddWarmups: () => void;
-  onApplyRpeToAll: () => void;
+  onAddWarmups: (count: number) => void;
   onTogglePerHand: () => void;
   onToggleDone: () => void;
   onCommitSetEdit: (setLocalId: string) => void;
@@ -60,7 +59,6 @@ export function ExerciseBlock({
   onCopyLastToAll,
   onApplySuggestion,
   onAddWarmups,
-  onApplyRpeToAll,
   onTogglePerHand,
   onToggleDone,
   onCommitSetEdit,
@@ -80,6 +78,7 @@ export function ExerciseBlock({
     }
   }, [reorderMode]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [warmupPickOpen, setWarmupPickOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [notesText, setNotesText] = useState(exercise.notes);
@@ -251,7 +250,7 @@ export function ExerciseBlock({
       />
 
       {/* ── Context menu ─────────────────────────────────────── */}
-      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
+      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)} onShow={() => setWarmupPickOpen(false)}>
         <Pressable className="flex-1 bg-black/50 justify-end" onPress={() => setMenuOpen(false)}>
           <Pressable>
             <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl pb-10">
@@ -271,19 +270,27 @@ export function ExerciseBlock({
                 <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Edit Notes</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => { setMenuOpen(false); onAddWarmups(); }}
+                onPress={() => setWarmupPickOpen((o) => !o)}
                 className="px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
                 activeOpacity={0.7}
               >
                 <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Add warm-up sets</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => { setMenuOpen(false); onApplyRpeToAll(); }}
-                className="px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
-                activeOpacity={0.7}
-              >
-                <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Apply RPE to all sets</Text>
-              </TouchableOpacity>
+              {warmupPickOpen && (
+                <View className="flex-row items-center gap-2 px-5 py-3 border-b border-surface-2 dark:border-zinc-800">
+                  <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs mr-1">How many?</Text>
+                  {[1, 2, 3, 4].map((n) => (
+                    <TouchableOpacity
+                      key={n}
+                      onPress={() => { setMenuOpen(false); setWarmupPickOpen(false); onAddWarmups(n); }}
+                      className="w-11 h-11 items-center justify-center rounded-full bg-surface-2 dark:bg-zinc-800"
+                      activeOpacity={0.7}
+                    >
+                      <Text className="font-mono-medium text-text-primary dark:text-white text-base">{n}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
               <TouchableOpacity
                 onPress={() => { setMenuOpen(false); onTogglePerHand(); }}
                 className="px-5 py-4 border-b border-surface-2 dark:border-zinc-800"

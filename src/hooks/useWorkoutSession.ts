@@ -435,27 +435,16 @@ export function useWorkoutSession() {
     [updateSession]
   );
 
-  const applyRpeToAll = useCallback(
-    (exerciseLocalId: string) => {
-      updateSession((prev) => {
-        const next = R.applyRpeToAll(prev, exerciseLocalId);
-        persistChanged(prev, next, exerciseLocalId);
-        return next;
-      });
-    },
-    [updateSession]
-  );
-
-  /** Ramp sets from the heaviest working weight entered (or last time's). Returns false when there's no weight to build from. */
+  /** `count` ramp sets from the heaviest working weight entered (or last time's). Returns false when there's no weight to build from. */
   const addWarmups = useCallback(
-    async (exerciseLocalId: string): Promise<boolean> => {
+    async (exerciseLocalId: string, count = 3): Promise<boolean> => {
       const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
       if (!exercise?.dbId) return false;
       const weights = [
         ...exercise.sets.filter((s) => !s.isWarmup).map((s) => parseFloat(s.weightLbs)),
         ...exercise.ghostSets.map((g) => g.weightLbs ?? NaN),
       ].filter((w) => Number.isFinite(w));
-      const ramp = warmupRamp(weights.length ? Math.max(...weights) : 0);
+      const ramp = warmupRamp(weights.length ? Math.max(...weights) : 0, count);
       if (ramp.length === 0) return false;
       const warmups: ActiveSet[] = [];
       for (const r of ramp) {
@@ -771,7 +760,6 @@ export function useWorkoutSession() {
     updateSet,
     copyLastSetToAll,
     applySuggestion,
-    applyRpeToAll,
     addWarmups,
     togglePerHand,
     toggleExerciseDone,

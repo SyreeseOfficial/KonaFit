@@ -48,15 +48,6 @@ export function insertWarmups(session: ActiveSession, exerciseLocalId: string, w
   return mapExercise(session, exerciseLocalId, (e) => ({ ...e, sets: renumber([...warmups, ...e.sets]) }));
 }
 
-/** Copy the last entered RPE onto every working set. */
-export function applyRpeToAll(session: ActiveSession, exerciseLocalId: string): ActiveSession {
-  return mapExercise(session, exerciseLocalId, (e) => {
-    const src = [...e.sets].reverse().find((s) => !s.isWarmup && s.rpe !== "");
-    if (!src) return e;
-    return { ...e, sets: e.sets.map((s) => (s.isWarmup || s.rpe === src.rpe ? s : { ...s, rpe: src.rpe })) };
-  });
-}
-
 export function toggleExerciseDone(session: ActiveSession, exerciseLocalId: string): ActiveSession {
   return mapExercise(session, exerciseLocalId, (e) => ({ ...e, isDone: !e.isDone }));
 }

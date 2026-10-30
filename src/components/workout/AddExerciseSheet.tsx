@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Switch,
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -211,6 +212,7 @@ export function AddExerciseSheet({ visible, onClose, onSelect, multiSelect = fal
   const [createMuscles, setCreateMuscles] = useState<string[]>([]);
   const [createEquipments, setCreateEquipments] = useState<string[]>([]);
   const [createTargetType, setCreateTargetType] = useState("reps");
+  const [createPerHand, setCreatePerHand] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const runSearch = useCallback(async (q: string, mg: string, eq: string) => {
@@ -234,7 +236,7 @@ export function AddExerciseSheet({ visible, onClose, onSelect, multiSelect = fal
   }, [visible]);
 
   const openCreate = () => {
-    setCreateName(query.trim()); setCreateMuscles([]); setCreateEquipments([]); setCreateTargetType("reps"); setMode("create");
+    setCreateName(query.trim()); setCreateMuscles([]); setCreateEquipments([]); setCreateTargetType("reps"); setCreatePerHand(false); setMode("create");
   };
 
   const toggleMuscle = (mg: string) =>
@@ -261,7 +263,7 @@ export function AddExerciseSheet({ visible, onClose, onSelect, multiSelect = fal
     if (!createName.trim() || createMuscles.length === 0 || createEquipments.length === 0 || creating) return;
     setCreating(true);
     try {
-      const exercise = await createCustomExercise(createName, createMuscles, createEquipments, createTargetType);
+      const exercise = await createCustomExercise(createName, createMuscles, createEquipments, createTargetType, createPerHand);
       if (multiSelect) { setPending((prev) => [...prev, exercise]); setMode("search"); }
       else { onSelect(exercise); onClose(); }
     } catch (e) {
@@ -520,6 +522,14 @@ export function AddExerciseSheet({ visible, onClose, onSelect, multiSelect = fal
                           );
                         })}
                       </View>
+                    </View>
+
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-1 mr-3">
+                        <Text className="font-montserrat-semibold text-text-primary dark:text-white text-sm">Weight is per hand</Text>
+                        <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-xs mt-0.5">Dumbbells, single-arm cable. Volume counts both hands.</Text>
+                      </View>
+                      <Switch value={createPerHand} onValueChange={setCreatePerHand} />
                     </View>
                   </ScrollView>
                 </View>

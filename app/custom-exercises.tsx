@@ -12,6 +12,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Switch,
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -54,6 +55,7 @@ type SaveData = {
   muscleGroup: string;
   targetType: string;
   equipmentType: string;
+  perHand: boolean;
 };
 
 function EditModal({
@@ -74,6 +76,7 @@ function EditModal({
   const [equipmentTypes, setEquipmentTypes] = useState<string[]>(
     exercise?.equipment_type ? exercise.equipment_type.split(", ").filter(Boolean) : []
   );
+  const [perHand, setPerHand] = useState(exercise?.per_hand === 1);
   const [saving, setSaving] = useState(false);
 
   if (!exercise) return null;
@@ -89,6 +92,7 @@ function EditModal({
         muscleGroup: muscleGroups.join(", "),
         targetType,
         equipmentType: equipmentTypes.join(", "),
+        perHand,
       });
     } finally {
       setSaving(false);
@@ -208,6 +212,14 @@ function EditModal({
                     ))}
                   </View>
                 </View>
+
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-1 mr-3">
+                    <Text className="font-montserrat-semibold text-text-primary dark:text-white text-sm">Weight is per hand</Text>
+                    <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-xs mt-0.5">Dumbbells, single-arm cable. Volume counts both hands.</Text>
+                  </View>
+                  <Switch value={perHand} onValueChange={setPerHand} />
+                </View>
               </ScrollView>
 
               <View className="px-5 pb-10 pt-3 border-t border-surface-2 dark:border-zinc-800">
@@ -257,6 +269,7 @@ export default function CustomExercisesScreen() {
         muscleGroup: data.muscleGroup,
         targetType: data.targetType,
         equipmentType: data.equipmentType,
+        perHand: data.perHand,
       });
     } catch (e) {
       Alert.alert("Can't save exercise", e instanceof Error ? e.message : String(e));

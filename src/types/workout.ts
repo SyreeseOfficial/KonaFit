@@ -66,4 +66,5 @@ export type Exercise = {
   target_type: string;    // 'reps' | 'time' | 'distance' | 'weight' | 'calories'
   use_count: number;
   is_custom: number;      // 0 = default seed, 1 = user-created
+  per_hand?: number;      // 1 = logged weight is one hand's
 };

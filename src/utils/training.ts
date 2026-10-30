@@ -31,12 +31,23 @@ export function suggestNext(last: LastSet[], compound: boolean): Suggestion | nu
   return { weight: w, reps: reps + 1, label: `Try ${w} × ${reps + 1}` };
 }
 
-/** Ramp sets before the first working set: 40/60/80% for 8/5/3, rounded to `step`, never below the bar or at the working weight. */
-export function warmupRamp(workingLbs: number, barLbs = 45, step = 5): { weight: number; reps: number }[] {
-  if (!(workingLbs > barLbs)) return [];
+const WARMUP_PLANS: Record<number, (readonly [number, number])[]> = {
+  1: [[0.6, 5]],
+  2: [[0.5, 6], [0.75, 3]],
+  3: [[0.4, 8], [0.6, 5], [0.8, 3]],
+  4: [[0.3, 10], [0.5, 6], [0.7, 4], [0.85, 2]],
+};
+
+/**
+ * Ramp of `count` (1-4) sets before the first working set, rounded to `step`, never at the working weight.
+ * The bar is a floor only when the work is heavy enough to be a barbell lift (a 65 lb dumbbell press has no bar).
+ */
+export function warmupRamp(workingLbs: number, count = 3, barLbs = 45, step = 5): { weight: number; reps: number }[] {
+  if (!(workingLbs > step)) return [];
+  const floor = workingLbs >= barLbs * 2 ? barLbs : step;
   const out: { weight: number; reps: number }[] = [];
-  for (const [pct, reps] of [[0.4, 8], [0.6, 5], [0.8, 3]] as const) {
-    const weight = Math.max(barLbs, Math.round((workingLbs * pct) / step) * step);
+  for (const [pct, reps] of WARMUP_PLANS[count] ?? WARMUP_PLANS[3]) {
+    const weight = Math.max(floor, Math.round((workingLbs * pct) / step) * step);
     if (weight >= workingLbs || out.some((o) => o.weight === weight)) continue;
     out.push({ weight, reps });
   }
