@@ -56,8 +56,8 @@ export async function getStatsTotals(): Promise<{ seconds: number; workoutCount:
   const db = await getDatabase();
   const row = await db.getFirstAsync<{ secs: number; n: number; lifted: number }>(
     `SELECT
-       (SELECT COALESCE(SUM(duration_seconds), 0) FROM workouts WHERE finished_at IS NOT NULL) AS secs,
-       (SELECT COUNT(*) FROM workouts WHERE finished_at IS NOT NULL) AS n,
+       (SELECT COALESCE(SUM(duration_seconds), 0) FROM workouts WHERE finished_at IS NOT NULL AND type = 'lift') AS secs,
+       (SELECT COUNT(*) FROM workouts WHERE finished_at IS NOT NULL AND type = 'lift') AS n, -- boxing: see Step 7.4 / 9.x if a combined count is wanted
        (SELECT COALESCE(SUM(${setVolumeSql()}), 0) FROM logged_sets ls
          JOIN logged_exercises le ON le.id = ls.logged_exercise_id
          JOIN workouts w ON w.id = le.workout_id
@@ -72,6 +72,7 @@ export async function getStatsTotals(): Promise<{ seconds: number; workoutCount:
 
 // Streak rule: a workout counts for the local day it was finished (so one that crosses midnight lands on the day you ended it).
 // ponytail: streaks cap at ~400 days; widen the window if anyone gets there.
+// boxing: see Step 7.4. The ticked-set EXISTS below keeps boxing rows (zero sets) out until streaks are made type-aware.
 export async function getWorkoutDatesForStreak(): Promise<string[]> {
   const db = await getDatabase();
   const rows = await db.getAllAsync<{ d: string }>(
@@ -95,7 +96,7 @@ export function weekStartSecs(now = new Date()): number {
   return Math.floor(d.getTime() / 1000);
 }
 
-/** Finished workouts with a ticked set since Monday, for the "2 / 4 this week" goal progress. */
+/** Finished workouts with a ticked set since Monday, for the "2 / 4 this week" goal progress. boxing: see Step 7.4 (the EXISTS excludes boxing for now). */
 export async function getWorkoutsThisWeek(): Promise<number> {
   const db = await getDatabase();
   const row = await db.getFirstAsync<{ n: number }>(
@@ -232,7 +233,7 @@ export async function getVolumeTrend(days: number | null): Promise<TrendPoint[]>
      FROM workouts w
      LEFT JOIN logged_exercises le ON le.workout_id = w.id
      LEFT JOIN logged_sets ls ON ls.logged_exercise_id = le.id
-     WHERE w.finished_at IS NOT NULL ${cond}
+     WHERE w.finished_at IS NOT NULL AND w.type = 'lift' ${cond}
      GROUP BY w.id
      ORDER BY w.started_at ASC`,
     params
@@ -261,7 +262,7 @@ export async function getFeelTrend(field: FeelField, days: number | null = 90): 
   const cond = days !== null ? "AND started_at >= unixepoch() - ? * 86400" : "";
   const rows = await db.getAllAsync<{ ts: number; v: number }>(
     `SELECT started_at * 1000 AS ts, ${field} AS v FROM workouts
-     WHERE finished_at IS NOT NULL AND ${field} IS NOT NULL ${cond} ORDER BY started_at ASC`,
+     WHERE finished_at IS NOT NULL AND type = 'lift' AND ${field} IS NOT NULL ${cond} ORDER BY started_at ASC`,
     days !== null ? [days] : []
   );
   return rows.map((r) => ({ x: r.ts, y: r.v }));

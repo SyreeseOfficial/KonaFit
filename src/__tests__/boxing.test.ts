@@ -61,3 +61,59 @@ describe("boxing queries", () => {
     expect(await adapter.getAllAsync("SELECT 1 FROM workouts")).toHaveLength(0);
   });
 });
+
+// ─── Audit: a boxing row (zero sets) must not change any lift number ───────────
+const DAY = 86400;
+const nowSecs = () => Math.floor(Date.now() / 1000);
+
+async function addLift(a: { runAsync: (s: string, p?: unknown[]) => Promise<{ lastInsertRowId: number }>; getFirstAsync: <T>(s: string, p?: unknown[]) => Promise<T | null> },
+  startedAt: number, exercise = "Barbell Bench Press", weight = 135, rating: number | null = null) {
+  const w = await a.runAsync(
+    "INSERT INTO workouts (name, started_at, finished_at, duration_seconds, rating) VALUES ('Workout', ?, ?, 3600, ?)",
+    [startedAt, startedAt + 3600, rating]);
+  const ex = (await a.getFirstAsync<{ id: number }>("SELECT id FROM exercises WHERE name = ?", [exercise]))!.id;
+  const le = await a.runAsync(
+    "INSERT INTO logged_exercises (workout_id, exercise_id, exercise_name, order_index) VALUES (?, ?, ?, 0)", [w.lastInsertRowId, ex, exercise]);
+  await a.runAsync(
+    "INSERT INTO logged_sets (logged_exercise_id, set_number, weight_lbs, reps, is_completed, completed_at) VALUES (?, 1, ?, 5, 1, ?)",
+    [le.lastInsertRowId, weight, startedAt + 600]);
+  return w.lastInsertRowId;
+}
+
+/** Seeds lifts, runs `snap` (returns plain data), adds boxing sessions (some today and some with big RPE), runs `snap` again. */
+async function liftUnchangedByBoxing<T>(snap: (ctx: Awaited<ReturnType<typeof fresh>>, liftIds: number[]) => Promise<T>) {
+  const ctx = await fresh();
+  const t = nowSecs();
+  const ids = [
+    await addLift(ctx.adapter, t - 2 * DAY, "Barbell Bench Press", 135, 4),
+    await addLift(ctx.adapter, t - DAY, "Barbell Bench Press", 145, 5),
+    await addLift(ctx.adapter, t - 3600 * 5, "Pull-Up", 0, 3),
+  ];
+  const before = await snap(ctx, ids);
+  await ctx.q.saveBoxingSession(session({ startedAt: t - 3600, finishedAt: t - 1800, durationSeconds: 1800, rounds: rounds(6) }));
+  await ctx.q.saveBoxingSession(session({ startedAt: t - 3 * DAY, finishedAt: t - 3 * DAY + 900, durationSeconds: 900, rounds: rounds(1) }));
+  const after = await snap(ctx, ids);
+  return { before, after };
+}
+
+describe("stats queries ignore boxing rows", () => {
+  it("totals, volume trend, feel trend, PRs, streak dates and weekly count are unchanged", async () => {
+    const { before, after } = await liftUnchangedByBoxing(async () => {
+      const stats = await import("../db/statsQueries");
+      return {
+        totals: await stats.getStatsTotals(),
+        volume: await stats.getVolumeTrend(null),
+        volume30: await stats.getVolumeTrend(30),
+        feel: await stats.getFeelTrend("rating", null),
+        prs: await stats.getTotalPRCount(),
+        dates: await stats.getWorkoutDatesForStreak(),
+        week: await stats.getWorkoutsThisWeek(),
+        muscles: await stats.getVolumeByMuscle(30),
+        tracked: await stats.getTrackedExercises(),
+      };
+    });
+    expect(after).toEqual(before);
+    expect(before.totals.workoutCount).toBe(3);
+    expect(before.volume).toHaveLength(3);
+  });
+});

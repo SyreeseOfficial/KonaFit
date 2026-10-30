@@ -103,7 +103,7 @@ Tick as you go. Each line = one commit.
 - [x] 1.1 Migration 13: `workouts.type` + boxing columns
 - [x] 1.2 Migration 14: `boxing_rounds` + `boxing_focus_chips` (seeded)
 - [x] 1.3 Boxing types + write/read queries
-- [ ] 1.4 Audit: `statsQueries.ts`
+- [x] 1.4 Audit: `statsQueries.ts`
 - [ ] 1.5 Audit: `insightQueries.ts`
 - [ ] 1.6 Audit: `historyQueries.ts` + `workoutQueries.ts`
 - [ ] 1.7 Audit: `goalQueries.ts`, `programQueries.ts`, `app/_layout.tsx`, `train.tsx` reads
