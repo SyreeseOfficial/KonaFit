@@ -149,7 +149,7 @@ Tick as you go. Each line = one commit.
 - [x] 9.1 Boxing stats queries + tests
 - [x] 9.2 Boxing section on Stats
 - [x] 9.3 Weekly training load query + tests
-- [ ] 9.4 Weekly load section on Stats
+- [x] 9.4 Weekly load section on Stats
 
 **Phase 10: Goals**
 - [ ] 10.1 Migration 15 + goal types + progress queries + tests
