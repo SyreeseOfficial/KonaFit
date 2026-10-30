@@ -103,7 +103,7 @@ async function liftUnchangedByBoxing<T>(snap: (ctx: Awaited<ReturnType<typeof fr
 }
 
 describe("stats queries ignore boxing rows", () => {
-  it("totals, volume trend, feel trend, PRs, streak dates and weekly count are unchanged", async () => {
+  it("totals, volume trend, feel trend and PRs are unchanged", async () => {
     const { before, after } = await liftUnchangedByBoxing(async () => {
       const stats = await import("../db/statsQueries");
       return {
@@ -112,8 +112,6 @@ describe("stats queries ignore boxing rows", () => {
         volume30: await stats.getVolumeTrend(30),
         feel: await stats.getFeelTrend("rating", null),
         prs: await stats.getTotalPRCount(),
-        dates: await stats.getWorkoutDatesForStreak(),
-        week: await stats.getWorkoutsThisWeek(),
         muscles: await stats.getVolumeByMuscle(30),
         tracked: await stats.getTrackedExercises(),
       };
@@ -334,5 +332,43 @@ describe("activity days (week dots)", () => {
     expect(days[key(2)]).toEqual({ lift: true, boxing: true });
     expect(days[key(3)]).toEqual({ lift: false, boxing: true });
     expect(Object.keys(days)).toHaveLength(2);
+  });
+});
+
+describe("streaks and weekly count include boxing", () => {
+  it("a boxing-only day extends the streak; a boxing day alone starts one", async () => {
+    const { adapter, q } = await fresh();
+    const stats = await import("../db/statsQueries");
+    const t = nowSecs();
+    await addLift(adapter, t - 2 * DAY);
+    await q.saveBoxingSession(session({ startedAt: t - DAY, finishedAt: t - DAY + 1800 }));
+    await q.saveBoxingSession(session({ startedAt: t - 600, finishedAt: t - 60 }));
+    const dates = await stats.getWorkoutDatesForStreak();
+    expect(stats.calculateStreak(dates)).toBe(3);
+    // an empty lift (no ticked sets) still doesn't count
+    await adapter.runAsync("INSERT INTO workouts (name, started_at, finished_at) VALUES ('empty', ?, ?)", [t - 4 * DAY, t - 4 * DAY + 60]);
+    expect(stats.calculateStreak(await stats.getWorkoutDatesForStreak())).toBe(3);
+  });
+
+  it("rest days keep working with boxing days around them", async () => {
+    const { q } = await fresh();
+    const stats = await import("../db/statsQueries");
+    const t = nowSecs();
+    const dow = (back: number) => new Date((t - back * DAY) * 1000).getDay();
+    await q.saveBoxingSession(session({ startedAt: t, finishedAt: t + 60 }));
+    await q.saveBoxingSession(session({ startedAt: t - 2 * DAY, finishedAt: t - 2 * DAY + 60 })); // yesterday is the gap
+    const dates = await stats.getWorkoutDatesForStreak();
+    expect(stats.calculateStreak(dates, [])).toBe(1);
+    expect(stats.calculateStreak(dates, [dow(1)])).toBe(2);
+  });
+
+  it("weekly count counts lifts and boxing sessions finished since Monday", async () => {
+    const { adapter, q } = await fresh();
+    const stats = await import("../db/statsQueries");
+    const mon = stats.weekStartSecs();
+    await addLift(adapter, mon + 3600);
+    await q.saveBoxingSession(session({ startedAt: mon + 7200, finishedAt: mon + 9000 }));
+    await q.saveBoxingSession(session({ startedAt: mon - 3 * DAY, finishedAt: mon - 3 * DAY + 600 })); // last week
+    expect(await stats.getWorkoutsThisWeek()).toBe(2);
   });
 });

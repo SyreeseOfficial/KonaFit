@@ -139,7 +139,7 @@ Tick as you go. Each line = one commit.
 - [x] 7.1 History filter chips + boxing row
 - [x] 7.2 Boxing detail screen (summary card + rounds)
 - [x] 7.3 Calendar/week dots
-- [ ] 7.4 Streaks include boxing
+- [x] 7.4 Streaks include boxing
 
 **Phase 8: Editing**
 - [ ] 8.1 Full edit of finished sessions

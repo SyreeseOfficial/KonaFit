@@ -72,7 +72,7 @@ export async function getStatsTotals(): Promise<{ seconds: number; workoutCount:
 
 // Streak rule: a workout counts for the local day it was finished (so one that crosses midnight lands on the day you ended it).
 // ponytail: streaks cap at ~400 days; widen the window if anyone gets there.
-// boxing: see Step 7.4. The ticked-set EXISTS below keeps boxing rows (zero sets) out until streaks are made type-aware.
+// A finished boxing session counts for its day too (it has no sets, so it is let in by type).
 export async function getWorkoutDatesForStreak(): Promise<string[]> {
   const db = await getDatabase();
   const rows = await db.getAllAsync<{ d: string }>(
@@ -80,10 +80,10 @@ export async function getWorkoutDatesForStreak(): Promise<string[]> {
      FROM workouts
      WHERE finished_at IS NOT NULL
        AND finished_at >= unixepoch() - 400 * 86400
-       AND EXISTS (
+       AND (type = 'boxing' OR EXISTS (
          SELECT 1 FROM logged_exercises le JOIN logged_sets ls ON ls.logged_exercise_id = le.id
          WHERE le.workout_id = workouts.id AND ls.is_completed = 1
-       )
+       ))
      ORDER BY d DESC`
   );
   return rows.map((r) => r.d);
@@ -96,16 +96,16 @@ export function weekStartSecs(now = new Date()): number {
   return Math.floor(d.getTime() / 1000);
 }
 
-/** Finished workouts with a ticked set since Monday, for the "2 / 4 this week" goal progress. boxing: see Step 7.4 (the EXISTS excludes boxing for now). */
+/** Finished lifts with a ticked set, plus finished boxing sessions, since Monday: the "2 / 4 this week" goal progress. */
 export async function getWorkoutsThisWeek(): Promise<number> {
   const db = await getDatabase();
   const row = await db.getFirstAsync<{ n: number }>(
     `SELECT COUNT(*) AS n FROM workouts
      WHERE finished_at >= ?
-       AND EXISTS (
+       AND (type = 'boxing' OR EXISTS (
          SELECT 1 FROM logged_exercises le JOIN logged_sets ls ON ls.logged_exercise_id = le.id
          WHERE le.workout_id = workouts.id AND ls.is_completed = 1
-       )`,
+       ))`,
     [weekStartSecs()]
   );
   return row?.n ?? 0;
