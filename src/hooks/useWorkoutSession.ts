@@ -236,8 +236,13 @@ export function useWorkoutSession() {
         sets.push({
           ...defaultSet(i),
           dbId: setDbId,
-          ...(g?.weightLbs != null && g?.reps != null
-            ? { weightLbs: String(g.weightLbs), reps: String(g.reps), isGhostFilled: true }
+          ...(g && (g.weightLbs != null || g.reps != null)
+            ? {
+                weightLbs: g.weightLbs != null ? String(g.weightLbs) : "",
+                reps: g.reps != null ? String(g.reps) : "",
+                rpe: g.rpe != null ? String(g.rpe) : "",
+                isGhostFilled: true,
+              }
             : {}),
         });
       }
@@ -291,8 +296,13 @@ export function useWorkoutSession() {
         sets.push({
           ...defaultSet(i),
           dbId: setDbId,
-          ...(g?.weightLbs != null && g?.reps != null
-            ? { weightLbs: String(g.weightLbs), reps: String(g.reps), isGhostFilled: true }
+          ...(g && (g.weightLbs != null || g.reps != null)
+            ? {
+                weightLbs: g.weightLbs != null ? String(g.weightLbs) : "",
+                reps: g.reps != null ? String(g.reps) : "",
+                rpe: g.rpe != null ? String(g.rpe) : "",
+                isGhostFilled: true,
+              }
             : {}),
         });
       }
