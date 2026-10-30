@@ -113,7 +113,7 @@ Tick as you go. Each line = one commit.
 - [x] 2.1 Pure timer state machine + tests
 - [x] 2.2 Boxing settings (kv) + helpers
 - [x] 2.3 Sound/haptic cue util
-- [ ] 2.4 Active-boxing snapshot (save/load/clear) + tests
+- [x] 2.4 Active-boxing snapshot (save/load/clear) + tests
 
 **Phase 3: Start flow**
 - [ ] 3.1 Start picker on Train (Lift / Box)

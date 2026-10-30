@@ -1,12 +1,17 @@
 // Boxing DB tests: runs the real queries against in-memory SQLite.
 import { setupDb } from "./helpers/sqlite";
 import type { BoxingSession } from "../types/boxing";
+import { createTimer } from "../utils/boxingTimer";
+import { serializeSnapshot, parseSnapshot } from "../utils/boxingSnapshot";
+import { serializeSession, parseSession } from "../utils/sessionReducers";
 
 async function fresh() {
   const ctx = await setupDb();
   await ctx.init();
   return { ...ctx, q: await import("../db/boxingQueries") };
 }
+
+jest.mock("expo-sqlite", () => ({})); // static imports below only use pure helpers; DB tests re-mock via setupDb
 
 const rounds = (n: number, extra: Partial<BoxingSession["rounds"][number]> = {}) =>
   Array.from({ length: n }, (_, i) => ({
@@ -199,5 +204,39 @@ describe("export and wipe cover boxing", () => {
     expect(chips).toHaveLength(13);
     expect(chips.map((c) => c.name)).toContain("Jab");
     expect(chips.every((c) => c.isDefault)).toBe(true);
+  });
+});
+
+describe("boxing snapshot", () => {
+  const timer = () => createTimer({ rounds: 3, workSec: 30, restSec: 10, getReadySec: 5 }, 1_000_000);
+  const snap = { timer: timer(), roundLog: [{ rpe: 7, focusTags: [1, 2], focusNote: "x" }], tagsDraft: ["Heavy bag"] };
+
+  it("round-trips, including through the kv store", async () => {
+    expect(parseSnapshot(serializeSnapshot(snap))).toEqual({ kind: "boxing", v: 1, ...snap });
+    await fresh();
+    const { saveSnapshot, loadSnapshot, clearSnapshot } = await import("../utils/boxingSnapshot");
+    expect(await loadSnapshot()).toBeNull();
+    await saveSnapshot(snap);
+    expect(await loadSnapshot()).toEqual({ kind: "boxing", v: 1, ...snap });
+    await clearSnapshot();
+    expect(await loadSnapshot()).toBeNull();
+  });
+
+  it("rejects a lifting snapshot, and a boxing one is not a valid lifting snapshot", () => {
+    const lifting = serializeSession({ workoutId: 1, startedAt: 1, exercises: [] });
+    expect(parseSnapshot(lifting)).toBeNull();
+    expect(parseSession(serializeSnapshot(snap))).toBeNull();
+  });
+
+  it("returns null for corrupt, wrong-version or impossible snapshots", () => {
+    const good = JSON.parse(serializeSnapshot(snap));
+    const bad = [
+      "{not json", "null", "", JSON.stringify({ ...good, v: 2 }), JSON.stringify({ ...good, kind: "lift" }),
+      JSON.stringify({ ...good, timer: { ...good.timer, phaseIndex: 99 } }),
+      JSON.stringify({ ...good, timer: { ...good.timer, setup: { ...good.timer.setup, rounds: 0 } } }),
+      JSON.stringify({ ...good, timer: { ...good.timer, rounds: [] } }),
+      JSON.stringify({ ...good, roundLog: "x" }),
+    ];
+    for (const b of bad) expect(parseSnapshot(b)).toBeNull();
   });
 });

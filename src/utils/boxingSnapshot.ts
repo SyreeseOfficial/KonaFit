@@ -1,0 +1,51 @@
+import { kvStore } from "./kvStore";
+import { buildPhases, validateSetup, type TimerState } from "./boxingTimer";
+
+// Saved copy of a running boxing session, so a killed app can resume. Separate key from the lifting snapshot, and each
+// carries its own shape check, so neither can be loaded as the other.
+export const BOXING_SNAPSHOT_KEY = "@konafit_active_boxing_v1";
+export const BOXING_SNAPSHOT_VERSION = 1;
+
+/** What the user typed for a round while the timer ran. */
+export type RoundLogEntry = { rpe: number | null; focusTags: number[]; focusNote: string };
+
+export type BoxingSnapshot = {
+  kind: "boxing";
+  v: number;
+  timer: TimerState;
+  roundLog: RoundLogEntry[];
+  tagsDraft: string[];
+};
+
+export const serializeSnapshot = (s: Omit<BoxingSnapshot, "kind" | "v">): string =>
+  JSON.stringify({ kind: "boxing", v: BOXING_SNAPSHOT_VERSION, ...s });
+
+const isNum = (x: unknown): x is number => typeof x === "number" && Number.isFinite(x);
+
+/** Null for missing/corrupt JSON, another kind (a lifting snapshot), another version, or a timer that can't be resumed. */
+export function parseSnapshot(raw: string | null): BoxingSnapshot | null {
+  if (!raw) return null;
+  try {
+    const d = JSON.parse(raw);
+    if (d?.kind !== "boxing" || d.v !== BOXING_SNAPSHOT_VERSION) return null;
+    const t = d.timer as TimerState;
+    if (!t?.setup || validateSetup(t.setup) !== null) return null;
+    if (![t.phaseIndex, t.phaseTotalMs, t.phaseEndsAt, t.startedAt].every(isNum)) return null;
+    if (t.phaseIndex < 0 || t.phaseIndex >= buildPhases(t.setup).length) return null;
+    if (!Array.isArray(t.rounds) || t.rounds.length !== t.setup.rounds) return null;
+    if (!Array.isArray(d.roundLog) || !Array.isArray(d.tagsDraft)) return null;
+    return d as BoxingSnapshot;
+  } catch {
+    return null;
+  }
+}
+
+export const saveSnapshot = (s: Omit<BoxingSnapshot, "kind" | "v">) => kvStore.setItem(BOXING_SNAPSHOT_KEY, serializeSnapshot(s));
+export const clearSnapshot = () => kvStore.removeItem(BOXING_SNAPSHOT_KEY);
+export async function loadSnapshot(): Promise<BoxingSnapshot | null> {
+  try {
+    return parseSnapshot(await kvStore.getItem(BOXING_SNAPSHOT_KEY));
+  } catch {
+    return null;
+  }
+}
