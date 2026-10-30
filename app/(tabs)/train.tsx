@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { WeeklyGoal } from "../../src/components/train/WeeklyGoal";
 import { GoalsSection } from "../../src/components/train/GoalsSection";
+import { StartSheet } from "../../src/components/train/StartSheet";
+import { loadSnapshot, clearSnapshot } from "../../src/utils/boxingSnapshot";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus, X, ArrowUpDown, Settings, ChevronRight, MoreHorizontal, Copy, Archive, Trash2 } from "lucide-react-native";
 import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
@@ -82,6 +84,18 @@ export default function TrainScreen() {
   }, [workoutActive]);
   const [exerciseSheetOpen, setExerciseSheetOpen] = useState(false);
   const [locationSheetOpen, setLocationSheetOpen] = useState(false);
+  const [startSheetOpen, setStartSheetOpen] = useState(false);
+
+  // A boxing session left running counts as "in progress" too: starting anything else asks before discarding it.
+  const startUnlessBoxingRunning = useCallback(async (go: () => void) => {
+    setStartSheetOpen(false);
+    if (!(await loadSnapshot())) return go();
+    Alert.alert("Boxing session in progress", "Starting something new will discard it.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Resume", onPress: () => router.push("/boxing/session" as never) },
+      { text: "Discard & Start", style: "destructive", onPress: async () => { await clearSnapshot(); go(); } },
+    ]);
+  }, []);
 
   async function persistPhoto(uri: string, workoutId?: number) {
     try {
@@ -198,7 +212,7 @@ export default function TrainScreen() {
           ]
         );
       } else {
-        await launchFromProgramDay(parseInt(programDayId, 10));
+        await startUnlessBoxingRunning(() => launchFromProgramDay(parseInt(programDayId, 10)));
       }
     };
     doLaunch();
@@ -352,15 +366,15 @@ export default function TrainScreen() {
           {/* Quick start */}
           <View className="px-5" style={{ paddingTop: 32, paddingBottom: 32 }}>
             <TouchableOpacity
-              onPress={startWorkout}
+              onPress={() => setStartSheetOpen(true)}
               className="bg-crimson dark:bg-blue-500 py-4 rounded-2xl items-center"
               activeOpacity={0.85}
             >
-              <Text className="font-montserrat-bold text-white text-base">Start Empty Workout</Text>
+              <Text className="font-montserrat-bold text-white text-base">Start</Text>
             </TouchableOpacity>
             {recentWorkouts.length > 0 && (
               <TouchableOpacity
-                onPress={repeatLastWorkout}
+                onPress={() => startUnlessBoxingRunning(repeatLastWorkout)}
                 className="mt-3 py-4 rounded-2xl items-center bg-surface dark:bg-zinc-900 border border-surface-3 dark:border-zinc-700"
                 activeOpacity={0.85}
               >
@@ -476,6 +490,13 @@ export default function TrainScreen() {
             <GoalsSection />
           </View>
         </ScrollView>
+
+        <StartSheet
+          visible={startSheetOpen}
+          onClose={() => setStartSheetOpen(false)}
+          onLift={() => startUnlessBoxingRunning(startWorkout)}
+          onBox={() => startUnlessBoxingRunning(() => router.push("/boxing/setup" as never))}
+        />
 
         {/* Programs context menu */}
         <Modal

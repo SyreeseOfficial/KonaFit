@@ -116,7 +116,7 @@ Tick as you go. Each line = one commit.
 - [x] 2.4 Active-boxing snapshot (save/load/clear) + tests
 
 **Phase 3: Start flow**
-- [ ] 3.1 Start picker on Train (Lift / Box)
+- [x] 3.1 Start picker on Train (Lift / Box)
 - [ ] 3.2 Boxing setup screen
 - [ ] 3.3 Repeat-last-setup shortcut
 
