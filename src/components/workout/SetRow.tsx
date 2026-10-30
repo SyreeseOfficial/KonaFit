@@ -11,14 +11,14 @@ const PR_LABELS: Record<PRBadge, string> = { W: "PR WT", R: "PR REP", V: "PR VOL
 const TYPE_LABELS: Record<SetType, string> = { drop: "DROP", failure: "FAILURE", amrap: "AMRAP", backoff: "BACKOFF", myo: "MYO-REPS" };
 
 type Kind = "normal" | "warmup" | SetType;
-const KINDS: { key: Kind; label: string }[] = [
-  { key: "normal", label: "Normal" },
-  { key: "warmup", label: "Warm-up" },
-  { key: "drop", label: "Drop" },
-  { key: "failure", label: "Failure" },
-  { key: "amrap", label: "AMRAP" },
-  { key: "backoff", label: "Backoff" },
-  { key: "myo", label: "Myo-reps" },
+const KINDS: { key: Kind; label: string; desc: string }[] = [
+  { key: "normal", label: "Normal", desc: "A standard working set at your planned weight and reps." },
+  { key: "warmup", label: "Warm-up", desc: "A lighter set to prep your muscles and joints; excluded from volume and PRs." },
+  { key: "drop", label: "Drop", desc: "Right after a hard set, cut the weight ~20-30% and keep going with no rest." },
+  { key: "failure", label: "Failure", desc: "Taken until you can't complete another rep with good form." },
+  { key: "amrap", label: "AMRAP", desc: "\"As many reps as possible\" at a fixed weight; stop when form breaks." },
+  { key: "backoff", label: "Backoff", desc: "After your heavy top set, drop the weight and do more reps for extra volume." },
+  { key: "myo", label: "Myo-reps", desc: "One near-failure set, then short 3-5 breath rests and mini-sets of ~3-5 reps." },
 ];
 
 function PRBadgeChip({ badge }: { badge: PRBadge }) {
@@ -245,15 +245,16 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
             <Text className="font-montserrat-bold text-text-primary dark:text-white text-base px-5 py-5 border-b border-surface-2 dark:border-zinc-800">
               Set {set.setNumber}
             </Text>
-            <View className="flex-row flex-wrap gap-2 px-5 py-4">
+            <View className="py-2">
               {KINDS.map((k) => (
                 <TouchableOpacity
                   key={k.key}
                   onPress={() => pickKind(k.key)}
-                  className={`px-4 h-11 items-center justify-center rounded-full ${kind === k.key ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
+                  className={`mx-3 px-3 py-3 rounded-xl ${kind === k.key ? "bg-crimson dark:bg-blue-500" : ""}`}
                   activeOpacity={0.7}
                 >
                   <Text className={`font-montserrat-semibold text-sm ${kind === k.key ? "text-white" : "text-text-primary dark:text-white"}`}>{k.label}</Text>
+                  <Text className={`font-mono text-xs mt-0.5 ${kind === k.key ? "text-white/90" : "text-text-secondary dark:text-zinc-400"}`}>{k.desc}</Text>
                 </TouchableOpacity>
               ))}
             </View>
