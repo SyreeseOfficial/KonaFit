@@ -128,7 +128,7 @@ Tick as you go. Each line = one commit.
 - [x] 4.5 Background catch-up + kill/resume
 
 **Phase 5: In-session logging**
-- [ ] 5.1 Round RPE row + focus chips component
+- [x] 5.1 Round RPE row + focus chips component
 - [ ] 5.2 Rest-time prompt + carry-over
 
 **Phase 6: Finish + recap**
