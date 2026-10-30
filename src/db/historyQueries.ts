@@ -110,6 +110,11 @@ export async function getLastWorkoutExercises(): Promise<RepeatExercise[]> {
   );
 }
 
+export async function getWorkoutType(workoutId: number): Promise<WorkoutType | null> {
+  const db = await getDatabase();
+  return (await db.getFirstAsync<{ type: WorkoutType }>("SELECT type FROM workouts WHERE id = ?", [workoutId]))?.type ?? null;
+}
+
 export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail | null> {
   const db = await getDatabase();
 

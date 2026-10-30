@@ -17,6 +17,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import { ChevronLeft, FileText, Camera, X, Pencil, Check, Trash2, Plus, Calendar } from "lucide-react-native";
 import {
   getWorkoutDetail,
+  getWorkoutType,
+  type WorkoutType,
   type WorkoutDetail,
   type SetRecord,
   updateWorkoutName,
@@ -34,51 +36,19 @@ import {
   formatVolume,
   shareWorkoutMarkdown,
 } from "../../src/utils/exportUtils";
+import { BoxingDetail } from "../../src/components/boxing/BoxingDetail";
 import { WorkoutShareCard } from "../../src/components/export/WorkoutShareCard";
 import { AddExerciseSheet } from "../../src/components/workout/AddExerciseSheet";
 import { cleanDecimal, cleanInt, MAX_WEIGHT, MAX_REPS } from "../../src/utils/numberInput";
 import type { Exercise } from "../../src/types/workout";
+import { initDateEdits, dateEditsToTimestamp, type InfoEdits } from "../../src/utils/dateEdit";
 
-type InfoEdits = {
-  month: string; day: string; year: string;
-  hour: string; minute: string; ampm: "AM" | "PM";
-  durHours: string; durMins: string;
-};
-
-function initInfoEdits(workout: WorkoutDetail): InfoEdits {
-  const d = new Date(workout.started_at * 1000);
-  let h = d.getHours();
-  const ampm: "AM" | "PM" = h >= 12 ? "PM" : "AM";
-  h = h % 12 || 12;
-  const totalDurMin = Math.round(workout.duration_seconds / 60);
-  return {
-    month: String(d.getMonth() + 1), day: String(d.getDate()), year: String(d.getFullYear()),
-    hour: String(h), minute: String(d.getMinutes()).padStart(2, "0"), ampm,
-    durHours: String(Math.floor(totalDurMin / 60)), durMins: String(totalDurMin % 60),
-  };
-}
-
-function infoEditsToTimestamp(edits: InfoEdits): { startedAt: number; durationSeconds: number } | null {
-  const month = parseInt(edits.month, 10);
-  const day = parseInt(edits.day, 10);
-  const year = parseInt(edits.year, 10);
-  let hour = parseInt(edits.hour, 10) % 12;
-  if (edits.ampm === "PM") hour += 12;
-  const minute = parseInt(edits.minute, 10);
-  if (
-    isNaN(month) || isNaN(day) || isNaN(year) || isNaN(hour) || isNaN(minute) ||
-    month < 1 || month > 12 || day < 1 || day > 31 || year < 2000 || minute < 0 || minute > 59
-  ) return null;
-  const d = new Date(year, month - 1, day, hour, minute, 0);
-  const startedAt = Math.floor(d.getTime() / 1000);
-  const dH = parseInt(edits.durHours, 10) || 0;
-  const dM = parseInt(edits.durMins, 10) || 0;
-  return { startedAt, durationSeconds: Math.max(0, dH * 3600 + dM * 60) };
-}
+const initInfoEdits = (workout: WorkoutDetail): InfoEdits => initDateEdits(workout.started_at, workout.duration_seconds);
+const infoEditsToTimestamp = dateEditsToTimestamp;
 
 const inputBase = "bg-surface-3 dark:bg-zinc-700 text-text-primary dark:text-white font-mono text-base text-center py-3 rounded-xl";
 
-export default function WorkoutDetailScreen() {
+function LiftWorkoutDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [workout, setWorkout] = useState<WorkoutDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -582,4 +552,14 @@ export default function WorkoutDetailScreen() {
       />
     </SafeAreaView>
   );
+}
+
+/** Lifts and boxing sessions share this route; the workout's type decides which screen shows. */
+export default function WorkoutDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const workoutId = parseInt(id, 10);
+  const [type, setType] = useState<WorkoutType | null>(null);
+  useEffect(() => { getWorkoutType(workoutId).then((t) => setType(t ?? "lift")).catch(() => setType("lift")); }, [workoutId]);
+  if (!type) return <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950" />;
+  return type === "boxing" ? <BoxingDetail id={workoutId} /> : <LiftWorkoutDetail />;
 }
