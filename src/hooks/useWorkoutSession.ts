@@ -7,6 +7,7 @@ import type { ActiveSession, ActiveExercise, ActiveSet } from "../types/workout"
 import {
   createWorkout,
   finalizeWorkout,
+  type WorkoutFeel,
   deleteWorkout,
   workoutExists,
   createLoggedExercise,
@@ -27,8 +28,10 @@ import { getHistPRs, getLastWorkoutExercises } from "../db/historyQueries";
 import { computePRBadges, isRealPR } from "../utils/prBadges";
 import type { PRBadge } from "../types/workout";
 import * as R from "../utils/sessionReducers";
+import { APP_VERSION } from "../utils/appVersion";
 
-const SESSION_KEY = "@kinetic_active_session";
+const SESSION_KEY = "@konafit_active_session_v1";
+const OLD_SESSION_KEY = "@kinetic_active_session"; // pre-versioning format; never read, just cleaned up
 // Local ids must stay unique across app restarts (a resumed session keeps its old ids), so no per-run counter.
 let localIdFallback = 0;
 const uid = () =>
@@ -53,7 +56,7 @@ function defaultSet(setNumber: number): ActiveSet {
 
 async function saveToStorage(session: ActiveSession | null) {
   if (session) {
-    await kvStore.setItem(SESSION_KEY, JSON.stringify(session));
+    await kvStore.setItem(SESSION_KEY, R.serializeSession(session));
   } else {
     await kvStore.removeItem(SESSION_KEY);
   }
@@ -61,8 +64,8 @@ async function saveToStorage(session: ActiveSession | null) {
 
 export async function loadCachedSession(): Promise<ActiveSession | null> {
   try {
-    const raw = await kvStore.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as ActiveSession) : null;
+    await kvStore.removeItem(OLD_SESSION_KEY);
+    return R.parseSession(await kvStore.getItem(SESSION_KEY));
   } catch {
     return null;
   }
@@ -159,7 +162,7 @@ export function useWorkoutSession() {
   );
 
   const startWorkout = useCallback(async () => {
-    const workoutId = await createWorkout();
+    const workoutId = await createWorkout(undefined, APP_VERSION);
     const newSession: ActiveSession = {
       workoutId,
       startedAt: Date.now(),
@@ -182,10 +185,10 @@ export function useWorkoutSession() {
     setSession(normalized);
   }, []);
 
-  const finishWorkout = useCallback(async (location?: string) => {
+  const finishWorkout = useCallback(async (location?: string, feel?: WorkoutFeel) => {
     if (!session) return;
     await flushDirty(); // the last typed values must be in the DB before the finish is stamped
-    await finalizeWorkout(session.workoutId, location);
+    await finalizeWorkout(session.workoutId, location, feel);
     setPendingUndo(null);
     cancelPending();
     await saveToStorage(null);
@@ -590,7 +593,7 @@ export function useWorkoutSession() {
     }[],
     programDayId?: number
   ) => {
-    const workoutId = await createWorkout(programDayId);
+    const workoutId = await createWorkout(programDayId, APP_VERSION);
     try {
       const supersetIds = new Map<string, string>(); // saved superset id -> this workout's own id
       const exercises: ActiveExercise[] = await Promise.all(

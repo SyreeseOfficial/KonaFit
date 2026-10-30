@@ -252,3 +252,17 @@ export async function getBodyweightTrend(days: number | null): Promise<TrendPoin
   return rows.map((r) => ({ x: r.ts, y: r.weight }));
 }
 
+
+export type FeelField = "rating" | "energy" | "sleep_hours";
+
+/** One point per finished workout that has the field filled in (x = start, ms). */
+export async function getFeelTrend(field: FeelField, days: number | null = 90): Promise<TrendPoint[]> {
+  const db = await getDatabase();
+  const cond = days !== null ? "AND started_at >= unixepoch() - ? * 86400" : "";
+  const rows = await db.getAllAsync<{ ts: number; v: number }>(
+    `SELECT started_at * 1000 AS ts, ${field} AS v FROM workouts
+     WHERE finished_at IS NOT NULL AND ${field} IS NOT NULL ${cond} ORDER BY started_at ASC`,
+    days !== null ? [days] : []
+  );
+  return rows.map((r) => ({ x: r.ts, y: r.v }));
+}

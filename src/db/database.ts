@@ -78,6 +78,53 @@ const MIGRATIONS: ((database: SQLite.SQLiteDatabase) => Promise<void>)[] = [
        WHERE type = 'bodyweight' AND start_value IS NOT NULL AND target_value IS NOT NULL AND direction IS NULL;`
     );
   },
+  // 6: indexes for history, PR and ghost-set lookups
+  async (database) => {
+    await database.execAsync(
+      `CREATE INDEX IF NOT EXISTS idx_le_exercise ON logged_exercises(exercise_id);
+       CREATE INDEX IF NOT EXISTS idx_le_workout ON logged_exercises(workout_id);
+       CREATE INDEX IF NOT EXISTS idx_ls_exercise ON logged_sets(logged_exercise_id);
+       CREATE INDEX IF NOT EXISTS idx_workouts_finished ON workouts(finished_at);`
+    );
+  },
+  // 7: progress_photos.photo_uri keeps only the file name; the folder is rebuilt at read time (full paths break when the app container moves)
+  async (database) => {
+    const rows = await database.getAllAsync<{ id: number; photo_uri: string }>("SELECT id, photo_uri FROM progress_photos");
+    for (const r of rows) {
+      const name = r.photo_uri.split("/").pop() ?? r.photo_uri;
+      if (name !== r.photo_uri) await database.runAsync("UPDATE progress_photos SET photo_uri = ? WHERE id = ?", [name, r.id]);
+    }
+  },
+  // 8: which app version / when a workout was created, for bug reports
+  async (database) => {
+    await addColumn(database, "workouts", "app_version", "TEXT");
+    await addColumn(database, "workouts", "created_at", "INTEGER");
+    await database.execAsync("UPDATE workouts SET created_at = started_at WHERE created_at IS NULL");
+  },
+  // 9: when an exercise was soft-deleted, so old ones with no history can be purged. Existing ones start their 30 days now.
+  async (database) => {
+    await addColumn(database, "exercises", "deleted_at", "INTEGER");
+    await database.execAsync("UPDATE exercises SET deleted_at = unixepoch() WHERE is_deleted = 1 AND deleted_at IS NULL");
+  },
+  // 10: how the workout felt (1-5 each) and last night's sleep
+  async (database) => {
+    await addColumn(database, "workouts", "rating", "INTEGER");
+    await addColumn(database, "workouts", "energy", "INTEGER");
+    await addColumn(database, "workouts", "sleep_hours", "REAL");
+  },
+  // 11: seconds rested before each set, and a start/pause/resume/finish log per workout
+  async (database) => {
+    await addColumn(database, "logged_sets", "rest_seconds", "INTEGER");
+    await database.execAsync(
+      `CREATE TABLE IF NOT EXISTS session_events (
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         workout_id INTEGER NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
+         type TEXT NOT NULL,
+         at INTEGER NOT NULL DEFAULT (unixepoch())
+       );
+       CREATE INDEX IF NOT EXISTS idx_se_workout ON session_events(workout_id);`
+    );
+  },
 ];
 
 async function runMigrations(database: SQLite.SQLiteDatabase) {

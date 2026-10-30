@@ -16,6 +16,7 @@ import { kvStore } from "../src/utils/kvStore";
 import { getAllWorkoutDataForExport } from "../src/db/historyQueries";
 import { exportCsvAndShare } from "../src/utils/exportUtils";
 import { wipeAllData } from "../src/db/wipe";
+import { removeOrphanPhotos } from "../src/utils/photoFiles";
 import { THEME_KEY, loadTheme, setTheme, type ThemePref } from "../src/utils/theme";
 import {
   REST_TIMER_KEY,
@@ -184,6 +185,7 @@ export default function SettingsScreen() {
     setWipeText("");
     try {
       await wipeAllData([...PRESERVED_KEYS, HAPTICS_KEY, THEME_KEY]);
+      await removeOrphanPhotos().catch(console.error); // the photo rows are gone, so every photo file is now an orphan
       Alert.alert("Done", "All workout data has been deleted.");
     } catch (e) {
       Alert.alert("Error", String(e));
@@ -335,6 +337,11 @@ export default function SettingsScreen() {
             label="Custom Exercises"
             sublabel="Edit or delete exercises you've created"
             onPress={() => router.push("/custom-exercises" as never)}
+          />
+          <Row
+            label="Deleted Exercises"
+            sublabel="Restore exercises you deleted"
+            onPress={() => router.push("/deleted-exercises" as never)}
           />
           <Row
             label="Archived Programs"

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { View, Text, Modal, Pressable, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
 import { X, Trophy } from "lucide-react-native";
+import { getExerciseNotes, type ExerciseNote } from "../../db/workoutQueries";
 import { getExercisePRs, getExerciseSets, type ExercisePRs, type PRSet, type ExerciseSetRow } from "../../db/historyQueries";
 
 type Props = {
@@ -49,6 +50,7 @@ function PRColumn({ label, set }: { label: string; set: PRSet }) {
 export function ExerciseHistoryModal({ visible, exerciseId, exerciseName, onClose }: Props) {
   const [prs, setPRs] = useState<ExercisePRs | null>(null);
   const [sets, setSets] = useState<ExerciseSetRow[]>([]);
+  const [notes, setNotes] = useState<ExerciseNote[]>([]);
   const [shown, setShown] = useState(10);
   const [loading, setLoading] = useState(false);
 
@@ -56,8 +58,8 @@ export function ExerciseHistoryModal({ visible, exerciseId, exerciseName, onClos
     if (!visible) return;
     setLoading(true);
     setShown(10);
-    Promise.all([getExercisePRs(exerciseId), getExerciseSets(exerciseId, 30)])
-      .then(([p, s]) => { setPRs(p); setSets(s); })
+    Promise.all([getExercisePRs(exerciseId), getExerciseSets(exerciseId, 30), getExerciseNotes(exerciseId)])
+      .then(([p, s, n]) => { setPRs(p); setSets(s); setNotes(n); })
       .finally(() => setLoading(false));
   }, [visible, exerciseId]);
 
@@ -148,6 +150,27 @@ export function ExerciseHistoryModal({ visible, exerciseId, exerciseName, onClos
                         <Text className="font-mono-medium text-text-primary dark:text-white text-sm">
                           {s.weightLbs ?? 0} lbs × {s.reps ?? 0}
                         </Text>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              </>
+            )}
+
+            {!loading && notes.length > 0 && (
+              <>
+                <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs uppercase tracking-widest mt-8 mb-3">
+                  Notes
+                </Text>
+                <View className="bg-surface-2 dark:bg-zinc-800 rounded-2xl overflow-hidden">
+                  <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
+                    {notes.map((n, i) => (
+                      <View
+                        key={i}
+                        className={`px-4 py-3.5 ${i < notes.length - 1 ? "border-b border-surface-3 dark:border-zinc-700" : ""}`}
+                      >
+                        <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs mb-1">{formatDate(n.at)}</Text>
+                        <Text className="font-montserrat text-text-primary dark:text-white text-sm">{n.text}</Text>
                       </View>
                     ))}
                   </ScrollView>

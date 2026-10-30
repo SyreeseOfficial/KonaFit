@@ -80,6 +80,8 @@ describe("migrations", () => {
     ["programs", "focus_tags"], ["programs", "equipment"], ["programs", "difficulty"], ["programs", "archived"],
     ["goals", "target_reps"], ["logged_sets", "notes"],
     ["logged_sets", "completed_at"], ["goals", "start_value"], ["goals", "direction"],
+    ["workouts", "app_version"], ["workouts", "created_at"], ["exercises", "deleted_at"],
+    ["workouts", "rating"], ["workouts", "energy"], ["workouts", "sleep_hours"], ["logged_sets", "rest_seconds"],
   ];
   const version = async (a: TestDb) => (await a.getFirstAsync<{ user_version: number }>("PRAGMA user_version"))!.user_version;
   const columns = async (a: TestDb, t: string) =>
@@ -533,5 +535,99 @@ describe("goals", () => {
     await q.goals.markGoalAchieved(gid);
     const at = (await adapter.getFirstAsync<{ achieved_at: number }>("SELECT achieved_at FROM goals"))!.achieved_at;
     expect(at).toBe(t - 5 * DAY + 3600);
+  });
+});
+
+describe("data round: indexes, photos, workout meta", () => {
+  it("creates the history indexes", async () => {
+    const { adapter } = await fresh();
+    const names = (await adapter.getAllAsync<{ name: string }>("SELECT name FROM sqlite_master WHERE type = 'index'")).map((r) => r.name);
+    for (const n of ["idx_le_exercise", "idx_le_workout", "idx_ls_exercise", "idx_workouts_finished"]) expect(names).toContain(n);
+  });
+
+  it("migration 7 cuts saved photo paths down to the file name", async () => {
+    const { adapter, init } = await fresh();
+    await adapter.runAsync("INSERT INTO progress_photos (photo_uri) VALUES (?), (?)", ["file:///data/user/0/app/files/konafit/photos/photo_1.jpg", "photo_2.jpg"]);
+    await adapter.execAsync("PRAGMA user_version = 6");
+    await init();
+    const rows = await adapter.getAllAsync<{ photo_uri: string }>("SELECT photo_uri FROM progress_photos ORDER BY id");
+    expect(rows.map((r) => r.photo_uri)).toEqual(["photo_1.jpg", "photo_2.jpg"]);
+  });
+
+  it("findOrphans lists files no row points to", async () => {
+    await fresh();
+    const { findOrphans } = await import("../db/photoQueries");
+    expect(findOrphans(["a.jpg", "b.jpg"], ["a.jpg", "/old/path/c.jpg"])).toEqual(["b.jpg"]);
+  });
+
+  it("a new workout records app version, created_at and a start event; finishing stores feel and a finish event", async () => {
+    const { adapter, q } = await fresh();
+    const id = await q.workouts.createWorkout(undefined, "1.2.3");
+    const w = (await adapter.getFirstAsync<{ app_version: string; created_at: number }>("SELECT app_version, created_at FROM workouts WHERE id = ?", [id]))!;
+    expect(w.app_version).toBe("1.2.3");
+    expect(w.created_at).toBeGreaterThan(0);
+    await q.workouts.logSessionEvent(id, "pause");
+    await q.workouts.finalizeWorkout(id, undefined, { rating: 4, energy: 3, sleepHours: 7.5 });
+    const f = (await adapter.getFirstAsync<{ rating: number; energy: number; sleep_hours: number }>("SELECT rating, energy, sleep_hours FROM workouts WHERE id = ?", [id]))!;
+    expect(f).toEqual({ rating: 4, energy: 3, sleep_hours: 7.5 });
+    const ev = await adapter.getAllAsync<{ type: string }>("SELECT type FROM session_events WHERE workout_id = ? ORDER BY id", [id]);
+    expect(ev.map((e) => e.type)).toEqual(["start", "pause", "finish"]);
+    expect((await q.stats.getFeelTrend("rating")).map((p) => p.y)).toEqual([4]);
+  });
+
+  it("stores rest_seconds between ticked sets, and ignores gaps over 30 min", async () => {
+    const { adapter, q } = await fresh();
+    const wid = await q.workouts.createWorkout();
+    const le = await q.workouts.createLoggedExercise(wid, await exId(adapter, "Barbell Bench Press"), "Barbell Bench Press", 0);
+    const tick = async (n: number, at: number) => {
+      const dbId = await q.workouts.createLoggedSet(le, n);
+      await q.workouts.upsertLoggedSet({ dbId, loggedExerciseId: le, localId: `s${n}`, setNumber: n, weightLbs: "100", reps: "5", rpe: "", notes: "", isWarmup: false, isCompleted: true });
+      await adapter.runAsync("UPDATE logged_sets SET completed_at = ?, rest_seconds = NULL WHERE id = ?", [at, dbId]);
+      return dbId;
+    };
+    const t0 = 1_000_000;
+    const a = await tick(1, t0);
+    const b = await tick(2, t0 + 90);
+    const c = await tick(3, t0 + 90 + 3600);
+    // re-run the stamp the way a later edit of a ticked set would
+    for (const id of [a, b, c]) {
+      await q.workouts.upsertLoggedSet({ dbId: id, loggedExerciseId: le, localId: "x", setNumber: 1, weightLbs: "100", reps: "5", rpe: "", notes: "", isWarmup: false, isCompleted: true });
+    }
+    const rest = (await adapter.getAllAsync<{ rest_seconds: number | null }>("SELECT rest_seconds FROM logged_sets ORDER BY id")).map((r) => r.rest_seconds);
+    expect(rest).toEqual([null, 90, null]);
+  });
+});
+
+describe("deleted exercises", () => {
+  it("restores, blocks a clash with a live name, and purges only old unused ones", async () => {
+    const { adapter, q } = await fresh();
+    const w = q.workouts;
+    const mk = (n: string) => w.createCustomExercise(n, ["Chest"], ["Barbell"], "reps");
+    const a = await mk("Old Unused"), b = await mk("Old Used"), c = await mk("Fresh"), d = await mk("Clash");
+    for (const e of [a, b, c, d]) await w.deleteExercise(e.id);
+    expect((await w.getDeletedExercises()).map((e) => e.name)).toHaveLength(4);
+    await mk("Clash");
+    await expect(w.restoreExercise(d.id)).rejects.toThrow(/already exists/);
+    await w.restoreExercise(c.id);
+    expect((await adapter.getFirstAsync<{ is_deleted: number }>("SELECT is_deleted FROM exercises WHERE id = ?", [c.id]))!.is_deleted).toBe(0);
+
+    await adapter.runAsync("UPDATE exercises SET deleted_at = unixepoch() - 40 * 86400 WHERE id IN (?, ?)", [a.id, b.id]);
+    const wid = await q.workouts.createWorkout();
+    await w.createLoggedExercise(wid, b.id, b.name, 0);
+    await w.purgeDeletedExercises();
+    const left = (await adapter.getAllAsync<{ name: string }>("SELECT name FROM exercises WHERE name IN ('Old Unused','Old Used','Clash')")).map((r) => r.name).sort();
+    expect(left).toEqual(["Clash", "Clash", "Old Used"]);
+  });
+
+  it("lists notes for one exercise, newest first, finished workouts only", async () => {
+    const { adapter, q } = await fresh();
+    const id = await exId(adapter, "Barbell Bench Press");
+    const w1 = await addWorkout(adapter, { "Barbell Bench Press": [{ w: 100, r: 5 }] }, { startedAt: now() - 3 * DAY });
+    const w2 = await addWorkout(adapter, { "Barbell Bench Press": [{ w: 100, r: 5 }] }, { startedAt: now() - DAY });
+    const w3 = await addWorkout(adapter, { "Barbell Bench Press": [{ w: 100, r: 5 }] }, { finished: false });
+    await adapter.runAsync("UPDATE logged_exercises SET notes = 'elbows in' WHERE workout_id = ?", [w1]);
+    await adapter.runAsync("UPDATE logged_exercises SET notes = 'felt strong' WHERE workout_id = ?", [w2]);
+    await adapter.runAsync("UPDATE logged_exercises SET notes = 'unfinished' WHERE workout_id = ?", [w3]);
+    expect((await q.workouts.getExerciseNotes(id)).map((n) => n.text)).toEqual(["felt strong", "elbows in"]);
   });
 });

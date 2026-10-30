@@ -99,3 +99,19 @@ export function swapExercise(session: ActiveSession, exerciseLocalId: string, ta
     sets: e.sets.some((s) => s.prBadges) ? e.sets.map((s) => (s.prBadges ? { ...s, prBadges: undefined } : s)) : e.sets,
   }));
 }
+
+/** Bump when ActiveSession changes shape; a saved session with another version is dropped instead of crashing the app. */
+export const SESSION_SCHEMA_VERSION = 1;
+
+export const serializeSession = (session: ActiveSession): string =>
+  JSON.stringify({ schemaVersion: SESSION_SCHEMA_VERSION, session });
+
+export function parseSession(raw: string | null): ActiveSession | null {
+  if (!raw) return null;
+  try {
+    const data = JSON.parse(raw);
+    return data?.schemaVersion === SESSION_SCHEMA_VERSION && data.session ? (data.session as ActiveSession) : null;
+  } catch {
+    return null;
+  }
+}

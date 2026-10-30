@@ -12,10 +12,37 @@ import {
 } from "react-native";
 import { MapPin, Plus, X } from "lucide-react-native";
 import { getLocations, type Location } from "../../db/locationQueries";
+import type { WorkoutFeel } from "../../db/workoutQueries";
+
+/** "7.5" -> 7.5; blank or nonsense -> null; capped at 24 h. */
+export const parseSleepHours = (text: string): number | null => {
+  const n = parseFloat(text.replace(",", "."));
+  return Number.isFinite(n) && n > 0 ? Math.min(24, n) : null;
+};
+
+function ScorePicker({ label, value, onChange }: { label: string; value: number | null; onChange: (v: number | null) => void }) {
+  return (
+    <View className="flex-row items-center justify-between mb-3">
+      <Text className="font-montserrat text-text-secondary dark:text-zinc-400 text-sm">{label}</Text>
+      <View className="flex-row gap-2">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <TouchableOpacity
+            key={n}
+            onPress={() => onChange(value === n ? null : n)}
+            activeOpacity={0.7}
+            className={`w-10 h-10 items-center justify-center rounded-full ${value === n ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
+          >
+            <Text className={`font-mono-medium text-sm ${value === n ? "text-white" : "text-text-primary dark:text-white"}`}>{n}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+}
 
 type Props = {
   visible: boolean;
-  onSave: (location: string | null) => void;
+  onSave: (location: string | null, feel: WorkoutFeel) => void;
   onDiscard: () => void;
   onCancel: () => void;
 };
@@ -25,12 +52,18 @@ export function LocationSheet({ visible, onSave, onDiscard, onCancel }: Props) {
   const [inputText, setInputText] = useState("");
   const [showInput, setShowInput] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [rating, setRating] = useState<number | null>(null);
+  const [energy, setEnergy] = useState<number | null>(null);
+  const [sleep, setSleep] = useState("");
 
   useEffect(() => {
     if (visible) {
       setInputText("");
       setShowInput(false);
       setSelectedLocation(null);
+      setRating(null);
+      setEnergy(null);
+      setSleep("");
       getLocations().then(setLocations);
     }
   }, [visible]);
@@ -179,10 +212,28 @@ export function LocationSheet({ visible, onSave, onDiscard, onCancel }: Props) {
                 </TouchableOpacity>
               )}
 
+              {/* How it felt (all optional) */}
+              <View className="px-5 pt-4">
+                <ScorePicker label="Workout rating" value={rating} onChange={setRating} />
+                <ScorePicker label="Energy" value={energy} onChange={setEnergy} />
+                <View className="flex-row items-center justify-between">
+                  <Text className="font-montserrat text-text-secondary dark:text-zinc-400 text-sm">Sleep last night (h)</Text>
+                  <TextInput
+                    className="w-20 h-10 bg-surface-2 dark:bg-zinc-800 px-3 font-mono text-text-primary dark:text-white text-base rounded-xl text-center"
+                    placeholder="7.5"
+                    placeholderTextColor="#94A3B8"
+                    value={sleep}
+                    onChangeText={setSleep}
+                    keyboardType="decimal-pad"
+                    maxLength={4}
+                  />
+                </View>
+              </View>
+
               {/* Actions */}
               <View className="px-5 pt-4 pb-10" style={{ gap: 8 }}>
                 <TouchableOpacity
-                  onPress={() => onSave(selectedLocation)}
+                  onPress={() => onSave(selectedLocation, { rating, energy, sleepHours: parseSleepHours(sleep) })}
                   className="bg-crimson dark:bg-blue-500 py-4 items-center rounded-2xl"
                   activeOpacity={0.85}
                 >

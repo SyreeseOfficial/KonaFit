@@ -14,7 +14,8 @@ import {
   JetBrainsMono_500Medium,
 } from "@expo-google-fonts/jetbrains-mono";
 import { initializeDatabase } from "../src/db/database";
-import { deleteUnfinishedWorkouts } from "../src/db/workoutQueries";
+import { deleteUnfinishedWorkouts, purgeDeletedExercises } from "../src/db/workoutQueries";
+import { removeOrphanPhotos } from "../src/utils/photoFiles";
 import { loadCachedSession } from "../src/hooks/useWorkoutSession";
 import { loadHapticsSetting } from "../src/utils/haptics";
 import { loadTheme } from "../src/utils/theme";
@@ -33,6 +34,8 @@ async function boot() {
   // Unfinished workouts are leftovers from crashes or failed starts, except the one a saved session can still resume.
   const cached = await loadCachedSession();
   await deleteUnfinishedWorkouts(cached?.workoutId ?? null).catch(console.error);
+  await purgeDeletedExercises().catch(console.error);
+  await removeOrphanPhotos().catch(console.error);
   await Promise.all([loadHapticsSetting(), loadTheme()]);
 }
 

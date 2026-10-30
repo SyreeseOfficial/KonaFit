@@ -16,6 +16,7 @@ import { exportCsvAndShare } from "../../src/utils/exportUtils";
 import { WeeklyGoal } from "../../src/components/train/WeeklyGoal";
 import { StatsGrid } from "../../src/components/stats/StatsGrid";
 import { SectionHeader } from "../../src/components/stats/SectionHeader";
+import { FeelChart } from "../../src/components/stats/FeelChart";
 import { BodyweightLogger } from "../../src/components/stats/BodyweightLogger";
 import { ProgressPhotoGallery } from "../../src/components/stats/ProgressPhotoGallery";
 
@@ -128,6 +129,11 @@ export default function StatsScreen() {
         <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
           <SectionHeader title="Lifestyle" subtitle="Daily tracking" />
           <BodyweightLogger onSaved={() => refresh()} refreshKey={refreshKey} />
+        </View>
+
+        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
+          <SectionHeader title="How it felt" subtitle="Rating, energy, sleep" />
+          <FeelChart refreshKey={refreshKey} />
         </View>
 
         <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>

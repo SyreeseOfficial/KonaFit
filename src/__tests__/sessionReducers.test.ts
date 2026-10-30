@@ -100,3 +100,14 @@ describe("exercises", () => {
     expect(R.addSupersetAfter(s, "missing", ex("x"), "ss")).toBe(s);
   });
 });
+
+describe("saved session format", () => {
+  it("round-trips, and rejects other versions, old unversioned saves and junk", () => {
+    const s: ActiveSession = { workoutId: 1, startedAt: 5, exercises: [] };
+    expect(R.parseSession(R.serializeSession(s))).toEqual(s);
+    expect(R.parseSession(JSON.stringify(s))).toBeNull(); // pre-versioning shape
+    expect(R.parseSession(JSON.stringify({ schemaVersion: 999, session: s }))).toBeNull();
+    expect(R.parseSession("{not json")).toBeNull();
+    expect(R.parseSession(null)).toBeNull();
+  });
+});

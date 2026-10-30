@@ -67,15 +67,7 @@ Things that are broken or give wrong answers.
 
 How the database and files are saved.
 
-- ⭐ 🟡 **Add indexes** — `idx_le_exercise`, `idx_le_workout`, `idx_ls_exercise`, `idx_workouts_finished`. They make history, PR and ghost-set queries much faster.
-- ⭐ 🟡 **Photos: save the file name only** (`photo_<ts>.jpg`) and build the full path when reading. Delete the file when its row is deleted. On launch and on wipe, remove orphan photo files. Also: don't ask for media-library permission just to use the camera.
-- ⭐ 🟡 **Session key rename.** Move `@kinetic_active_session` to a versioned key. Store a `schemaVersion` inside, so old saves are rejected, not crashed on.
-- 🟡 **Auto-backup before each migration.** Use `VACUUM INTO`, keep the last 3. Also add a `schema_version` row.
-- 🟡 **Save `app_version` and `created_at` on workouts.** Helps bug reports.
-- 🟡 **Purge old soft-deleted exercises** that have no history. Add a "Deleted exercises" list with Restore.
-- 🟡 **Workout rating, energy and sleep fields.** Show them on the finish sheet and chart them.
-- 🟡 **Save `completed_at` and `rest_seconds` for each set**, plus a `session_events` log (start, pause, resume). Gives true duration and rest times.
-- 🟡 **Exercise notes timeline.** See your cues for one exercise over time.
+- 🟡 **Auto-backup before each migration.** Use `VACUUM INTO`, keep the last 3. Also add a `schema_version` row. *Left alone this round: it is the same job as "Auto-backup before Wipe All Data and before each migration" in ⏸️ Skipped for now.*
 
 ---
 
@@ -372,7 +364,16 @@ You marked these as "skip for now." They stay on the list so they aren't lost.
 
 ## ✅ Done
 
-Finished in earlier rounds. For reference only.
+**Data round** (passed typecheck, lint and `npm test`)
+- [x] Indexes `idx_le_exercise`, `idx_le_workout`, `idx_ls_exercise`, `idx_workouts_finished` (migration 6).
+- [x] Photos save only the file name (`src/utils/photoFiles.ts` builds the path; migration 7 trims old rows). Deleting a photo deletes its file; orphan files are removed on launch and after Wipe All Data. The media-library permission prompt is gone (camera still asks for camera access).
+- [x] Active session key is now `@konafit_active_session_v1` with a `schemaVersion` inside. Old/unknown saves are ignored, and the old `@kinetic_active_session` key is removed.
+- [x] Workouts store `app_version` and `created_at` (migration 8).
+- [x] Deleted exercises get `deleted_at` (migration 9). Ones older than 30 days with no workout or program use are purged on launch. Settings > Deleted Exercises lists them with Restore (blocked if a live exercise took the name).
+- [x] Workout rating, energy (1-5) and sleep hours on the finish sheet (migration 10), charted on Stats under "How it felt".
+- [x] Each set stores `rest_seconds` (time since the previous ticked set, gaps over 30 min ignored) and a `session_events` table logs start, pause, resume, finish (migration 11). `completed_at` already existed.
+- [x] Exercise notes timeline: the exercise history modal lists your notes for that exercise, newest first.
+
 
 
 **Bugs round** (everything below passed typecheck, lint and `npm test`)

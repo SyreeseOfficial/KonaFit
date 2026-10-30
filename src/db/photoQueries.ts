@@ -1,5 +1,6 @@
 import { getDatabase } from "./database";
 
+/** `photo_uri` is the file name only (`photo_<ts>.jpg`); build the full path with `photoPath` in utils/photoFiles. */
 export type ProgressPhoto = {
   id: number;
   workout_id: number | null;
@@ -9,11 +10,11 @@ export type ProgressPhoto = {
   taken_at: number;
 };
 
-export async function saveProgressPhoto(photoUri: string, workoutId?: number): Promise<number> {
+export async function saveProgressPhoto(fileName: string, workoutId?: number): Promise<number> {
   const db = await getDatabase();
   const result = await db.runAsync(
     "INSERT INTO progress_photos (photo_uri, workout_id) VALUES (?, ?)",
-    [photoUri, workoutId ?? null]
+    [fileName, workoutId ?? null]
   );
   return result.lastInsertRowId;
 }
@@ -34,4 +35,15 @@ export async function getProgressPhotos(limit = 50): Promise<ProgressPhoto[]> {
 export async function deleteProgressPhoto(photoId: number): Promise<void> {
   const db = await getDatabase();
   await db.runAsync("DELETE FROM progress_photos WHERE id = ?", [photoId]);
+}
+
+export async function getPhotoFileNames(): Promise<string[]> {
+  const db = await getDatabase();
+  return (await db.getAllAsync<{ photo_uri: string }>("SELECT photo_uri FROM progress_photos")).map((r) => r.photo_uri);
+}
+
+/** Files on disk that no photo row refers to. */
+export function findOrphans(onDisk: string[], inDb: string[]): string[] {
+  const known = new Set(inDb.map((n) => n.split("/").pop()));
+  return onDisk.filter((n) => !known.has(n));
 }

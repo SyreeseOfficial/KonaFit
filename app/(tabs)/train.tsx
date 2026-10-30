@@ -13,10 +13,9 @@ import { GoalsSection } from "../../src/components/train/GoalsSection";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus, X, ArrowUpDown, Settings, ChevronRight, MoreHorizontal, Copy, Archive, Trash2 } from "lucide-react-native";
 import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
-import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
-import { saveProgressPhoto } from "../../src/db/photoQueries";
+import { addProgressPhoto } from "../../src/utils/photoFiles";
 import { useWorkoutSession, loadCachedSession, discardCachedSession } from "../../src/hooks/useWorkoutSession";
 import { useRestTimer } from "../../src/hooks/useRestTimer";
 import { WorkspaceHeader } from "../../src/components/workout/WorkspaceHeader";
@@ -24,6 +23,7 @@ import { ExerciseBlock } from "../../src/components/workout/ExerciseBlock";
 import { AddExerciseSheet } from "../../src/components/workout/AddExerciseSheet";
 import { UndoSnackbar } from "../../src/components/workout/UndoSnackbar";
 import { LocationSheet } from "../../src/components/workout/LocationSheet";
+import { logSessionEvent } from "../../src/db/workoutQueries";
 import { saveWorkoutLocation } from "../../src/db/locationQueries";
 import { formatVolume, formatShortDate, formatDuration } from "../../src/utils/exportUtils";
 import { getPrograms, deleteProgram, cloneProgram, archiveProgram } from "../../src/db/programQueries";
@@ -31,6 +31,7 @@ import { getWorkoutHistory, type WorkoutSummary } from "../../src/db/historyQuer
 import { kvStore } from "../../src/utils/kvStore";
 import { haptics } from "../../src/utils/haptics";
 import { isRealPR } from "../../src/utils/prBadges";
+import type { WorkoutFeel } from "../../src/db/workoutQueries";
 import type { Exercise } from "../../src/types/workout";
 import type { ProgramSummary } from "../../src/types/program";
 
@@ -81,23 +82,13 @@ export default function TrainScreen() {
 
   async function persistPhoto(uri: string, workoutId?: number) {
     try {
-      const dir = `${FileSystem.documentDirectory}konafit/photos/`;
-      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-      const filename = `photo_${Date.now()}.jpg`;
-      const dest = `${dir}${filename}`;
-      await FileSystem.copyAsync({ from: uri, to: dest });
-      await saveProgressPhoto(dest, workoutId);
+      await addProgressPhoto(uri, workoutId);
     } catch (e) {
       Alert.alert("Error", "Failed to save photo.");
     }
   }
 
   const handleCameraPress = useCallback(async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission needed", "Enable photo access in Settings to save progress photos.");
-      return;
-    }
     Alert.alert("Progress Photo", "Choose how to add your photo", [
       {
         text: "Camera",
@@ -239,7 +230,7 @@ export default function TrainScreen() {
   }, [session, discardWorkout]);
 
   const handleSaveWorkout = useCallback(
-    async (location: string | null) => {
+    async (location: string | null, feel: WorkoutFeel) => {
       if (!session) return;
       setLocationSheetOpen(false);
 
@@ -257,7 +248,7 @@ export default function TrainScreen() {
         .map((e) => e.exerciseName);
 
       try {
-        await finishWorkout();
+        await finishWorkout(undefined, feel);
       } catch (e) {
         // The session is only cleared after a successful save, so the sets are still on screen.
         console.error("Failed to finish workout:", e);
@@ -543,6 +534,7 @@ export default function TrainScreen() {
         onFinish={handleFinish}
         onTools={() => router.push("/tools")}
         onCamera={handleCameraPress}
+        onPauseChange={(paused) => { logSessionEvent(session.workoutId, paused ? "pause" : "resume").catch(console.error); }}
         restTimer={restTimer}
       />
 

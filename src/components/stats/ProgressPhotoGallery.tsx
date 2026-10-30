@@ -3,8 +3,8 @@ import {
   View, Text, ScrollView, Image, TouchableOpacity, Modal, Alert,
 } from "react-native";
 import { Camera, X, Trash2 } from "lucide-react-native";
-import * as FileSystem from "expo-file-system/legacy";
-import { getProgressPhotos, saveProgressPhoto, deleteProgressPhoto, type ProgressPhoto } from "../../db/photoQueries";
+import { getProgressPhotos, deleteProgressPhoto, type ProgressPhoto } from "../../db/photoQueries";
+import { addProgressPhoto, deletePhotoFile, photoPath } from "../../utils/photoFiles";
 
 type Props = { refreshKey?: number };
 
@@ -12,14 +12,6 @@ function formatDate(unixtimeSec: number): string {
   return new Date(unixtimeSec * 1000).toLocaleDateString([], {
     month: "short", day: "numeric", year: "numeric",
   });
-}
-
-async function persistAndSave(uri: string, workoutId?: number): Promise<void> {
-  const dir = `${FileSystem.documentDirectory}konafit/photos/`;
-  await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-  const dest = `${dir}photo_${Date.now()}.jpg`;
-  await FileSystem.copyAsync({ from: uri, to: dest });
-  await saveProgressPhoto(dest, workoutId);
 }
 
 export function ProgressPhotoGallery({ refreshKey }: Props) {
@@ -34,11 +26,6 @@ export function ProgressPhotoGallery({ refreshKey }: Props) {
 
   const handleAdd = useCallback(async () => {
     const ImagePicker = require("expo-image-picker") as typeof import("expo-image-picker");
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission needed", "Enable photo access in Settings.");
-      return;
-    }
     Alert.alert("Add Progress Photo", "Choose source", [
       {
         text: "Camera",
@@ -46,14 +33,14 @@ export function ProgressPhotoGallery({ refreshKey }: Props) {
           const cam = await ImagePicker.requestCameraPermissionsAsync();
           if (cam.status !== "granted") return;
           const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
-          if (!result.canceled && result.assets[0]) { await persistAndSave(result.assets[0].uri); load(); }
+          if (!result.canceled && result.assets[0]) { await addProgressPhoto(result.assets[0].uri); load(); }
         },
       },
       {
         text: "Photo Library",
         onPress: async () => {
           const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
-          if (!result.canceled && result.assets[0]) { await persistAndSave(result.assets[0].uri); load(); }
+          if (!result.canceled && result.assets[0]) { await addProgressPhoto(result.assets[0].uri); load(); }
         },
       },
       { text: "Cancel", style: "cancel" },
@@ -67,7 +54,7 @@ export function ProgressPhotoGallery({ refreshKey }: Props) {
         text: "Delete", style: "destructive",
         onPress: async () => {
           await deleteProgressPhoto(photo.id);
-          try { await FileSystem.deleteAsync(photo.photo_uri, { idempotent: true }); } catch {}
+          try { await deletePhotoFile(photo.photo_uri); } catch {}
           setSelected(null);
           load();
         },
@@ -111,7 +98,7 @@ export function ProgressPhotoGallery({ refreshKey }: Props) {
             {photos.map((photo) => (
               <TouchableOpacity key={photo.id} onPress={() => setSelected(photo)} activeOpacity={0.85}>
                 <Image
-                  source={{ uri: photo.photo_uri }}
+                  source={{ uri: photoPath(photo.photo_uri) }}
                   style={{ width: 96, height: 116, borderRadius: 12 }}
                   resizeMode="cover"
                 />
@@ -133,7 +120,7 @@ export function ProgressPhotoGallery({ refreshKey }: Props) {
         <View className="flex-1 bg-black">
           {selected && (
             <>
-              <Image source={{ uri: selected.photo_uri }} className="flex-1" resizeMode="contain" />
+              <Image source={{ uri: photoPath(selected.photo_uri) }} className="flex-1" resizeMode="contain" />
               <View className="absolute top-0 left-0 right-0 flex-row items-center justify-between px-5 pt-14 pb-4">
                 <TouchableOpacity onPress={() => setSelected(null)} hitSlop={12} activeOpacity={0.7}>
                   <X size={24} color="#FFFFFF" />

@@ -10,6 +10,7 @@ type Props = {
   onFinish: () => void;
   onTools?: () => void;
   onCamera?: () => void;
+  onPauseChange?: (paused: boolean) => void;
   restTimer: ReturnType<typeof useRestTimer>;
 };
 
@@ -25,7 +26,7 @@ const minuteLabel = (totalMins: number): string => {
 
 const ADJUSTMENTS = [-10, -5, -1, 1, 5, 10] as const;
 
-export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera, restTimer }: Props) {
+export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera, onPauseChange, restTimer }: Props) {
   const { elapsed, formattedTime, isPaused, pause, resume, reset, setElapsed } = useWorkoutTimer(startedAt);
   const [adjustOpen, setAdjustOpen] = useState(false);
   // Target minutes shown in the picker — initialised when modal opens
@@ -74,7 +75,7 @@ export function WorkspaceHeader({ startedAt, onFinish, onTools, onCamera, restTi
           )}
 
           <TouchableOpacity
-            onPress={isPaused ? resume : pause}
+            onPress={() => { (isPaused ? resume : pause)(); onPauseChange?.(!isPaused); }}
             hitSlop={8}
             activeOpacity={0.7}
           >

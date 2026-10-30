@@ -2,14 +2,22 @@ import { getDatabase } from "./database";
 import type { ActiveSet, Exercise, GhostSet } from "../types/workout";
 import { isBodyweightSql } from "./sqlFragments";
 
-export async function createWorkout(programDayId?: number): Promise<number> {
+export async function createWorkout(programDayId?: number, appVersion?: string): Promise<number> {
   const db = await getDatabase();
   const result = await db.runAsync(
-    `INSERT INTO workouts (name, started_at, program_day_id)
-     VALUES (COALESCE((SELECT name FROM program_days WHERE id = ?), 'Workout'), unixepoch(), ?)`,
-    [programDayId ?? null, programDayId ?? null]
+    `INSERT INTO workouts (name, started_at, created_at, app_version, program_day_id)
+     VALUES (COALESCE((SELECT name FROM program_days WHERE id = ?), 'Workout'), unixepoch(), unixepoch(), ?, ?)`,
+    [programDayId ?? null, appVersion ?? null, programDayId ?? null]
   );
+  await logSessionEvent(result.lastInsertRowId, "start");
   return result.lastInsertRowId;
+}
+
+export type SessionEventType = "start" | "pause" | "resume" | "finish";
+
+export async function logSessionEvent(workoutId: number, type: SessionEventType): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("INSERT INTO session_events (workout_id, type) VALUES (?, ?)", [workoutId, type]);
 }
 
 /** "Chest + Triceps · Thu" from each exercise's primary muscle group (top two by count), else "Thursday Workout". */
@@ -33,7 +41,9 @@ const END_PAD_SECS = 120;
  * Stamps the finish. Only ticked sets count (nothing is auto-completed). The end time is the last ticked set + 2 min
  * (capped at now), so leaving the app open over lunch doesn't inflate the duration; it's editable on the workout screen.
  */
-export async function finalizeWorkout(workoutId: number, location?: string): Promise<void> {
+export type WorkoutFeel = { rating?: number | null; energy?: number | null; sleepHours?: number | null };
+
+export async function finalizeWorkout(workoutId: number, location?: string, feel: WorkoutFeel = {}): Promise<void> {
   const db = await getDatabase();
   const row = await db.getFirstAsync<{ started_at: number; last_set: number | null }>(
     `SELECT w.started_at,
@@ -50,10 +60,14 @@ export async function finalizeWorkout(workoutId: number, location?: string): Pro
     `UPDATE workouts
      SET finished_at = ?,
          duration_seconds = ? - started_at,
-         location = COALESCE(?, location)
+         location = COALESCE(?, location),
+         rating = COALESCE(?, rating),
+         energy = COALESCE(?, energy),
+         sleep_hours = COALESCE(?, sleep_hours)
      WHERE id = ?`,
-    [end, end, location ?? null, workoutId]
+    [end, end, location ?? null, feel.rating ?? null, feel.energy ?? null, feel.sleepHours ?? null, workoutId]
   );
+  await logSessionEvent(workoutId, "finish");
   // Still the default name (not launched from a program day, not renamed): describe what was trained.
   const w = await db.getFirstAsync<{ name: string; started_at: number }>(
     "SELECT name, started_at FROM workouts WHERE id = ?", [workoutId]
@@ -153,17 +167,39 @@ export async function upsertLoggedSet(set: ActiveSet & { loggedExerciseId: numbe
     await db.runAsync(
       `UPDATE logged_sets
        SET weight_lbs = ${blankWeight}, reps = ?, rpe = ?, notes = ?, is_warmup = ?, is_completed = ?,
-           completed_at = CASE WHEN ? = 1 THEN COALESCE(completed_at, unixepoch()) END
+           completed_at = CASE WHEN ? = 1 THEN COALESCE(completed_at, unixepoch()) END,
+           rest_seconds = CASE WHEN ? = 1 THEN rest_seconds END
        WHERE id = ?`,
-      [weight, set.loggedExerciseId, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.isCompleted ? 1 : 0, set.dbId]
+      [weight, set.loggedExerciseId, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.isCompleted ? 1 : 0, set.isCompleted ? 1 : 0, set.dbId]
     );
+    if (set.isCompleted) await stampRest(set.dbId);
   } else {
-    await db.runAsync(
+    const result = await db.runAsync(
       `INSERT INTO logged_sets (logged_exercise_id, set_number, weight_lbs, reps, rpe, notes, is_warmup, is_completed, completed_at)
        VALUES (?, ?, ${blankWeight}, ?, ?, ?, ?, ?, CASE WHEN ? = 1 THEN unixepoch() END)`,
       [set.loggedExerciseId, set.setNumber, weight, set.loggedExerciseId, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.isCompleted ? 1 : 0]
     );
+    if (set.isCompleted) await stampRest(result.lastInsertRowId);
   }
+}
+
+/** Gaps longer than this are a break (lunch, phone call), not rest between sets. */
+const MAX_REST_SECS = 1800;
+
+/** Rest before a just-ticked set = time since the previous ticked set of the same workout. Set once, when first ticked. */
+async function stampRest(setId: number): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    `UPDATE logged_sets SET rest_seconds = (
+       SELECT CASE WHEN logged_sets.completed_at - MAX(p.completed_at) BETWEEN 0 AND ${MAX_REST_SECS}
+                   THEN logged_sets.completed_at - MAX(p.completed_at) END
+       FROM logged_sets p JOIN logged_exercises pe ON pe.id = p.logged_exercise_id
+       WHERE pe.workout_id = (SELECT workout_id FROM logged_exercises WHERE id = logged_sets.logged_exercise_id)
+         AND p.id != logged_sets.id AND p.completed_at <= logged_sets.completed_at
+     )
+     WHERE id = ? AND completed_at IS NOT NULL AND rest_seconds IS NULL`,
+    [setId]
+  );
 }
 
 /** Persist the full exercise order (position in `ids` becomes order_index) in one transaction. */
@@ -353,7 +389,50 @@ export async function updateExercise(
 export async function deleteExercise(id: number): Promise<void> {
   const db = await getDatabase();
   // ponytail: soft-delete keeps FK refs in logged_exercises intact
-  await db.runAsync("UPDATE exercises SET is_deleted = 1 WHERE id = ?", [id]);
+  await db.runAsync("UPDATE exercises SET is_deleted = 1, deleted_at = unixepoch() WHERE id = ?", [id]);
+}
+
+export async function getDeletedExercises(): Promise<Exercise[]> {
+  const db = await getDatabase();
+  return db.getAllAsync<Exercise>("SELECT * FROM exercises WHERE is_deleted = 1 ORDER BY deleted_at DESC, name ASC");
+}
+
+/** Bring a deleted exercise back. Throws if a live exercise has taken its name since. */
+export async function restoreExercise(id: number): Promise<void> {
+  const db = await getDatabase();
+  const ex = await db.getFirstAsync<{ name: string }>("SELECT name FROM exercises WHERE id = ?", [id]);
+  if (!ex) return;
+  await assertNameFree(ex.name, id);
+  await db.runAsync("UPDATE exercises SET is_deleted = 0, deleted_at = NULL WHERE id = ?", [id]);
+}
+
+const PURGE_AFTER_DAYS = 30;
+
+/** Remove exercises deleted over 30 days ago that no workout or program uses. Anything with history stays (soft-deleted). */
+export async function purgeDeletedExercises(): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    `DELETE FROM exercises
+     WHERE is_deleted = 1 AND deleted_at < unixepoch() - ? * 86400
+       AND id NOT IN (SELECT exercise_id FROM logged_exercises)
+       AND id NOT IN (SELECT exercise_id FROM program_exercises)`,
+    [PURGE_AFTER_DAYS]
+  );
+}
+
+export type ExerciseNote = { text: string; at: number };
+
+/** Notes typed on this exercise in finished workouts, newest first (at = ms). */
+export async function getExerciseNotes(exerciseId: number): Promise<ExerciseNote[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{ notes: string; started_at: number }>(
+    `SELECT le.notes, w.started_at FROM logged_exercises le
+     JOIN workouts w ON w.id = le.workout_id
+     WHERE le.exercise_id = ? AND w.finished_at IS NOT NULL AND TRIM(COALESCE(le.notes, '')) != ''
+     ORDER BY w.started_at DESC, le.id DESC`,
+    [exerciseId]
+  );
+  return rows.map((r) => ({ text: r.notes.trim(), at: r.started_at * 1000 }));
 }
 
 /** Library note plus whether the exercise is logged as added load on bodyweight. */
