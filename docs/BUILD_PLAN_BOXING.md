@@ -136,7 +136,7 @@ Tick as you go. Each line = one commit.
 - [x] 6.2 Boxing recap screen
 
 **Phase 7: History, calendar, streaks**
-- [ ] 7.1 History filter chips + boxing row
+- [x] 7.1 History filter chips + boxing row
 - [ ] 7.2 Boxing detail screen (summary card + rounds)
 - [ ] 7.3 Calendar/week dots
 - [ ] 7.4 Streaks include boxing

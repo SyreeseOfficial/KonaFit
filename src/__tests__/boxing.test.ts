@@ -305,3 +305,17 @@ describe("boxing recap", () => {
     expect(a).toBeLessThan(b);
   });
 });
+
+describe("history rows for boxing", () => {
+  it("carry round count and avg RPE; lifts report 0 rounds", async () => {
+    const { adapter, q } = await fresh();
+    const hist = await import("../db/historyQueries");
+    await addLift(adapter, nowSecs() - 5 * DAY);
+    await q.saveBoxingSession(session({ rpe: 9, rounds: rounds(3).map((r, i) => ({ ...r, rpe: [4, 6, null][i] })) }));
+    await q.saveBoxingSession(session({ startedAt: 5, rpe: 8, rounds: rounds(2) }));
+    const rows = await hist.getWorkoutHistory(10);
+    const box = rows.filter((r) => r.type === "boxing");
+    expect(box.map((r) => [r.round_count, r.avg_rpe])).toEqual([[3, 5], [2, 8]]); // round avg first, else overall
+    expect(rows.find((r) => r.type === "lift")).toMatchObject({ round_count: 0, avg_rpe: null });
+  });
+});

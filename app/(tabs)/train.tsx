@@ -474,12 +474,12 @@ export default function TrainScreen() {
                         {w.name}
                       </Text>
                       <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">
-                        {formatShortDate(w.started_at)} · {w.exercise_count} exercises
+                        {formatShortDate(w.started_at)} · {w.type === "boxing" ? `${w.round_count} rounds` : `${w.exercise_count} exercises`}
                       </Text>
                     </View>
                     <View className="items-end mr-3">
                       <Text className="font-mono-medium text-text-primary dark:text-white text-sm">
-                        {formatVolume(w.total_volume)}
+                        {w.type === "boxing" ? (w.avg_rpe != null ? `RPE ${w.avg_rpe.toFixed(1)}` : "Boxing") : formatVolume(w.total_volume)}
                       </Text>
                       <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">
                         {formatDuration(w.duration_seconds)}

@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, FlatList, RefreshControl, Alert, TextInpu
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { ChevronLeft, ChevronRight, MapPin, Search } from "lucide-react-native";
-import { getWorkoutHistory, type WorkoutSummary } from "../src/db/historyQueries";
+import { getWorkoutHistory, type WorkoutSummary, type WorkoutType } from "../src/db/historyQueries";
 import { deleteWorkout } from "../src/db/workoutQueries";
 import { formatDuration, formatShortDate, formatVolume } from "../src/utils/exportUtils";
 
@@ -33,6 +33,7 @@ export default function HistoryScreen() {
   const [hasMore, setHasMore] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState(""); // debounced query
+  const [kind, setKind] = useState<WorkoutType | undefined>(undefined); // All / Lift / Boxing
   const requestRef = useRef(0); // a newer reload makes older in-flight pages stale
   const loadingMoreRef = useRef(false);
   const rows = useMemo(() => withMonthHeaders(workouts), [workouts]);
@@ -64,7 +65,7 @@ export default function HistoryScreen() {
     const req = ++requestRef.current;
     if (spinner) setRefreshing(true);
     try {
-      const page = await getWorkoutHistory(PAGE_SIZE, 0, filter);
+      const page = await getWorkoutHistory(PAGE_SIZE, 0, kind === "boxing" ? "" : filter, kind);
       if (req !== requestRef.current) return;
       setWorkouts(page);
       setHasMore(page.length === PAGE_SIZE);
@@ -74,7 +75,7 @@ export default function HistoryScreen() {
         setLoading(false);
       }
     }
-  }, [filter]);
+  }, [filter, kind]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -83,14 +84,14 @@ export default function HistoryScreen() {
     loadingMoreRef.current = true;
     const req = requestRef.current;
     try {
-      const page = await getWorkoutHistory(PAGE_SIZE, workouts.length, filter);
+      const page = await getWorkoutHistory(PAGE_SIZE, workouts.length, kind === "boxing" ? "" : filter, kind);
       if (req !== requestRef.current) return;
       setWorkouts((prev) => [...prev, ...page]);
       setHasMore(page.length === PAGE_SIZE);
     } finally {
       loadingMoreRef.current = false;
     }
-  }, [hasMore, workouts.length, filter]);
+  }, [hasMore, workouts.length, filter, kind]);
 
   return (
     <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">
@@ -110,6 +111,23 @@ export default function HistoryScreen() {
         </View>
       </View>
 
+      <View className="flex-row mx-5 mt-3" style={{ gap: 8 }}>
+        {([[undefined, "All"], ["lift", "Lift"], ["boxing", "Boxing"]] as const).map(([k, label]) => {
+          const on = kind === k;
+          return (
+            <TouchableOpacity
+              key={label}
+              onPress={() => setKind(k)}
+              className={`px-4 py-2 rounded-full ${on ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
+              activeOpacity={0.7}
+            >
+              <Text className={`font-montserrat-semibold text-sm ${on ? "text-white" : "text-text-primary dark:text-white"}`}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {kind !== "boxing" && (
       <View className="flex-row items-center mx-5 mt-3 px-3 h-11 bg-surface dark:bg-zinc-900 rounded-xl">
         <Search size={16} color="#94A3B8" />
         <TextInput
@@ -124,6 +142,7 @@ export default function HistoryScreen() {
           clearButtonMode="while-editing"
         />
       </View>
+      )}
 
       <FlatList
         data={rows}
@@ -144,7 +163,7 @@ export default function HistoryScreen() {
           loading ? null : (
             <View className="flex-1 items-center justify-center pt-20">
               <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-base">
-                {filter ? "No workouts with that exercise" : "No workouts yet"}
+                {filter && kind !== "boxing" ? "No workouts with that exercise" : kind === "boxing" ? "No boxing sessions yet" : "No workouts yet"}
               </Text>
             </View>
           )
@@ -170,15 +189,21 @@ export default function HistoryScreen() {
                 {formatShortDate(w.started_at)}
               </Text>
               <View className="flex-row gap-3 flex-wrap">
+                {w.type === "boxing" && <Text className="font-mono-medium text-crimson dark:text-blue-400 text-sm">Boxing</Text>}
                 <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm">
                   {formatDuration(w.duration_seconds)}
                 </Text>
-                <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm">
-                  {w.exercise_count} exercises
-                </Text>
-                <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm">
-                  {formatVolume(w.total_volume)}
-                </Text>
+                {w.type === "boxing" ? (
+                  <>
+                    <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm">{w.round_count} rounds</Text>
+                    {w.avg_rpe != null && <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm">RPE {w.avg_rpe.toFixed(1)}</Text>}
+                  </>
+                ) : (
+                  <>
+                    <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm">{w.exercise_count} exercises</Text>
+                    <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm">{formatVolume(w.total_volume)}</Text>
+                  </>
+                )}
                 {w.rating != null && (
                   <Text className="font-mono text-amber-500 text-sm">★ {w.rating}/5</Text>
                 )}

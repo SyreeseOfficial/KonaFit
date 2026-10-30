@@ -14,6 +14,8 @@ export type WorkoutSummary = {
   location: string | null;
   rating: number | null; // 1-5 "how did it feel", from the finish sheet
   type: WorkoutType;
+  round_count: number; // boxing rounds (0 for lifts)
+  avg_rpe: number | null; // boxing: average round RPE, else the overall RPE
 };
 
 export type WorkoutType = "lift" | "boxing";
@@ -62,6 +64,8 @@ export async function getWorkoutHistory(limit = 20, offset = 0, exerciseQuery = 
     `SELECT
        w.id, w.name, w.type, w.started_at, w.finished_at, w.location, w.rating,
        COALESCE(w.duration_seconds, 0) as duration_seconds,
+       (SELECT COUNT(*) FROM boxing_rounds br WHERE br.workout_id = w.id) AS round_count,
+       COALESCE((SELECT AVG(br.rpe) FROM boxing_rounds br WHERE br.workout_id = w.id), w.rpe) AS avg_rpe,
        COUNT(DISTINCT le.id) as exercise_count,
        COUNT(DISTINCT ls.id) as set_count,
        COALESCE(SUM(CASE WHEN ${workingSetSql()} THEN ${setVolumeSql()} ELSE 0 END), 0) as total_volume
