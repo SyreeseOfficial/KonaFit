@@ -155,3 +155,22 @@ describe("insight + history queries ignore boxing rows", () => {
     expect(d).toMatchObject({ type: "boxing", exercises: [], totalVolume: 0 });
   });
 });
+
+describe("misc workouts reads ignore boxing rows", () => {
+  it("goal progress and program day dates are unchanged, and startup cleanup keeps finished boxing sessions", async () => {
+    const { before, after } = await liftUnchangedByBoxing(async (ctx) => {
+      const goalsQ = await import("../db/goalQueries");
+      const benchId = (await ctx.adapter.getFirstAsync<{ id: number }>("SELECT id FROM exercises WHERE name = 'Barbell Bench Press'"))!.id;
+      const g = await goalsQ.createGoal({ type: "lift_pr", title: "Bench 200", exerciseId: benchId, exerciseName: "Barbell Bench Press", targetValue: 200 });
+      const goal = (await goalsQ.getGoals()).find((x) => x.id === g)!;
+      return { progress: await goalsQ.getGoalProgress(goal), days: await (await import("../db/programQueries")).getLastUsedDatesByDay(1) };
+    });
+    expect(after).toEqual(before);
+    expect(before.progress).not.toBeNull();
+
+    const { adapter, q } = await fresh();
+    const box = await q.saveBoxingSession(session());
+    await (await import("../db/workoutQueries")).deleteUnfinishedWorkouts(null);
+    expect(await adapter.getAllAsync("SELECT 1 FROM workouts WHERE id = ?", [box])).toHaveLength(1);
+  });
+});
