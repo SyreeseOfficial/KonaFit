@@ -206,6 +206,16 @@ export function roundResults(state: TimerState): RoundResult[] {
   return out;
 }
 
+/** 0..1 across the whole session. ponytail: +30s extras stretch the total but are not placed per phase; it stays monotonic enough for a thin bar. */
+export function sessionProgress(state: TimerState, now: number): number {
+  if (state.done) return 1;
+  const phases = buildPhases(state.setup);
+  const extra = state.rounds.reduce((a, r) => a + r.extraSec, 0);
+  const prior = phases.slice(0, state.phaseIndex).reduce((a, p) => a + p.durationSec, 0);
+  const inPhase = (state.phaseTotalMs - remainingMs(state, now)) / 1000;
+  return Math.min(1, Math.max(0, (prior + inPhase) / (plannedTotalSec(state.setup) + extra)));
+}
+
 /** Seconds actually worked + rested (pauses and get-ready excluded). */
 export const activeSeconds = (state: TimerState): number =>
   state.rounds.reduce((a, r) => a + r.actualWorkSec + r.actualRestSec, 0);

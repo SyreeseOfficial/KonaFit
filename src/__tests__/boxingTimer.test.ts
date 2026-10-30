@@ -1,7 +1,7 @@
 import { parseFlag, parseGetReady, parseLastSetup, DEFAULT_BOXING_PLAN, BOXING_PRESERVED_KEYS } from "../utils/boxingSettings";
 import {
   createTimer, advance, pause, resume, skipRest, addSeconds, endEarly, remainingSec, currentPhase, warningDue,
-  buildPhases, parseClock, roundResults, activeSeconds, plannedTotalSec, validateSetup, type TimerSetup,
+  buildPhases, parseClock, sessionProgress, roundResults, activeSeconds, plannedTotalSec, validateSetup, type TimerSetup,
 } from "../utils/boxingTimer";
 jest.mock("expo-sqlite", () => ({})); // boxingSettings -> kvStore -> database; these tests only use the pure parsers
 
@@ -109,6 +109,16 @@ describe("pause / resume", () => {
     expect(resume(s, T0)).toBe(s);
     const p = pause(s, T0);
     expect(pause(p, T0 + S)).toBe(p);
+  });
+});
+
+describe("sessionProgress", () => {
+  it("goes 0 -> 1 across the session and is 1 when done", () => {
+    const setup = { rounds: 1, workSec: 100, restSec: 0, getReadySec: 0 };
+    const s = createTimer(setup, T0);
+    expect(sessionProgress(s, T0)).toBe(0);
+    expect(sessionProgress(s, T0 + 25 * S)).toBeCloseTo(0.25);
+    expect(sessionProgress(advance(s, T0 + 100 * S).state, T0 + 100 * S)).toBe(1);
   });
 });
 

@@ -122,7 +122,7 @@ Tick as you go. Each line = one commit.
 
 **Phase 4: Timer screen**
 - [x] 4.1 `useBoxingSession` hook + route skeleton
-- [ ] 4.2 Timer face (phase colors, big clock, round counter)
+- [x] 4.2 Timer face (phase colors, big clock, round counter)
 - [ ] 4.3 Controls: pause, skip rest, +30s, end early
 - [ ] 4.4 Cues: bell, 10s warning, keep-awake
 - [ ] 4.5 Background catch-up + kill/resume
