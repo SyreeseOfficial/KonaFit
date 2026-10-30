@@ -33,6 +33,10 @@ export function copyLastSetToAll(session: ActiveSession, exerciseLocalId: string
   });
 }
 
+export function toggleExerciseDone(session: ActiveSession, exerciseLocalId: string): ActiveSession {
+  return mapExercise(session, exerciseLocalId, (e) => ({ ...e, isDone: !e.isDone }));
+}
+
 export function removeSet(session: ActiveSession, exerciseLocalId: string, setLocalId: string): ActiveSession {
   return mapExercise(session, exerciseLocalId, (e) => ({
     ...e,

@@ -37,6 +37,7 @@ export type ActiveExercise = {
   orderIndex: number;
   supersetId?: string;
   notes: string;
+  isDone?: boolean; // manually marked finished (e.g. skipped sets); absent in older cached sessions
   sets: ActiveSet[];
   ghostSets: GhostSet[];
   histPRs: HistPRs;

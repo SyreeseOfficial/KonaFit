@@ -12,7 +12,7 @@ import {
   Switch,
 } from "react-native";
 import { haptics } from "../../utils/haptics";
-import { MoreHorizontal, X, FileText, PlusCircle, ArrowLeftRight, ChevronDown, ChevronUp, History, ArrowUp, ArrowDown, Link } from "lucide-react-native";
+import { MoreHorizontal, X, FileText, PlusCircle, ArrowLeftRight, ChevronDown, ChevronUp, Check, History, ArrowUp, ArrowDown, Link } from "lucide-react-native";
 import { SetRow } from "./SetRow";
 import { ExerciseHistoryModal } from "./ExerciseHistoryModal";
 import type { ActiveExercise, ActiveSet } from "../../types/workout";
@@ -30,6 +30,7 @@ type Props = {
   onRemoveSet: (setLocalId: string) => void;
   onUpdateSet: (setLocalId: string, patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe" | "notes">>) => void;
   onCopyLastToAll: () => void;
+  onToggleDone: () => void;
   onCommitSetEdit: (setLocalId: string) => void;
   onToggleComplete: (setLocalId: string) => void;
   onToggleWarmup: (setLocalId: string) => void;
@@ -52,6 +53,7 @@ export function ExerciseBlock({
   onRemoveSet,
   onUpdateSet,
   onCopyLastToAll,
+  onToggleDone,
   onCommitSetEdit,
   onToggleComplete,
   onToggleWarmup,
@@ -74,6 +76,10 @@ export function ExerciseBlock({
   const [notesText, setNotesText] = useState(exercise.notes);
   const [saveAsDefault, setSaveAsDefault] = useState(false);
 
+  const doneCount = exercise.sets.filter((s) => s.isCompleted).length;
+  const setsDone = exercise.sets.length > 0 && doneCount === exercise.sets.length;
+  const allDone = setsDone || !!exercise.isDone;
+
   return (
     <View
       className="mb-3 mx-5 bg-surface dark:bg-zinc-900 rounded-2xl overflow-hidden"
@@ -87,9 +93,15 @@ export function ExerciseBlock({
           activeOpacity={reorderMode ? 1 : 0.7}
         >
           <Text className="font-mono text-text-muted dark:text-zinc-500 text-base">{index}</Text>
-          <Text className="font-montserrat-bold text-text-primary dark:text-white text-base flex-shrink" numberOfLines={1}>
+          <Text
+            className={`font-montserrat-bold text-base flex-shrink ${allDone ? "text-text-muted dark:text-zinc-500" : "text-text-primary dark:text-white"}`}
+            numberOfLines={1}
+          >
             {exercise.exerciseName}
           </Text>
+          {!allDone && doneCount > 0 && (
+            <Text className="font-mono text-crimson dark:text-blue-400 text-xs">{doneCount}/{exercise.sets.length}</Text>
+          )}
           {!reorderMode && (
             collapsed
               ? <ChevronDown size={15} color="#94A3B8" />
@@ -116,7 +128,22 @@ export function ExerciseBlock({
               <ArrowDown size={16} color="#64748B" />
             </TouchableOpacity>
           </View>
-        ) : null}
+        ) : (
+          // Manual done toggle; locked on while every set is checked (uncheck a set to undo)
+          <TouchableOpacity
+            onPress={() => {
+              haptics.tap();
+              if (!exercise.isDone) { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setCollapsed(true); }
+              onToggleDone();
+            }}
+            disabled={setsDone}
+            hitSlop={8}
+            className={`w-8 h-8 ml-2 rounded-full items-center justify-center ${allDone ? "bg-emerald-500" : "border-2 border-surface-3 dark:border-zinc-700"}`}
+            activeOpacity={0.7}
+          >
+            <Check size={16} color={allDone ? "#FFFFFF" : "#94A3B8"} strokeWidth={3} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── Collapsed: set count summary ───────────── */}
@@ -142,6 +169,7 @@ export function ExerciseBlock({
             <Text className="flex-1 mx-2 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Previous</Text>
             <Text className="w-14 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Lbs</Text>
             <Text className="w-12 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Reps</Text>
+            <Text className="w-11 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">RPE</Text>
             <View className="w-12 items-center">
               <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">✓</Text>
             </View>

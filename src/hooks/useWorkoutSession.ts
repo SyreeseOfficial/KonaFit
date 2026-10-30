@@ -389,6 +389,11 @@ export function useWorkoutSession() {
     [updateSession, markDirty]
   );
 
+  const toggleExerciseDone = useCallback(
+    (exerciseLocalId: string) => updateSession((prev) => R.toggleExerciseDone(prev, exerciseLocalId)),
+    [updateSession]
+  );
+
   // Copy weight/reps/rpe from the last filled set into every other incomplete set.
   const copyLastSetToAll = useCallback(
     (exerciseLocalId: string) => {
@@ -681,6 +686,7 @@ export function useWorkoutSession() {
     removeSet,
     updateSet,
     copyLastSetToAll,
+    toggleExerciseDone,
     recheckSetPR,
     toggleSetComplete,
     toggleSetWarmup,

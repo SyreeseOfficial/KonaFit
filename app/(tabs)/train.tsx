@@ -53,6 +53,7 @@ export default function TrainScreen() {
     removeSet,
     updateSet,
     copyLastSetToAll,
+    toggleExerciseDone,
     recheckSetPR,
     toggleSetComplete,
     toggleSetWarmup,
@@ -573,6 +574,7 @@ export default function TrainScreen() {
             onRemoveSet={(setLocalId) => removeSet(exercise.localId, setLocalId)}
             onUpdateSet={(setLocalId, patch) => updateSet(exercise.localId, setLocalId, patch)}
             onCopyLastToAll={() => copyLastSetToAll(exercise.localId)}
+            onToggleDone={() => toggleExerciseDone(exercise.localId)}
             onCommitSetEdit={(setLocalId) => recheckSetPR(exercise.localId, setLocalId)}
             onToggleComplete={(setLocalId) => handleSetComplete(exercise.localId, setLocalId)}
             onToggleWarmup={(setLocalId) => toggleSetWarmup(exercise.localId, setLocalId)}

@@ -35,12 +35,9 @@ type Props = {
   onRemove: () => void;
 };
 
-const WEIGHT_STEPS = [-5, -2.5, 2.5, 5];
-const RPE_VALUES = ["6", "7", "8", "9", "10"];
-
 export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit, onToggleComplete, onToggleWarmup, onRemove }: Props) {
   const completed = set.isCompleted;
-  const [focused, setFocused] = useState<"weight" | "reps" | null>(null);
+  const [focused, setFocused] = useState<"weight" | "reps" | "rpe" | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const note = set.notes ?? "";
 
@@ -59,11 +56,6 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
   const handleBlur = () => {
     setFocused(null);
     if (completed) onCommitEdit();
-  };
-
-  const stepWeight =(delta: number) => {
-    const next = Math.min(MAX_WEIGHT, Math.max(bodyweight ? -MAX_WEIGHT : 0, (parseFloat(set.weightLbs) || 0) + delta));
-    onUpdate({ weightLbs: String(Math.round(next * 100) / 100) });
   };
 
   const chip = "h-9 px-3 mr-2 rounded-full bg-surface-2 dark:bg-zinc-800 items-center justify-center";
@@ -124,6 +116,20 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
         style={[set.isGhostFilled ? { opacity: 0.45 } : undefined, focused === "reps" ? focusBorder : undefined]}
       />
 
+      {/* RPE */}
+      <TextInput
+        className={`${inputBase} w-11 mr-1.5`}
+        placeholder="RPE"
+        placeholderTextColor="#94A3B8"
+        value={set.rpe}
+        onChangeText={(v) => { const c = cleanDecimal(v, 10); if (c !== null) onUpdate({ rpe: c }); }}
+        keyboardType="decimal-pad"
+        selectTextOnFocus
+        onFocus={() => setFocused("rpe")}
+        onBlur={handleBlur}
+        style={focused === "rpe" ? focusBorder : undefined}
+      />
+
       {/* Complete */}
       <TouchableOpacity
         onPress={() => { haptics.tap(); onToggleComplete(); }}
@@ -132,7 +138,7 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
       >
         <View
           className={`w-9 h-9 items-center justify-center rounded-full ${
-            completed ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"
+            completed ? "bg-emerald-500" : "bg-surface-2 dark:bg-zinc-800"
           }`}
         >
           <Check size={18} color={completed ? "#FFFFFF" : "#94A3B8"} strokeWidth={2.5} />
@@ -140,27 +146,18 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
       </TouchableOpacity>
     </View>
 
-    {/* PR badges + RPE (RPE chips live in the toolbar while editing) */}
-    {((set.prBadges && set.prBadges.length > 0) || (set.rpe !== "" && focused === null)) && (
+    {/* PR badges */}
+    {set.prBadges && set.prBadges.length > 0 && (
       <View className="flex-row items-center gap-1 px-3 pb-2">
-        {set.rpe !== "" && focused === null && (
-          <Text className="font-mono-medium text-text-secondary dark:text-zinc-400 text-xs mr-1">RPE {set.rpe}</Text>
-        )}
         {(set.prBadges ?? []).map((badge) => (
           <PRBadgeChip key={badge} badge={badge} />
         ))}
       </View>
     )}
 
-    {/* Quick-entry toolbar: weight stepper + repeat previous set */}
+    {/* Quick-entry toolbar: repeat previous set + note */}
     {focused !== null && (
       <View className="flex-row items-center px-3 pb-2">
-        {focused === "weight" &&
-          WEIGHT_STEPS.map((d) => (
-            <TouchableOpacity key={d} onPress={() => stepWeight(d)} className={chip} activeOpacity={0.7}>
-              <Text className={chipText}>{d > 0 ? `+${d}` : d}</Text>
-            </TouchableOpacity>
-          ))}
         {prevSet && prevSet.weightLbs !== "" && prevSet.reps !== "" && (
           <TouchableOpacity
             onPress={() => onUpdate({ weightLbs: prevSet.weightLbs, reps: prevSet.reps })}
@@ -170,6 +167,9 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
             <Text className={chipText}>Same as prev</Text>
           </TouchableOpacity>
         )}
+        <TouchableOpacity onPress={() => setNoteOpen(true)} className={`${chip} ml-auto mr-0`} activeOpacity={0.7}>
+          <Text className={chipText}>{note ? "Edit note" : "Note"}</Text>
+        </TouchableOpacity>
       </View>
     )}
 
@@ -191,24 +191,6 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
       </TouchableOpacity>
     ) : null}
 
-    {focused !== null && (
-      <View className="flex-row items-center px-3 pb-2">
-        <Text className="font-mono-medium text-text-muted dark:text-zinc-500 text-xs mr-2">RPE</Text>
-        {RPE_VALUES.map((v) => (
-          <TouchableOpacity
-            key={v}
-            onPress={() => onUpdate({ rpe: set.rpe === v ? "" : v })}
-            className={set.rpe === v ? chip.replace("bg-surface-2 dark:bg-zinc-800", "bg-blue-500") : chip}
-            activeOpacity={0.7}
-          >
-            <Text className={set.rpe === v ? "font-mono-medium text-white text-xs" : chipText}>{v}</Text>
-          </TouchableOpacity>
-        ))}
-        <TouchableOpacity onPress={() => setNoteOpen(true)} className={`${chip} ml-auto mr-0`} activeOpacity={0.7}>
-          <Text className={chipText}>{note ? "Edit note" : "Note"}</Text>
-        </TouchableOpacity>
-      </View>
-    )}
     </View>
   );
 }
