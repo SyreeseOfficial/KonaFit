@@ -20,3 +20,6 @@ export async function setTheme(pref: ThemePref): Promise<void> {
   applyTheme(pref);
   await kvStore.setItem(THEME_KEY, pref);
 }
+
+/** Calendar/week dot for a day with boxing (lifting days use the accent blue). The one color added for boxing. */
+export const BOXING_DOT = "#F97316";

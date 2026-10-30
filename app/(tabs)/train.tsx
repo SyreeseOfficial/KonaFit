@@ -9,6 +9,7 @@ import {
   Pressable,
 } from "react-native";
 import { WeeklyGoal } from "../../src/components/train/WeeklyGoal";
+import { WeekStrip } from "../../src/components/train/WeekStrip";
 import { GoalsSection } from "../../src/components/train/GoalsSection";
 import { StartSheet } from "../../src/components/train/StartSheet";
 import { loadSnapshot, clearSnapshot, type BoxingSnapshot } from "../../src/utils/boxingSnapshot";
@@ -364,6 +365,7 @@ export default function TrainScreen() {
         </View>
 
         <WeeklyGoal />
+        <WeekStrip />
 
         <ScrollView
           className="flex-1"

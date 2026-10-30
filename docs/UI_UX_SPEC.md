@@ -26,6 +26,7 @@ Tokens live in `tailwind.config.js`. The `crimson` token name is historical: it 
 | Text muted | `text-muted` | #94A3B8 | #71717A (`dark:text-zinc-500`) | Labels, hints |
 | PR badge | n/a | #F59E0B (`bg-amber-500`) | same | Personal-record chips |
 | Error | n/a | #F43F5E (`rose-500`) | same | Errors, destructive actions |
+| Boxing dot | `BOXING_DOT` in `src/utils/theme.ts` | #F97316 | same | Week-strip dot for a day with boxing (lifting days use the accent blue). The only color added for boxing |
 
 Rules: every colored surface or text needs both a light and a `dark:` class. Hardcoded hex (icons, focus borders) must follow the same pair using `useColorScheme()`.
 

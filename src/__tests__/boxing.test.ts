@@ -319,3 +319,20 @@ describe("history rows for boxing", () => {
     expect(rows.find((r) => r.type === "lift")).toMatchObject({ round_count: 0, avg_rpe: null });
   });
 });
+
+describe("activity days (week dots)", () => {
+  it("marks lift and boxing separately and both on the same day; empty lifts don't count", async () => {
+    const { adapter, q } = await fresh();
+    const stats = await import("../db/statsQueries");
+    const t = nowSecs();
+    await addLift(adapter, t - 2 * DAY);
+    await q.saveBoxingSession(session({ startedAt: t - 2 * DAY, finishedAt: t - 2 * DAY + 3600 }));
+    await q.saveBoxingSession(session({ startedAt: t - 3 * DAY, finishedAt: t - 3 * DAY + 3600 }));
+    await adapter.runAsync("INSERT INTO workouts (name, started_at, finished_at) VALUES ('empty', ?, ?)", [t - DAY, t - DAY + 60]);
+    const days = await stats.getActivityDays(t - 10 * DAY);
+    const key = (back: number) => Object.keys(days).find((k) => k === new Date((t - back * DAY + 3600) * 1000).toLocaleDateString("sv"))!;
+    expect(days[key(2)]).toEqual({ lift: true, boxing: true });
+    expect(days[key(3)]).toEqual({ lift: false, boxing: true });
+    expect(Object.keys(days)).toHaveLength(2);
+  });
+});

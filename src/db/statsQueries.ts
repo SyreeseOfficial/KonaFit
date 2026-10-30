@@ -111,6 +111,28 @@ export async function getWorkoutsThisWeek(): Promise<number> {
   return row?.n ?? 0;
 }
 
+/** Local days (YYYY-MM-DD) since `sinceSecs` that have a finished lift (with a ticked set) and/or a finished boxing session. */
+export async function getActivityDays(sinceSecs: number): Promise<Record<string, { lift: boolean; boxing: boolean }>> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{ d: string; type: string }>(
+    `SELECT DISTINCT DATE(finished_at, 'unixepoch', 'localtime') AS d, type
+     FROM workouts
+     WHERE finished_at >= ?
+       AND (type = 'boxing' OR EXISTS (
+         SELECT 1 FROM logged_exercises le JOIN logged_sets ls ON ls.logged_exercise_id = le.id
+         WHERE le.workout_id = workouts.id AND ls.is_completed = 1
+       ))`,
+    [sinceSecs]
+  );
+  const out: Record<string, { lift: boolean; boxing: boolean }> = {};
+  for (const r of rows) {
+    out[r.d] ??= { lift: false, boxing: false };
+    if (r.type === "boxing") out[r.d].boxing = true;
+    else out[r.d].lift = true;
+  }
+  return out;
+}
+
 /** Consecutive local days with a workout. Today may still be empty; `restDays` (0 = Sunday) are planned and never break the streak. */
 export function calculateStreak(dates: string[], restDays: number[] = []): number {
   const set = new Set(dates);

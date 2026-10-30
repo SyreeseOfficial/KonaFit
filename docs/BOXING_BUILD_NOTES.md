@@ -15,6 +15,8 @@ Written during the unattended run of `BUILD_PLAN_BOXING.md`. Newest at the botto
 - **I6 (cannot verify here):** Everything on-device (phase colors legibility, bell/haptic feel, background catch-up, kill/resume, keep-awake) is untested on a phone. Run Appendix A of the plan.
 - **I7 (edge):** A snapshot hours old (forgotten session) still offers Resume and then lands on the "done" state. Consider auto-discarding snapshots older than the planned length + a margin.
 
+- **I8 (scope gap, decide):** The app had no calendar or week view (Step 7.3 assumed one). I added a Mon-Sun **week strip** under the weekly goal on Train (blue dot lift, orange dot boxing). A full month calendar in History/Stats was not built. Want one? Say so and I'll scope it.
+
 ## Judgment calls I made
 - Step 3.1: the plan says tapping Box with a lift in progress asks to discard. That state is not reachable: Train hides the idle screen (and Start) while a lift runs. The guard I built covers the reverse (boxing running, starting a lift or a program day).
 - Steps 1.5 + 1.6 are one commit (their tests share fixtures).
