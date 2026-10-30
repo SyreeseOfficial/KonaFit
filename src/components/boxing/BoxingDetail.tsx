@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { ChevronLeft, ChevronDown, ChevronUp, Trash2 } from "lucide-react-native";
-import { getBoxingSession, getFocusChips } from "../../db/boxingQueries";
+import { ChevronLeft, ChevronDown, ChevronUp, Trash2, Pencil } from "lucide-react-native";
+import { getBoxingSession, getFocusChips, updateBoxingSession } from "../../db/boxingQueries";
 import { deleteWorkout } from "../../db/workoutQueries";
 import { sessionAvgRpe } from "../../utils/boxingRecap";
 import { formatShortDate } from "../../utils/exportUtils";
 import { formatTime } from "../../utils/time";
+import { BoxingEdit } from "./BoxingEdit";
 import type { BoxingSession, FocusChip } from "../../types/boxing";
 
 const card = "mx-5 bg-surface dark:bg-zinc-900 rounded-2xl mb-4";
@@ -18,6 +19,7 @@ export function BoxingDetail({ id }: { id: number }) {
   const [chips, setChips] = useState<FocusChip[]>([]);
   const [loading, setLoading] = useState(true);
   const [showRounds, setShowRounds] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const reload = useCallback(async () => {
     const [s, c] = await Promise.all([getBoxingSession(id), getFocusChips({ includeHidden: true })]);
@@ -40,6 +42,17 @@ export function BoxingDetail({ id }: { id: number }) {
     );
   }
 
+  if (editing) {
+    return (
+      <BoxingEdit
+        session={session}
+        chips={chips}
+        onCancel={() => setEditing(false)}
+        onSave={async (edited) => { await updateBoxingSession(id, edited); await reload(); setEditing(false); }}
+      />
+    );
+  }
+
   const avg = sessionAvgRpe(session.rounds.map((r) => r.rpe), session.rpe);
   const stats = [
     { label: "Time", value: formatTime(session.durationSeconds) },
@@ -58,6 +71,9 @@ export function BoxingDetail({ id }: { id: number }) {
           <Text className="font-montserrat-bold text-text-primary dark:text-white text-xl" numberOfLines={1}>{session.name}</Text>
           <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm">{formatShortDate(session.startedAt)}</Text>
         </View>
+        <TouchableOpacity onPress={() => setEditing(true)} hitSlop={8} activeOpacity={0.7} accessibilityLabel="Edit session" className="mr-4">
+          <Pencil size={18} color="#94A3B8" />
+        </TouchableOpacity>
         <TouchableOpacity onPress={handleDelete} hitSlop={8} activeOpacity={0.7} accessibilityLabel="Delete session">
           <Trash2 size={18} color="#F43F5E" />
         </TouchableOpacity>

@@ -33,6 +33,34 @@ export async function saveBoxingSession(session: BoxingSession, appVersion?: str
   return id;
 }
 
+/**
+ * Replaces a boxing session's fields and rounds in one transaction. Rounds are renumbered 1..n in the order given, so removing
+ * a middle round closes the gap. finished_at follows started_at + duration. No-op (returns false) for a missing or non-boxing id.
+ */
+export async function updateBoxingSession(id: number, session: BoxingSession): Promise<boolean> {
+  const db = await getDatabase();
+  const exists = await db.getFirstAsync("SELECT 1 FROM workouts WHERE id = ? AND type = 'boxing'", [id]);
+  if (!exists) return false;
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      `UPDATE workouts SET name = ?, started_at = ?, finished_at = ?, duration_seconds = ?, rpe = ?, session_tags = ?, notes = ?
+       WHERE id = ?`,
+      [session.name, session.startedAt, session.startedAt + session.durationSeconds, session.durationSeconds, session.rpe,
+       JSON.stringify(session.tags), session.notes, id]
+    );
+    await db.runAsync("DELETE FROM boxing_rounds WHERE workout_id = ?", [id]);
+    for (const [i, rd] of session.rounds.entries()) {
+      await db.runAsync(
+        `INSERT INTO boxing_rounds (workout_id, round_number, rpe, focus_tags, focus_note, work_seconds, rest_seconds, actual_work_seconds, actual_rest_seconds)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, i + 1, rd.rpe, JSON.stringify(rd.focusTags), rd.focusNote, rd.workSeconds, rd.restSeconds,
+         rd.actualWorkSeconds, rd.actualRestSeconds]
+      );
+    }
+  });
+  return true;
+}
+
 type WorkoutRow = {
   id: number; name: string; started_at: number; finished_at: number | null; duration_seconds: number | null;
   rpe: number | null; session_tags: string | null; notes: string | null;

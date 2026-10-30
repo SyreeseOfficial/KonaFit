@@ -2,6 +2,7 @@
 import { setupDb } from "./helpers/sqlite";
 import type { BoxingSession } from "../types/boxing";
 import { buildRecap, sessionAvgRpe } from "../utils/boxingRecap";
+import { draftFromRound, draftToRound, newDraft, roundsDuration } from "../utils/boxingEdit";
 import { createTimer } from "../utils/boxingTimer";
 import { serializeSnapshot, parseSnapshot, updateRoundLog } from "../utils/boxingSnapshot";
 import { serializeSession, parseSession } from "../utils/sessionReducers";
@@ -370,5 +371,58 @@ describe("streaks and weekly count include boxing", () => {
     await q.saveBoxingSession(session({ startedAt: mon + 7200, finishedAt: mon + 9000 }));
     await q.saveBoxingSession(session({ startedAt: mon - 3 * DAY, finishedAt: mon - 3 * DAY + 600 })); // last week
     expect(await stats.getWorkoutsThisWeek()).toBe(2);
+  });
+});
+
+describe("editing finished boxing sessions", () => {
+  it("round-trips edited fields and rounds", async () => {
+    const { q } = await fresh();
+    const id = await q.saveBoxingSession(session({ rounds: rounds(3) }));
+    const edited = session({
+      name: "Renamed", startedAt: 5_000_000, durationSeconds: 900, rpe: 4, tags: ["Drills", "Skipping"], notes: null,
+      rounds: [{ ...rounds(1)[0], roundNumber: 1, rpe: 9, focusTags: [3], focusNote: "x", actualWorkSeconds: 200 }],
+    });
+    expect(await q.updateBoxingSession(id, edited)).toBe(true);
+    expect(await q.getBoxingSession(id)).toEqual({ ...edited, id, finishedAt: 5_000_900 });
+  });
+
+  it("removing a middle round renumbers the rest", async () => {
+    const { q } = await fresh();
+    const base = rounds(4).map((r, i) => ({ ...r, rpe: i + 1 }));
+    const id = await q.saveBoxingSession(session({ rounds: base }));
+    const s = (await q.getBoxingSession(id))!;
+    await q.updateBoxingSession(id, { ...s, rounds: s.rounds.filter((r) => r.roundNumber !== 2) });
+    const after = (await q.getBoxingSession(id))!.rounds;
+    expect(after.map((r) => [r.roundNumber, r.rpe])).toEqual([[1, 1], [2, 3], [3, 4]]);
+  });
+
+  it("refuses a lift or missing id; delete cascades to rounds", async () => {
+    const { adapter, q } = await fresh();
+    const lift = await addLift(adapter, nowSecs());
+    expect(await q.updateBoxingSession(lift, session())).toBe(false);
+    expect(await q.updateBoxingSession(9999, session())).toBe(false);
+    const id = await q.saveBoxingSession(session({ rounds: rounds(2) }));
+    await (await import("../db/workoutQueries")).deleteWorkout(id);
+    expect(await adapter.getAllAsync("SELECT 1 FROM boxing_rounds")).toHaveLength(0);
+  });
+});
+
+describe("round drafts", () => {
+  const orig = { ...rounds(1)[0], roundNumber: 4, workSeconds: 180, actualWorkSeconds: 210, restSeconds: 60, actualRestSeconds: null, rpe: 7 };
+
+  it("untouched times keep their planned/actual split; edited ones become the new plan", () => {
+    const d = draftFromRound(orig);
+    expect(d.work).toBe("03:30");
+    expect(draftToRound(d, 1)).toEqual({ ...orig, roundNumber: 1, focusNote: null });
+    const edited = draftToRound({ ...d, work: "2:00" }, 2)!;
+    expect(edited).toMatchObject({ roundNumber: 2, workSeconds: 120, actualWorkSeconds: null, restSeconds: 60 });
+  });
+  it("bad times fail; new drafts copy the previous round's times", () => {
+    expect(draftToRound({ ...newDraft(), work: "abc" }, 1)).toBeNull();
+    expect(newDraft()).toMatchObject({ work: "3:00", rest: "1:00" });
+    expect(newDraft({ ...newDraft(), work: "2:00", rest: "0:30" })).toMatchObject({ work: "2:00", rest: "0:30" });
+  });
+  it("duration sums effective work + rest", () => {
+    expect(roundsDuration([orig, { ...orig, actualWorkSeconds: null }])).toBe(210 + 60 + 180 + 60);
   });
 });

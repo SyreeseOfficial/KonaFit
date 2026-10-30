@@ -142,7 +142,7 @@ Tick as you go. Each line = one commit.
 - [x] 7.4 Streaks include boxing
 
 **Phase 8: Editing**
-- [ ] 8.1 Full edit of finished sessions
+- [x] 8.1 Full edit of finished sessions
 - [ ] 8.2 Quick-add past session
 
 **Phase 9: Stats**
