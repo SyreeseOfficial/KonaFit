@@ -18,7 +18,7 @@ export const PHASE_BG: Record<PhaseKind, string> = {
   rest: "bg-surface-3 dark:bg-zinc-800",
   getReady: "bg-amber-500",
 };
-const onColor = (k: PhaseKind) => (k === "rest" ? "text-text-primary dark:text-white" : "text-white");
+export const onColor = (k: PhaseKind) => (k === "rest" ? "text-text-primary dark:text-white" : "text-white");
 
 export function phaseLabel(kind: PhaseKind, round: number, rounds: number): string {
   if (kind === "getReady") return "GET READY";
