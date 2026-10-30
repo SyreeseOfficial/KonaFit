@@ -179,6 +179,9 @@ export default function HistoryScreen() {
                 <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm">
                   {formatVolume(w.total_volume)}
                 </Text>
+                {w.rating != null && (
+                  <Text className="font-mono text-amber-500 text-sm">★ {w.rating}/5</Text>
+                )}
               </View>
               {w.location && (
                 <View className="flex-row items-center gap-1 mt-1.5">

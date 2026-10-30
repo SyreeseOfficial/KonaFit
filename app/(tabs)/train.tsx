@@ -53,6 +53,10 @@ export default function TrainScreen() {
     removeSet,
     updateSet,
     copyLastSetToAll,
+    applySuggestion,
+    applyRpeToAll,
+    addWarmups,
+    togglePerHand,
     toggleExerciseDone,
     recheckSetPR,
     toggleSetComplete,
@@ -566,6 +570,12 @@ export default function TrainScreen() {
             onRemoveSet={(setLocalId) => removeSet(exercise.localId, setLocalId)}
             onUpdateSet={(setLocalId, patch) => updateSet(exercise.localId, setLocalId, patch)}
             onCopyLastToAll={() => copyLastSetToAll(exercise.localId)}
+            onApplySuggestion={(w, r) => applySuggestion(exercise.localId, w, r)}
+            onAddWarmups={async () => {
+              if (!(await addWarmups(exercise.localId))) Alert.alert("No working weight yet", "Enter a weight for a working set first, then add warm-ups.");
+            }}
+            onApplyRpeToAll={() => applyRpeToAll(exercise.localId)}
+            onTogglePerHand={() => togglePerHand(exercise.localId)}
             onToggleDone={() => toggleExerciseDone(exercise.localId)}
             onCommitSetEdit={(setLocalId) => recheckSetPR(exercise.localId, setLocalId)}
             onToggleComplete={(setLocalId) => handleSetComplete(exercise.localId, setLocalId)}

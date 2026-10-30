@@ -3,6 +3,7 @@ import { Share, Platform } from "react-native";
 import type { WorkoutDetail, CsvRow } from "../db/historyQueries";
 import { localDateKey, formatTime } from "./time";
 import { compactNumber } from "./format";
+import { buildFullExport } from "../db/exportJson";
 
 // ─── Formatting helpers ───────────────────────────────────────────────────────
 
@@ -126,5 +127,17 @@ export async function exportCsvAndShare(rows: CsvRow[]): Promise<void> {
     await Share.share({ url: path, title: "KonaFit Export" });
   } else {
     await Share.share({ message: csv, title: "KonaFit Export" });
+  }
+}
+
+/** Everything in the database as one JSON file (see docs/export-schema.md). Same sharing path as the CSV. */
+export async function exportJsonAndShare(appVersion: string): Promise<void> {
+  const json = JSON.stringify(await buildFullExport(appVersion), null, 2);
+  if (Platform.OS === "ios") {
+    const path = (FileSystem.cacheDirectory ?? "") + `konafit_full_${localDateKey(new Date())}.json`;
+    await FileSystem.writeAsStringAsync(path, json, { encoding: FileSystem.EncodingType.UTF8 });
+    await Share.share({ url: path, title: "KonaFit Full Export" });
+  } else {
+    await Share.share({ message: json, title: "KonaFit Full Export" });
   }
 }

@@ -22,12 +22,14 @@ import {
   getExerciseInfo,
   updateExerciseLibraryNote,
   setLoggedExerciseSuperset,
+  setExercisePerHand,
 } from "../db/workoutQueries";
 import { getProgramDayExercises } from "../db/programQueries";
 import { getHistPRs, getLastWorkoutExercises } from "../db/historyQueries";
 import { computePRBadges, isRealPR } from "../utils/prBadges";
 import type { PRBadge } from "../types/workout";
 import * as R from "../utils/sessionReducers";
+import { warmupRamp } from "../utils/training";
 import { APP_VERSION } from "../utils/appVersion";
 
 const SESSION_KEY = "@konafit_active_session_v1";
@@ -252,6 +254,7 @@ export function useWorkoutSession() {
         ghostSets: ghost,
         histPRs,
         isBodyweight: info.isBodyweight,
+            perHand: info.perHand,
       };
 
       updateSession((prev) => ({
@@ -306,6 +309,7 @@ export function useWorkoutSession() {
         ghostSets: ghost,
         histPRs,
         isBodyweight: info.isBodyweight,
+            perHand: info.perHand,
       };
       setLoggedExerciseSuperset([target.dbId, dbId], supersetId).catch(console.error);
       updateSession((prev) => {
@@ -370,7 +374,7 @@ export function useWorkoutSession() {
     (
       exerciseLocalId: string,
       setLocalId: string,
-      patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe" | "notes" | "isWarmup" | "isCompleted">>
+      patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe" | "notes" | "isWarmup" | "isCompleted" | "setType">>
     ) => {
       updateSession((prev) => ({
         ...prev,
@@ -397,22 +401,95 @@ export function useWorkoutSession() {
     [updateSession]
   );
 
+  // Write the sets a reducer changed (by identity) for one exercise.
+  const persistChanged = (prev: ActiveSession, next: ActiveSession, exerciseLocalId: string) => {
+    const before = prev.exercises.find((e) => e.localId === exerciseLocalId);
+    const after = next.exercises.find((e) => e.localId === exerciseLocalId);
+    if (after?.dbId) {
+      after.sets.forEach((s, i) => {
+        if (s !== before?.sets[i]) upsertLoggedSet({ ...s, loggedExerciseId: after.dbId! }).catch(console.error);
+      });
+    }
+  };
+
   // Copy weight/reps/rpe from the last filled set into every other incomplete set.
   const copyLastSetToAll = useCallback(
     (exerciseLocalId: string) => {
       updateSession((prev) => {
         const next = R.copyLastSetToAll(prev, exerciseLocalId);
-        const before = prev.exercises.find((e) => e.localId === exerciseLocalId);
-        const after = next.exercises.find((e) => e.localId === exerciseLocalId);
-        if (after?.dbId) {
-          after.sets.forEach((s, i) => {
-            if (s !== before?.sets[i]) upsertLoggedSet({ ...s, loggedExerciseId: after.dbId! }).catch(console.error);
-          });
-        }
+        persistChanged(prev, next, exerciseLocalId);
         return next;
       });
     },
     [updateSession]
+  );
+
+  const applySuggestion = useCallback(
+    (exerciseLocalId: string, weight: number, reps: number) => {
+      updateSession((prev) => {
+        const next = R.applySuggestion(prev, exerciseLocalId, weight, reps);
+        persistChanged(prev, next, exerciseLocalId);
+        return next;
+      });
+    },
+    [updateSession]
+  );
+
+  const applyRpeToAll = useCallback(
+    (exerciseLocalId: string) => {
+      updateSession((prev) => {
+        const next = R.applyRpeToAll(prev, exerciseLocalId);
+        persistChanged(prev, next, exerciseLocalId);
+        return next;
+      });
+    },
+    [updateSession]
+  );
+
+  /** Ramp sets from the heaviest working weight entered (or last time's). Returns false when there's no weight to build from. */
+  const addWarmups = useCallback(
+    async (exerciseLocalId: string): Promise<boolean> => {
+      const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
+      if (!exercise?.dbId) return false;
+      const weights = [
+        ...exercise.sets.filter((s) => !s.isWarmup).map((s) => parseFloat(s.weightLbs)),
+        ...exercise.ghostSets.map((g) => g.weightLbs ?? NaN),
+      ].filter((w) => Number.isFinite(w));
+      const ramp = warmupRamp(weights.length ? Math.max(...weights) : 0);
+      if (ramp.length === 0) return false;
+      const warmups: ActiveSet[] = [];
+      for (const r of ramp) {
+        warmups.push({
+          ...defaultSet(0),
+          dbId: await createLoggedSet(exercise.dbId, 0),
+          weightLbs: String(r.weight),
+          reps: String(r.reps),
+          isWarmup: true,
+        });
+      }
+      updateSession((prev) => {
+        const next = R.insertWarmups(prev, exerciseLocalId, warmups);
+        const after = next.exercises.find((e) => e.localId === exerciseLocalId)!;
+        after.sets.forEach((s) => upsertLoggedSet({ ...s, loggedExerciseId: after.dbId! }).catch(console.error)); // new rows and renumbered old ones
+        return next;
+      });
+      return true;
+    },
+    [session, updateSession]
+  );
+
+  const togglePerHand = useCallback(
+    (exerciseLocalId: string) => {
+      const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
+      if (!exercise) return;
+      const perHand = !exercise.perHand;
+      setExercisePerHand(exercise.exerciseId, perHand).catch(console.error);
+      updateSession((prev) => ({
+        ...prev,
+        exercises: prev.exercises.map((e) => (e.exerciseId === exercise.exerciseId ? { ...e, perHand } : e)),
+      }));
+    },
+    [session, updateSession]
   );
 
   // Re-evaluate PR badges for an already-completed set after its values were edited.
@@ -544,6 +621,7 @@ export function useWorkoutSession() {
           ghostSets: ghost,
           histPRs,
           isBodyweight: info.isBodyweight,
+            perHand: info.perHand,
         })
       );
     },
@@ -589,7 +667,7 @@ export function useWorkoutSession() {
   const launchFromExercises = useCallback(async (
     programExercises: {
       exerciseId: number; exerciseName: string; muscleGroup: string; targetSets: number | null;
-      warmupSets?: number; supersetId?: string | null;
+      warmupSets?: number; supersetId?: string | null; targetReps?: string | null; targetRpe?: number | null;
     }[],
     programDayId?: number
   ) => {
@@ -644,6 +722,9 @@ export function useWorkoutSession() {
             ghostSets: ghost,
             histPRs,
             isBodyweight: info.isBodyweight,
+            perHand: info.perHand,
+            targetReps: pe.targetReps,
+            targetRpe: pe.targetRpe,
           };
         })
       );
@@ -689,6 +770,10 @@ export function useWorkoutSession() {
     removeSet,
     updateSet,
     copyLastSetToAll,
+    applySuggestion,
+    applyRpeToAll,
+    addWarmups,
+    togglePerHand,
     toggleExerciseDone,
     recheckSetPR,
     toggleSetComplete,

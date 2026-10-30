@@ -1,6 +1,7 @@
 import { getDatabase } from "./database";
 import type { ActiveSet, Exercise, GhostSet } from "../types/workout";
 import { isBodyweightSql } from "./sqlFragments";
+import { fuzzyMatches } from "../utils/fuzzy";
 
 export async function createWorkout(programDayId?: number, appVersion?: string): Promise<number> {
   const db = await getDatabase();
@@ -167,17 +168,18 @@ export async function upsertLoggedSet(set: ActiveSet & { loggedExerciseId: numbe
     await db.runAsync(
       `UPDATE logged_sets
        SET weight_lbs = ${blankWeight}, reps = ?, rpe = ?, notes = ?, is_warmup = ?, is_completed = ?,
+           set_number = ?, set_type = ?,
            completed_at = CASE WHEN ? = 1 THEN COALESCE(completed_at, unixepoch()) END,
            rest_seconds = CASE WHEN ? = 1 THEN rest_seconds END
        WHERE id = ?`,
-      [weight, set.loggedExerciseId, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.isCompleted ? 1 : 0, set.isCompleted ? 1 : 0, set.dbId]
+      [weight, set.loggedExerciseId, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.setNumber, set.setType ?? null, set.isCompleted ? 1 : 0, set.isCompleted ? 1 : 0, set.dbId]
     );
     if (set.isCompleted) await stampRest(set.dbId);
   } else {
     const result = await db.runAsync(
-      `INSERT INTO logged_sets (logged_exercise_id, set_number, weight_lbs, reps, rpe, notes, is_warmup, is_completed, completed_at)
-       VALUES (?, ?, ${blankWeight}, ?, ?, ?, ?, ?, CASE WHEN ? = 1 THEN unixepoch() END)`,
-      [set.loggedExerciseId, set.setNumber, weight, set.loggedExerciseId, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.isCompleted ? 1 : 0]
+      `INSERT INTO logged_sets (logged_exercise_id, set_number, weight_lbs, reps, rpe, notes, is_warmup, is_completed, set_type, completed_at)
+       VALUES (?, ?, ${blankWeight}, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 1 THEN unixepoch() END)`,
+      [set.loggedExerciseId, set.setNumber, weight, set.loggedExerciseId, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.setType ?? null, set.isCompleted ? 1 : 0]
     );
     if (set.isCompleted) await stampRest(result.lastInsertRowId);
   }
@@ -265,10 +267,11 @@ export async function getGhostSets(
   );
   if (!lastWorkout) return [];
 
-  const rows = await db.getAllAsync<{ set_number: number; weight_lbs: number | null; reps: number | null }>(
-    `SELECT ls.set_number, ls.weight_lbs, ls.reps
+  const rows = await db.getAllAsync<{ set_number: number; weight_lbs: number | null; reps: number | null; rpe: number | null; at: number }>(
+    `SELECT ls.set_number, ls.weight_lbs, ls.reps, ls.rpe, w.started_at AS at
      FROM logged_sets ls
      JOIN logged_exercises le ON ls.logged_exercise_id = le.id
+     JOIN workouts w ON w.id = le.workout_id
      WHERE le.exercise_id = ?
        AND le.workout_id = ?
        AND ls.is_warmup = 0
@@ -281,6 +284,8 @@ export async function getGhostSets(
     setNumber: r.set_number,
     weightLbs: r.weight_lbs,
     reps: r.reps,
+    rpe: r.rpe,
+    at: r.at,
   }));
 }
 
@@ -355,12 +360,25 @@ export async function searchExercises(
 
   conditions.push("is_deleted = 0");
   const where = `WHERE ${conditions.join(" AND ")}`;
-  // Name starting with the first word ranks first, then most used.
-  const rank = tokens.length > 0 ? "(LOWER(name) LIKE ?) DESC, " : "";
-  return db.getAllAsync<Exercise>(
+  // With a query: name starting with the first word, then most used. Without: most recently trained first, then most used.
+  const rank = tokens.length > 0
+    ? "(LOWER(name) LIKE ?) DESC, "
+    : "(SELECT MAX(w.started_at) FROM logged_exercises le JOIN workouts w ON w.id = le.workout_id WHERE le.exercise_id = exercises.id) DESC, ";
+  const rows = await db.getAllAsync<Exercise>(
     `SELECT * FROM exercises ${where} ORDER BY ${rank}use_count DESC, name ASC`,
     tokens.length > 0 ? [...params, `${tokens[0]}%`] : params
   );
+  if (rows.length > 0 || tokens.length === 0) return rows;
+
+  // Nothing matched literally: retry forgiving typos ("benhc pres") over the same filters.
+  const filterOnly = conditions.filter((_, i) => i >= tokens.length);
+  const filterParams = params.slice(params.length - filterOnly.filter((c) => c.includes("?")).length);
+  const all = await db.getAllAsync<Exercise>(
+    `SELECT * FROM exercises WHERE ${filterOnly.join(" AND ")} ORDER BY use_count DESC, name ASC`,
+    filterParams
+  );
+  const expanded = tokens.map((t) => SEARCH_ALIASES[t] ?? t);
+  return all.filter((e) => fuzzyMatches(`${e.name} ${e.equipment_type}`, expanded));
 }
 
 export async function getCustomExercises(): Promise<Exercise[]> {
@@ -436,13 +454,37 @@ export async function getExerciseNotes(exerciseId: number): Promise<ExerciseNote
 }
 
 /** Library note plus whether the exercise is logged as added load on bodyweight. */
-export async function getExerciseInfo(exerciseId: number): Promise<{ note: string; isBodyweight: boolean }> {
+export async function getExerciseInfo(exerciseId: number): Promise<{ note: string; isBodyweight: boolean; perHand: boolean }> {
   const db = await getDatabase();
-  const row = await db.getFirstAsync<{ notes: string | null; equipment_type: string }>(
-    "SELECT notes, equipment_type FROM exercises WHERE id = ?",
+  const row = await db.getFirstAsync<{ notes: string | null; equipment_type: string; per_hand: number }>(
+    "SELECT notes, equipment_type, per_hand FROM exercises WHERE id = ?",
     [exerciseId]
   );
-  return { note: row?.notes ?? "", isBodyweight: /bodyweight/i.test(row?.equipment_type ?? "") };
+  return { note: row?.notes ?? "", isBodyweight: /bodyweight/i.test(row?.equipment_type ?? ""), perHand: row?.per_hand === 1 };
+}
+
+export async function setExercisePerHand(exerciseId: number, perHand: boolean): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync("UPDATE exercises SET per_hand = ? WHERE id = ?", [perHand ? 1 : 0, exerciseId]);
+}
+
+/**
+ * Fold `fromId` into `intoId`: workout history, program entries and goals move over (and take the kept name), the use count is added,
+ * and `fromId` is soft-deleted (restorable from Settings). One transaction, so a failure leaves both exercises as they were.
+ */
+export async function mergeExercises(fromId: number, intoId: number): Promise<void> {
+  if (fromId === intoId) throw new Error("Pick two different exercises.");
+  const db = await getDatabase();
+  const into = await db.getFirstAsync<{ name: string }>("SELECT name FROM exercises WHERE id = ?", [intoId]);
+  if (!into) throw new Error("Exercise not found.");
+  await db.withTransactionAsync(async () => {
+    for (const table of ["logged_exercises", "program_exercises"]) {
+      await db.runAsync(`UPDATE ${table} SET exercise_id = ?, exercise_name = ? WHERE exercise_id = ?`, [intoId, into.name, fromId]);
+    }
+    await db.runAsync("UPDATE goals SET exercise_id = ?, exercise_name = ? WHERE exercise_id = ?", [intoId, into.name, fromId]);
+    await db.runAsync("UPDATE exercises SET use_count = use_count + (SELECT use_count FROM exercises WHERE id = ?) WHERE id = ?", [fromId, intoId]);
+    await db.runAsync("UPDATE exercises SET is_deleted = 1, deleted_at = unixepoch(), use_count = 0 WHERE id = ?", [fromId]);
+  });
 }
 
 export async function updateExerciseLibraryNote(exerciseId: number, notes: string): Promise<void> {

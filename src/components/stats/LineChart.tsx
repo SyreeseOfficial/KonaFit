@@ -14,6 +14,8 @@ type Props = {
   height?: number;
   formatY?: (v: number) => string;
   emptyText?: string;
+  goal?: number; // dashed horizontal target line
+  overlay?: TrendPoint[]; // second, thinner series (e.g. a moving average) over the same x range
 };
 
 function fmtDate(ts: number): string {
@@ -26,6 +28,8 @@ export function LineChart({
   height = 150,
   formatY = (v) => String(Math.round(v)),
   emptyText = "No data for this period",
+  goal,
+  overlay,
 }: Props) {
   const { width } = useWindowDimensions();
   const plotW = width - 40 - PAD_L - PAD_R;
@@ -41,8 +45,9 @@ export function LineChart({
 
   const minX = data[0].x;
   const maxX = data[data.length - 1].x;
-  const rawMin = Math.min(...data.map((d) => d.y));
-  const rawMax = Math.max(...data.map((d) => d.y));
+  const ys = [...data.map((d) => d.y), ...(goal != null ? [goal] : [])];
+  const rawMin = Math.min(...ys);
+  const rawMax = Math.max(...ys);
   const range = rawMax - rawMin || 1;
   const minY = rawMin - range * 0.1;
   const maxY = rawMax + range * 0.1;
@@ -72,6 +77,21 @@ export function LineChart({
         fill={`${color}18`}
       />
       <Path d={pathD} stroke={color} strokeWidth={1.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+
+      {overlay && overlay.length > 1 && (
+        <Path
+          d={overlay.map((d, i) => `${i === 0 ? "M" : "L"} ${PAD_L + toX(d.x)} ${PAD_T + toY(d.y)}`).join(" ")}
+          stroke="#F59E0B" strokeWidth={1.5} fill="none" strokeLinejoin="round" strokeLinecap="round"
+        />
+      )}
+      {goal != null && (
+        <>
+          <Line x1={PAD_L} y1={PAD_T + toY(goal)} x2={PAD_L + plotW} y2={PAD_T + toY(goal)} stroke="#10B981" strokeWidth={1.5} strokeDasharray="5 4" />
+          <SvgText x={PAD_L + plotW} y={PAD_T + toY(goal) - 4} textAnchor="end" fill="#10B981" fontSize={9} fontFamily="JetBrainsMono_400Regular">
+            goal {formatY(goal)}
+          </SvgText>
+        </>
+      )}
 
       {data.length <= 30 && data.map((d, i) => (
         <Circle key={i} cx={PAD_L + toX(d.x)} cy={PAD_T + toY(d.y)} r={2.5} fill={color} />

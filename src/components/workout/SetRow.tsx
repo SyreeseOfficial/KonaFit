@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, useColorScheme } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, useColorScheme } from "react-native";
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { Check } from "lucide-react-native";
 import { haptics } from "../../utils/haptics";
 import { cleanDecimal, cleanInt, MAX_WEIGHT, MAX_REPS } from "../../utils/numberInput";
-import type { ActiveSet, GhostSet, PRBadge } from "../../types/workout";
+import type { ActiveSet, GhostSet, PRBadge, SetType } from "../../types/workout";
 
 const PR_LABELS: Record<PRBadge, string> = { W: "PR WT", R: "PR REP", V: "PR VOL", F: "FIRST TIME" };
+
+const SET_TYPES: (SetType | undefined)[] = [undefined, "drop", "failure", "amrap", "backoff", "myo"];
+const TYPE_LABELS: Record<SetType, string> = { drop: "DROP", failure: "FAILURE", amrap: "AMRAP", backoff: "BACKOFF", myo: "MYO-REPS" };
+const RPE_CHIPS = ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10"];
 
 function PRBadgeChip({ badge }: { badge: PRBadge }) {
   const scale = useSharedValue(0);
@@ -28,7 +32,7 @@ type Props = {
   bodyweight?: boolean; // weight is added load: may be negative (assisted)
   ghost?: GhostSet;
   prevSet?: ActiveSet;
-  onUpdate: (patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe" | "notes">>) => void;
+  onUpdate: (patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe" | "notes" | "setType">>) => void;
   onCommitEdit: () => void;
   onToggleComplete: () => void;
   onToggleWarmup: () => void;
@@ -146,9 +150,16 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
       </TouchableOpacity>
     </View>
 
-    {/* PR badges */}
-    {set.prBadges && set.prBadges.length > 0 && (
+    {/* Set type + PR badges */}
+    {((set.prBadges && set.prBadges.length > 0) || set.setType) && (
       <View className="flex-row items-center gap-1 px-3 pb-2">
+        {set.setType && (
+          <View className="bg-surface-3 dark:bg-zinc-700 px-1.5 py-0.5 rounded">
+            <Text className="font-mono-medium text-text-primary dark:text-white" style={{ fontSize: 11, lineHeight: 14 }}>
+              {TYPE_LABELS[set.setType]}
+            </Text>
+          </View>
+        )}
         {(set.prBadges ?? []).map((badge) => (
           <PRBadgeChip key={badge} badge={badge} />
         ))}
@@ -167,9 +178,34 @@ export function SetRow({ set, bodyweight, ghost, prevSet, onUpdate, onCommitEdit
             <Text className={chipText}>Same as prev</Text>
           </TouchableOpacity>
         )}
+        <TouchableOpacity
+          onPress={() => onUpdate({ setType: SET_TYPES[(SET_TYPES.indexOf(set.setType) + 1) % SET_TYPES.length] })}
+          className={chip}
+          activeOpacity={0.7}
+        >
+          <Text className={chipText}>{set.setType ? TYPE_LABELS[set.setType] : "Normal"}</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => setNoteOpen(true)} className={`${chip} ml-auto mr-0`} activeOpacity={0.7}>
           <Text className={chipText}>{note ? "Edit note" : "Note"}</Text>
         </TouchableOpacity>
+      </View>
+    )}
+
+    {/* RPE quick pick (half steps) with the matching reps in reserve */}
+    {focused === "rpe" && (
+      <View className="pb-2">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always" contentContainerStyle={{ paddingHorizontal: 12 }}>
+          {RPE_CHIPS.map((v) => (
+            <TouchableOpacity key={v} onPress={() => onUpdate({ rpe: v })} className={chip} activeOpacity={0.7}>
+              <Text className={chipText}>{v}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        {set.rpe !== "" && !isNaN(parseFloat(set.rpe)) && (
+          <Text className="px-3 font-mono text-text-muted dark:text-zinc-500 text-xs">
+            ≈ {Math.max(0, 10 - parseFloat(set.rpe))} reps in reserve
+          </Text>
+        )}
       </View>
     )}
 

@@ -16,6 +16,9 @@ import { exportCsvAndShare } from "../../src/utils/exportUtils";
 import { WeeklyGoal } from "../../src/components/train/WeeklyGoal";
 import { StatsGrid } from "../../src/components/stats/StatsGrid";
 import { SectionHeader } from "../../src/components/stats/SectionHeader";
+import { TrendCards } from "../../src/components/stats/TrendCards";
+import { MuscleWeek } from "../../src/components/stats/MuscleWeek";
+import { ReadinessCard } from "../../src/components/stats/ReadinessCard";
 import { FeelChart } from "../../src/components/stats/FeelChart";
 import { BodyweightLogger } from "../../src/components/stats/BodyweightLogger";
 import { ProgressPhotoGallery } from "../../src/components/stats/ProgressPhotoGallery";
@@ -125,6 +128,21 @@ export default function StatsScreen() {
             prCount={stats.prCount}
           />
         )}
+
+        <View style={{ paddingHorizontal: 20, paddingTop: 40 }}>
+          <SectionHeader title="Trends" subtitle="Strength, volume, bodyweight" />
+          <TrendCards refreshKey={refreshKey} />
+        </View>
+
+        <View style={{ paddingHorizontal: 20, paddingTop: 40 }}>
+          <SectionHeader title="This week" subtitle="Sets, balance, recovery" />
+          <MuscleWeek refreshKey={refreshKey} />
+        </View>
+
+        <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
+          <SectionHeader title="Readiness" subtitle="Daily check-in" />
+          <ReadinessCard refreshKey={refreshKey} />
+        </View>
 
         <View style={{ paddingHorizontal: 20, paddingTop: 56 }}>
           <SectionHeader title="Lifestyle" subtitle="Daily tracking" />

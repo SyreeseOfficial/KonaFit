@@ -125,6 +125,21 @@ const MIGRATIONS: ((database: SQLite.SQLiteDatabase) => Promise<void>)[] = [
        CREATE INDEX IF NOT EXISTS idx_se_workout ON session_events(workout_id);`
     );
   },
+  // 12: set types (drop, failure, AMRAP...), per-hand dumbbell/kettlebell weights, daily readiness check-ins
+  async (database) => {
+    await addColumn(database, "logged_sets", "set_type", "TEXT");
+    await addColumn(database, "exercises", "per_hand", "INTEGER NOT NULL DEFAULT 0");
+    await database.execAsync(
+      `CREATE TABLE IF NOT EXISTS readiness_checkins (
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         day TEXT NOT NULL UNIQUE,
+         sleep INTEGER NOT NULL,
+         soreness INTEGER NOT NULL,
+         mood INTEGER NOT NULL,
+         created_at INTEGER NOT NULL DEFAULT (unixepoch())
+       );`
+    );
+  },
 ];
 
 async function runMigrations(database: SQLite.SQLiteDatabase) {

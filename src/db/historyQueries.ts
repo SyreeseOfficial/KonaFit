@@ -1,6 +1,6 @@
 import { getDatabase } from "./database";
 import { localDateKey } from "../utils/time";
-import { setLoadSql, isBodyweightSql, LATEST_BODYWEIGHT_SQL, workingSetSql, setVolumeSql, prVolumeSql, oneRmSql } from "./sqlFragments";
+import { setLoadSql, handsSql, isBodyweightSql, LATEST_BODYWEIGHT_SQL, workingSetSql, setVolumeSql, prVolumeSql, oneRmSql } from "./sqlFragments";
 
 export type WorkoutSummary = {
   id: number;
@@ -12,6 +12,7 @@ export type WorkoutSummary = {
   set_count: number;
   total_volume: number;
   location: string | null;
+  rating: number | null; // 1-5 "how did it feel", from the finish sheet
 };
 
 export type SetRecord = {
@@ -55,7 +56,7 @@ export async function getWorkoutHistory(limit = 20, offset = 0, exerciseQuery = 
     : "";
   return db.getAllAsync<WorkoutSummary>(
     `SELECT
-       w.id, w.name, w.started_at, w.finished_at, w.location,
+       w.id, w.name, w.started_at, w.finished_at, w.location, w.rating,
        COALESCE(w.duration_seconds, 0) as duration_seconds,
        COUNT(DISTINCT le.id) as exercise_count,
        COUNT(DISTINCT ls.id) as set_count,
@@ -115,11 +116,12 @@ export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail
 
   const exerciseRows = await db.getAllAsync<{
     id: number; exercise_name: string; muscle_group: string; order_index: number; notes: string | null;
-    bw_lbs: number; is_bodyweight: number;
+    bw_lbs: number; is_bodyweight: number; hands: number;
   }>(
     `SELECT le.id, le.exercise_name, COALESCE(e.muscle_group, '') as muscle_group, le.order_index, le.notes,
             CASE WHEN ${isBodyweightSql()} THEN COALESCE(${LATEST_BODYWEIGHT_SQL}, 0) ELSE 0 END AS bw_lbs,
-            ${isBodyweightSql()} AS is_bodyweight
+            ${isBodyweightSql()} AS is_bodyweight,
+            ${handsSql()} AS hands
      FROM logged_exercises le
      LEFT JOIN exercises e ON le.exercise_id = e.id
      WHERE le.workout_id = ?
@@ -137,10 +139,10 @@ export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail
       );
       sets.forEach((s) => {
         if (s.is_completed && !s.is_warmup && s.weight_lbs != null && s.reps) {
-          totalVolume += Math.max(0, s.weight_lbs + ex.bw_lbs) * s.reps;
+          totalVolume += Math.max(0, s.weight_lbs + ex.bw_lbs) * s.reps * ex.hands;
         }
       });
-      const { bw_lbs: _bw, ...exercise } = ex;
+      const { bw_lbs: _bw, hands: _h, ...exercise } = ex;
       return { ...exercise, is_bodyweight: !!ex.is_bodyweight, notes: ex.notes ?? null, sets };
     })
   );

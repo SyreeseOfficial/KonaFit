@@ -14,7 +14,7 @@ import { router } from "expo-router";
 import Constants from "expo-constants";
 import { kvStore } from "../src/utils/kvStore";
 import { getAllWorkoutDataForExport } from "../src/db/historyQueries";
-import { exportCsvAndShare } from "../src/utils/exportUtils";
+import { exportCsvAndShare, exportJsonAndShare } from "../src/utils/exportUtils";
 import { wipeAllData } from "../src/db/wipe";
 import { removeOrphanPhotos } from "../src/utils/photoFiles";
 import { THEME_KEY, loadTheme, setTheme, type ThemePref } from "../src/utils/theme";
@@ -175,6 +175,14 @@ export default function SettingsScreen() {
         return;
       }
       await exportCsvAndShare(rows);
+    } catch (e) {
+      Alert.alert("Export Failed", String(e));
+    }
+  }, []);
+
+  const handleExportJson = useCallback(async () => {
+    try {
+      await exportJsonAndShare(Constants.expoConfig?.version ?? "unknown");
     } catch (e) {
       Alert.alert("Export Failed", String(e));
     }
@@ -357,6 +365,16 @@ export default function SettingsScreen() {
             label="Export Workouts"
             sublabel="Download all workout data as CSV"
             onPress={handleExport}
+          />
+          <Row
+            label="Export Everything (JSON)"
+            sublabel="Workouts, programs, goals and logs with full detail"
+            onPress={handleExportJson}
+          />
+          <Row
+            label="Merge Duplicate Exercises"
+            sublabel="Fold one exercise into another and keep the history"
+            onPress={() => router.push("/merge-exercises" as never)}
           />
         </View>
 

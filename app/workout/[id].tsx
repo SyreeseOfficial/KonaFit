@@ -26,8 +26,10 @@ import {
   addExerciseToHistory,
 } from "../../src/db/historyQueries";
 import { deleteWorkout } from "../../src/db/workoutQueries";
+import { createProgramFromWorkout } from "../../src/db/programQueries";
 import {
   formatDate,
+  formatShortDate,
   formatDuration,
   formatVolume,
   shareWorkoutMarkdown,
@@ -180,6 +182,16 @@ export default function WorkoutDetailScreen() {
     try { await shareWorkoutMarkdown(workout); }
     catch (e) { Alert.alert("Share failed", String(e)); }
     finally { setSharing(false); }
+  }, [workout]);
+
+  const handleSaveAsProgram = useCallback(async () => {
+    if (!workout) return;
+    try {
+      const programId = await createProgramFromWorkout(workout.id, `${workout.name} · ${formatShortDate(workout.started_at)}`);
+      router.push(`/programs/${programId}` as never);
+    } catch (e) {
+      Alert.alert("Couldn't save program", String(e));
+    }
   }, [workout]);
 
   if (loading) {
@@ -410,6 +422,17 @@ export default function WorkoutDetailScreen() {
               <View>
                 <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Share as Text</Text>
                 <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">Markdown format</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSaveAsProgram}
+              className="bg-surface dark:bg-zinc-900 flex-row items-center gap-3 px-5 py-4 rounded-2xl"
+              activeOpacity={0.7}
+            >
+              <Plus size={18} color="#94A3B8" />
+              <View>
+                <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Save as Program</Text>
+                <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs">Use this workout as a template</Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity

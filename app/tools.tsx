@@ -5,8 +5,9 @@ import { router, useLocalSearchParams } from "expo-router";
 import { X } from "lucide-react-native";
 import { PlateCalculator } from "../src/components/tools/PlateCalculator";
 import { PercentageCalculator } from "../src/components/tools/PercentageCalculator";
+import { OneRmCalculator, RpeChart, WarmupCalculator } from "../src/components/tools/MoreTools";
 
-type Tab = "plates" | "percent";
+type Tab = "plates" | "percent" | "onerm" | "rpe" | "warmup";
 
 export default function ToolsScreen() {
   const { tab: initialTab, oneRM: oneRMParam } = useLocalSearchParams<{
@@ -41,6 +42,9 @@ export default function ToolsScreen() {
         {([
           { key: "plates" as Tab, label: "Plate Calc" },
           { key: "percent" as Tab, label: "% Calc" },
+          { key: "onerm" as Tab, label: "1RM" },
+          { key: "rpe" as Tab, label: "RPE" },
+          { key: "warmup" as Tab, label: "Warm-up" },
         ]).map(({ key, label }) => (
           <TouchableOpacity
             key={key}
@@ -68,6 +72,12 @@ export default function ToolsScreen() {
       >
         {activeTab === "plates" ? (
           <PlateCalculator key={plateWeight} initialWeight={plateWeight} />
+        ) : activeTab === "onerm" ? (
+          <OneRmCalculator />
+        ) : activeTab === "rpe" ? (
+          <RpeChart />
+        ) : activeTab === "warmup" ? (
+          <WarmupCalculator />
         ) : (
           <PercentageCalculator
             initialOneRM={oneRM}

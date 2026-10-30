@@ -631,3 +631,104 @@ describe("deleted exercises", () => {
     expect((await q.workouts.getExerciseNotes(id)).map((n) => n.text)).toEqual(["felt strong", "elbows in"]);
   });
 });
+
+describe("features round", () => {
+  it("per-hand exercises count volume twice in stats and history", async () => {
+    const { adapter, q } = await fresh();
+    await addWorkout(adapter, { "Incline Dumbbell Press": [{ w: 50, r: 10 }] });
+    const before = (await q.stats.getStatsTotals()).totalLifted;
+    expect(before).toBe(500);
+    await q.workouts.setExercisePerHand(await exId(adapter, "Incline Dumbbell Press"), true);
+    expect((await q.stats.getStatsTotals()).totalLifted).toBe(1000);
+    const [w] = await q.history.getWorkoutHistory(5);
+    expect(w.total_volume).toBe(1000);
+    expect((await q.history.getWorkoutDetail(w.id))!.totalVolume).toBe(1000);
+  });
+
+  it("set type and set number are saved on update", async () => {
+    const { adapter, q } = await fresh();
+    const wid = await q.workouts.createWorkout();
+    const le = await q.workouts.createLoggedExercise(wid, await exId(adapter, "Pull-Up"), "Pull-Up", 0);
+    const dbId = await q.workouts.createLoggedSet(le, 0);
+    await q.workouts.upsertLoggedSet({
+      localId: "a", dbId, setNumber: 3, weightLbs: "10", reps: "5", rpe: "", isWarmup: false, isCompleted: true,
+      setType: "drop", loggedExerciseId: le,
+    });
+    const row = await adapter.getFirstAsync<{ set_type: string; set_number: number }>("SELECT set_type, set_number FROM logged_sets WHERE id = ?", [dbId]);
+    expect(row).toEqual({ set_type: "drop", set_number: 3 });
+  });
+
+  it("ghost sets carry RPE and date, exercise info carries the per-hand flag", async () => {
+    const { adapter, q } = await fresh();
+    const at = now() - DAY;
+    const w = await addWorkout(adapter, { "Pull-Up": [{ w: 10, r: 5 }] }, { startedAt: at });
+    await adapter.runAsync("UPDATE logged_sets SET rpe = 8");
+    const id = await exId(adapter, "Pull-Up");
+    const ghost = await q.workouts.getGhostSets(id, w + 1);
+    expect(ghost[0]).toMatchObject({ weightLbs: 10, reps: 5, rpe: 8, at });
+    expect((await q.workouts.getExerciseInfo(id)).perHand).toBe(false);
+  });
+
+  it("merging moves history, programs and goals, and soft-deletes the duplicate", async () => {
+    const { adapter, q } = await fresh();
+    const from = await exId(adapter, "Reverse Hyperextension");
+    const into = await exId(adapter, "Back Extension");
+    await addWorkout(adapter, { "Reverse Hyperextension": [{ w: 0, r: 10 }] });
+    await adapter.runAsync("INSERT INTO goals (type, title, exercise_id, exercise_name, target_value) VALUES ('lift_pr','g',?,'Reverse Hyperextension',100)", [from]);
+    await q.workouts.mergeExercises(from, into);
+    const moved = await adapter.getFirstAsync<{ exercise_id: number; exercise_name: string }>("SELECT exercise_id, exercise_name FROM logged_exercises");
+    expect(moved).toEqual({ exercise_id: into, exercise_name: "Back Extension" });
+    expect((await adapter.getFirstAsync<{ exercise_id: number }>("SELECT exercise_id FROM goals"))!.exercise_id).toBe(into);
+    expect((await adapter.getFirstAsync<{ is_deleted: number }>("SELECT is_deleted FROM exercises WHERE id = ?", [from]))!.is_deleted).toBe(1);
+    await expect(q.workouts.mergeExercises(into, into)).rejects.toThrow();
+  });
+
+  it("search forgives typos only when nothing matches literally", async () => {
+    const { q } = await fresh();
+    expect((await q.workouts.searchExercises("bnch pres")).some((e) => e.name.includes("Bench Press"))).toBe(true);
+    expect((await q.workouts.searchExercises("zzzzzz")).length).toBe(0);
+    expect((await q.workouts.searchExercises("bench press")).every((e) => /bench/i.test(e.name + e.equipment_type))).toBe(true);
+  });
+
+  it("readiness: one check-in per day, trend and rating split", async () => {
+    const { adapter } = await fresh();
+    const ins = await import("../db/insightQueries");
+    await ins.saveReadiness({ sleep: 5, soreness: 1, mood: 5 });
+    await ins.saveReadiness({ sleep: 3, soreness: 3, mood: 3 }); // same day: replaces
+    expect(await ins.getTodayReadiness()).toEqual({ sleep: 3, soreness: 3, mood: 3 });
+    expect((await adapter.getFirstAsync<{ n: number }>("SELECT COUNT(*) n FROM readiness_checkins"))!.n).toBe(1);
+    await ins.saveReadiness({ sleep: 5, soreness: 1, mood: 5 }, "2020-01-01");
+    const wid = await addWorkout(adapter, { "Pull-Up": [{ w: 0, r: 5 }] }, { startedAt: Math.floor(new Date("2020-01-01T12:00:00").getTime() / 1000) });
+    await adapter.runAsync("UPDATE workouts SET rating = 5 WHERE id = ?", [wid]);
+    expect(await ins.getReadinessVsRating()).toEqual({ high: 5, low: null });
+    expect(ins.readinessScore({ sleep: 5, soreness: 1, mood: 5 })).toBe(5);
+  });
+
+  it("weekly load, hard sets, recovery and prior volumes read finished working sets", async () => {
+    const { adapter } = await fresh();
+    const ins = await import("../db/insightQueries");
+    const a = await addWorkout(adapter, { "Pull-Up": [{ w: 0, r: 10 }] }, { startedAt: now() - 10 * DAY, name: "Pull Day" });
+    await addWorkout(adapter, { "Pull-Up": [{ w: 0, r: 10 }] }, { startedAt: now() - 3 * DAY, name: "Pull Day" });
+    const c = await addWorkout(adapter, { "Pull-Up": [{ w: 0, r: 10 }, { w: 0, r: 10, warm: true }] }, { startedAt: now() - 3600, name: "Pull Day" });
+    expect(a).toBeLessThan(c);
+    const load = await ins.getWeeklyLoad(4);
+    expect(load.length).toBeGreaterThanOrEqual(2);
+    expect(load.some((l) => l.current)).toBe(true);
+    const hard = await ins.getHardSetsLastWeek();
+    expect(hard.reduce((n, r) => n + r.sets, 0)).toBe(2); // 3 days ago + an hour ago; warm-up and 10-day-old set excluded
+    expect((await ins.getLastTrainedByGroup()).length).toBeGreaterThan(0);
+    expect((await ins.getPriorVolumes(c)).length).toBe(2);
+  });
+
+  it("full export has every table and the schema version", async () => {
+    const { adapter, database } = await fresh();
+    await addWorkout(adapter, { "Pull-Up": [{ w: 10, r: 5 }] });
+    const { buildFullExport } = await import("../db/exportJson");
+    const out = await buildFullExport("1.2.3");
+    expect(out).toMatchObject({ format: "konafit-export", formatVersion: 1, appVersion: "1.2.3" });
+    expect(out.schemaVersion).toBe(12);
+    expect(out.tables.logged_sets).toHaveLength(1);
+    expect(Object.keys(out.tables)).toEqual(expect.arrayContaining(["workouts", "readiness_checkins", "programs", "goals"]));
+    expect(database).toBeTruthy();
+  });
+});

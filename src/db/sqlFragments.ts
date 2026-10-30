@@ -26,8 +26,12 @@ export const oneRmSql = (load: string, reps: string) => `(${load} * (1.0 + MIN($
 export const workingSetSql = (ls = "ls") =>
   `${ls}.is_completed = 1 AND ${ls}.is_warmup = 0 AND ${ls}.weight_lbs IS NOT NULL AND ${ls}.reps IS NOT NULL`;
 
-/** Volume of one set: effective load x reps. Only meaningful for rows matching `workingSetSql`. */
-export const setVolumeSql = (ls = "ls", le = "le") => `${setLoadSql(ls, le)} * ${ls}.reps`;
+/** Per-hand exercises (dumbbells, kettlebells) log one hand's weight; a rep moves it twice. */
+export const handsSql = (le = "le") =>
+  `(CASE WHEN COALESCE((SELECT x.per_hand FROM exercises x WHERE x.id = ${le}.exercise_id), 0) = 1 THEN 2 ELSE 1 END)`;
+
+/** Volume of one set: effective load x reps (x2 when per hand). Only meaningful for rows matching `workingSetSql`. */
+export const setVolumeSql = (ls = "ls", le = "le") => `${setLoadSql(ls, le)} * ${ls}.reps * ${handsSql(le)}`;
 
 /**
  * PR score of a set: its volume, except bodyweight sets always score at least their reps

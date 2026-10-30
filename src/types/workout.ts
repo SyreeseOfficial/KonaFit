@@ -2,7 +2,11 @@ export type GhostSet = {
   setNumber: number;
   weightLbs: number | null;
   reps: number | null;
+  rpe?: number | null; // absent in sessions cached before overload hints
+  at?: number; // unix secs of the workout it came from
 };
+
+export type SetType = "drop" | "failure" | "amrap" | "backoff" | "myo";
 
 export type PRBadge = "W" | "R" | "V" | "F"; // Weight, Reps, Volume, First time
 
@@ -15,6 +19,7 @@ export type ActiveSet = {
   rpe: string;
   notes?: string; // optional: sessions cached before per-set notes lack it
   isWarmup: boolean;
+  setType?: SetType; // absent = normal working set
   isCompleted: boolean;
   prBadges?: PRBadge[];
   isGhostFilled?: boolean;
@@ -41,6 +46,9 @@ export type ActiveExercise = {
   sets: ActiveSet[];
   ghostSets: GhostSet[];
   histPRs: HistPRs;
+  perHand?: boolean; // logged weight is one hand's; volume counts it twice
+  targetReps?: string | null; // from the program day, e.g. "8-10"
+  targetRpe?: number | null;
   isBodyweight?: boolean; // weight is added load on top of bodyweight and may be negative (assisted); absent in older cached sessions
 };
 

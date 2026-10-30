@@ -7,6 +7,8 @@ import { getWorkoutDetail, type WorkoutDetail } from "../src/db/historyQueries";
 import { createProgramFromWorkout } from "../src/db/programQueries";
 import { formatDuration, formatShortDate, formatVolume } from "../src/utils/exportUtils";
 import { kvStore } from "../src/utils/kvStore";
+import { getPriorVolumes } from "../src/db/insightQueries";
+import { sessionInsights } from "../src/utils/training";
 
 const LAST_PRS_KEY = "@konafit_last_prs";
 
@@ -17,13 +19,16 @@ export default function WorkoutCompleteScreen() {
 
   const [workout, setWorkout] = useState<WorkoutDetail | null>(null);
   const [prs, setPrs] = useState<string[]>([]);
+  const [priorVolumes, setPriorVolumes] = useState<number[]>([]);
 
   const load = useCallback(async () => {
-    const [detail, rawPrs] = await Promise.all([
+    const [detail, rawPrs, prior] = await Promise.all([
       getWorkoutDetail(workoutId),
       kvStore.getItem(LAST_PRS_KEY),
+      getPriorVolumes(workoutId).catch(() => []),
     ]);
     setWorkout(detail);
+    setPriorVolumes(prior);
     if (rawPrs) {
       try { setPrs(JSON.parse(rawPrs)); } catch {}
       kvStore.removeItem(LAST_PRS_KEY).catch(() => {});
@@ -44,6 +49,15 @@ export default function WorkoutCompleteScreen() {
     (sum, e) => sum + e.sets.filter((s) => s.is_completed && !s.is_warmup).length,
     0
   );
+
+  const insights = sessionInsights({
+    volume: workout.totalVolume,
+    priorVolumes,
+    exercises: workout.exercises.map((e) => ({
+      name: e.exercise_name,
+      sets: e.sets.filter((s) => s.is_completed && !s.is_warmup).map((s) => ({ weight: s.weight_lbs, reps: s.reps })),
+    })),
+  });
 
   const handleDone = () => {
     router.dismissAll();
@@ -111,6 +125,28 @@ export default function WorkoutCompleteScreen() {
             ))}
           </View>
         </View>
+
+        {/* Insights */}
+        {(insights.volumeVsAvgPct != null || insights.best || insights.fatigue.length > 0) && (
+          <View className="mx-5 bg-surface dark:bg-zinc-900 rounded-2xl px-5 py-4 mb-4 gap-1.5">
+            <Text className="font-montserrat-bold text-text-primary dark:text-white text-sm uppercase tracking-widest mb-1">Insights</Text>
+            {insights.volumeVsAvgPct != null && (
+              <Text className="font-montserrat text-text-primary dark:text-white text-base">
+                Volume {insights.volumeVsAvgPct >= 0 ? "up" : "down"} {Math.abs(insights.volumeVsAvgPct)}% vs your last {insights.comparedTo} {workout.name} {insights.comparedTo === 1 ? "session" : "sessions"}.
+              </Text>
+            )}
+            {insights.best && (
+              <Text className="font-montserrat text-text-primary dark:text-white text-base">
+                Best set: {insights.best.name} {insights.best.weight} × {insights.best.reps}.
+              </Text>
+            )}
+            {insights.fatigue.length > 0 && (
+              <Text className="font-montserrat text-amber-600 dark:text-amber-400 text-base">
+                Reps dropped sharply on {insights.fatigue.join(", ")}: fatigue or too heavy.
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* PRs */}
         {prs.length > 0 && (

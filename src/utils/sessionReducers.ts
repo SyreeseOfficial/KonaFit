@@ -33,6 +33,30 @@ export function copyLastSetToAll(session: ActiveSession, exerciseLocalId: string
   });
 }
 
+/** Fill every unticked working set with the suggested weight and reps. */
+export function applySuggestion(session: ActiveSession, exerciseLocalId: string, weight: number, reps: number): ActiveSession {
+  return mapExercise(session, exerciseLocalId, (e) => ({
+    ...e,
+    sets: e.sets.map((s) =>
+      s.isCompleted || s.isWarmup ? s : { ...s, weightLbs: String(weight), reps: String(reps), isGhostFilled: false }
+    ),
+  }));
+}
+
+/** Put warm-up sets in front of the existing sets and renumber. */
+export function insertWarmups(session: ActiveSession, exerciseLocalId: string, warmups: ActiveSet[]): ActiveSession {
+  return mapExercise(session, exerciseLocalId, (e) => ({ ...e, sets: renumber([...warmups, ...e.sets]) }));
+}
+
+/** Copy the last entered RPE onto every working set. */
+export function applyRpeToAll(session: ActiveSession, exerciseLocalId: string): ActiveSession {
+  return mapExercise(session, exerciseLocalId, (e) => {
+    const src = [...e.sets].reverse().find((s) => !s.isWarmup && s.rpe !== "");
+    if (!src) return e;
+    return { ...e, sets: e.sets.map((s) => (s.isWarmup || s.rpe === src.rpe ? s : { ...s, rpe: src.rpe })) };
+  });
+}
+
 export function toggleExerciseDone(session: ActiveSession, exerciseLocalId: string): ActiveSession {
   return mapExercise(session, exerciseLocalId, (e) => ({ ...e, isDone: !e.isDone }));
 }
@@ -89,7 +113,7 @@ export function moveExercise(session: ActiveSession, exerciseLocalId: string, di
   return { ...session, exercises: reindex(exercises) };
 }
 
-export type SwapTarget = Pick<ActiveExercise, "exerciseId" | "exerciseName" | "muscleGroup" | "ghostSets" | "histPRs" | "isBodyweight">;
+export type SwapTarget = Pick<ActiveExercise, "exerciseId" | "exerciseName" | "muscleGroup" | "ghostSets" | "histPRs" | "isBodyweight" | "perHand">;
 
 /** Replace the movement but keep the sets. PR badges were earned against the old movement, so they're cleared. */
 export function swapExercise(session: ActiveSession, exerciseLocalId: string, target: SwapTarget): ActiveSession {

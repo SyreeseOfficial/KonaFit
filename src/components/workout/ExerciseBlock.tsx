@@ -15,6 +15,7 @@ import { haptics } from "../../utils/haptics";
 import { MoreHorizontal, X, FileText, PlusCircle, ArrowLeftRight, ChevronDown, ChevronUp, Check, History, ArrowUp, ArrowDown, Link } from "lucide-react-native";
 import { SetRow } from "./SetRow";
 import { ExerciseHistoryModal } from "./ExerciseHistoryModal";
+import { ExerciseHint } from "./ExerciseHint";
 import type { ActiveExercise, ActiveSet } from "../../types/workout";
 
 type Props = {
@@ -28,8 +29,12 @@ type Props = {
   onMoveDown?: () => void;
   onAddSet: () => void;
   onRemoveSet: (setLocalId: string) => void;
-  onUpdateSet: (setLocalId: string, patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe" | "notes">>) => void;
+  onUpdateSet: (setLocalId: string, patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe" | "notes" | "setType">>) => void;
   onCopyLastToAll: () => void;
+  onApplySuggestion: (weight: number, reps: number) => void;
+  onAddWarmups: () => void;
+  onApplyRpeToAll: () => void;
+  onTogglePerHand: () => void;
   onToggleDone: () => void;
   onCommitSetEdit: (setLocalId: string) => void;
   onToggleComplete: (setLocalId: string) => void;
@@ -53,6 +58,10 @@ export function ExerciseBlock({
   onRemoveSet,
   onUpdateSet,
   onCopyLastToAll,
+  onApplySuggestion,
+  onAddWarmups,
+  onApplyRpeToAll,
+  onTogglePerHand,
   onToggleDone,
   onCommitSetEdit,
   onToggleComplete,
@@ -163,11 +172,13 @@ export function ExerciseBlock({
       {/* ── Expanded content ─────────────────────────────────── */}
       {!collapsed && (
         <>
+          <ExerciseHint exercise={exercise} onApply={onApplySuggestion} />
+
           {/* Column headers */}
           <View className="flex-row items-center px-3 pt-1 pb-2">
             <Text className="w-12 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Set</Text>
             <Text className="flex-1 mx-2 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Previous</Text>
-            <Text className="w-14 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Lbs</Text>
+            <Text className="w-14 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">{exercise.perHand ? "Lbs/hd" : "Lbs"}</Text>
             <Text className="w-12 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Reps</Text>
             <Text className="w-11 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">RPE</Text>
             <View className="w-12 items-center">
@@ -258,6 +269,29 @@ export function ExerciseBlock({
                 activeOpacity={0.7}
               >
                 <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Edit Notes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => { setMenuOpen(false); onAddWarmups(); }}
+                className="px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
+                activeOpacity={0.7}
+              >
+                <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Add warm-up sets</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => { setMenuOpen(false); onApplyRpeToAll(); }}
+                className="px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
+                activeOpacity={0.7}
+              >
+                <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Apply RPE to all sets</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => { setMenuOpen(false); onTogglePerHand(); }}
+                className="px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
+                activeOpacity={0.7}
+              >
+                <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">
+                  {exercise.perHand ? "Weight is per hand: on" : "Weight is per hand: off"}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => { setMenuOpen(false); onCopyLastToAll(); }}

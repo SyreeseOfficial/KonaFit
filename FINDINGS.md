@@ -75,56 +75,7 @@ How the database and files are saved.
 
 New things to build. Grouped by area.
 
-### Logging a workout
-- 🟡 **Progressive overload hints.** "Last time 135 × 8. Try 140 × 8 or 135 × 9." Rule: if every set hit the top of the range at RPE ≤ 8, suggest +5 lb (+2.5 for isolation). One tap to apply. ⭐
-- 🟡 **"Last time" row** at the top of each exercise (date, top set, total volume).
-- 🟡 **Warm-up generator.** From the first working weight, add ramp sets (like 40/60/80% for 8/5/3). Round with the plate set.
-- 🟡 **More set types:** drop, failure, AMRAP, backoff, myo-reps. Show a chip and count volume correctly.
-- 🟡 **RPE half steps** (8.5, 9.5) and "apply RPE to all sets." Optional RIR display.
-- 🟡 **Per-hand weight flag** for dumbbells and kettlebells (doubles the volume).
-- 🟡 **Assisted exercises flag** (assisted pull-up). Subtract the help from bodyweight.
-- 🟡 **Cardio and timed exercises.** Duration, distance, pace. Add a countdown / interval timer for HIIT, Tabata and EMOM.
-- 🟡 **Quick-add a custom exercise** when search finds nothing ("Create 'cable pullover'").
-- 🟡 **Better exercise search:** typo-friendly, recent and most-used first, chips for muscle and equipment.
-- 🟡 **Merge / rename tool** for duplicate exercises. Keep the history.
-- 🟡 **Daily readiness check-in** (sleep, soreness, mood 1–5). Chart it against performance.
-- 🟡 **"How did it feel" 1–5 rating** shown in History. Notes templates.
-
-### Plates and calculators
-- 🟡 **Remember bar and plates per exercise.** Show "per side" as plain text, not just a graphic.
-- 🟡 **Dumbbell / kettlebell steps** (5 lb steps, 2.5 lb jumps) from the user's real rack.
-- 🟡 **Plates and bar per gym** (a `locations` table already exists).
-- 🟡 **Percentage calculator → active workout.** Apply to an exercise's e1RM or training max. One tap to send sets.
-- 🟡 **Manual training max / 1RM** per exercise (an `exercise_maxes` table).
-- 🟡 **Plate-loaded vs selectorized machine toggle.** Different step sizes.
-- 🟡 **More Tools tab items:** 1RM calculator (many formulas), RPE chart, warm-up calculator, dumbbell-pair helper.
-
-### Programs
-- 🟡 **RPE-based loads.** `program_exercises.target_rpe` exists but nothing uses it.
-- 🟡 **Progression engines:** linear, double progression, 5/3/1, GZCL. Ship templates.
-- 🟡 **Templates from any past workout**, and "save as template" on the finish sheet.
-
-### Stats and progress
-- ⭐ ❓ **Stats has no trends.** Add 3 small cards with the existing `LineChart`: best 1RM per exercise, weekly volume, bodyweight trend. Include a goal line.
-- 🟡 **Weekly volume per muscle** with ideal ranges (MEV / MAV / MRV).
-- 🟡 **Muscle balance:** push vs pull sets per week, quads vs hamstrings, in plain words.
-- 🟡 **Training density:** hard sets per muscle per week.
-- 🟡 **Deload alert** when volume or RPE climbs for 4+ weeks.
-- 🟡 **Strength standards:** compare your e1RM to bodyweight levels (beginner → elite). Match lifts by exercise id.
-- 🟡 **Recovery heat list:** hours since each muscle was trained.
-- 🟡 **Workout-complete insights:** compare to your last 4 sessions of the same day. Best set. Fatigue flags.
-- 🟡 **Bodyweight trend:** 7-day average, goal weight, projected date.
-
-### Units
-- 🟡 **Different units per field:** weight, distance, measurements.
-
-### Save, share, import
-- 🟡 **Full-detail JSON export** with a written schema.
-- 🟡 **Share a workout as an image** with PR highlights.
-- 🟡 **Social-lite profile card** (PRs, streak) as an image.
-
-### Phone and device
-- 🟡 **"Resume" card** for an in-progress workout on launch.
+Everything here was worked through in the Features round: finished jobs are under ✅ Done, the rest are under 🙋 Needs my decision.
 
 ---
 
@@ -260,6 +211,47 @@ Claude parks jobs here when it needs a choice or help from me. Each entry: origi
   - *Question:* a custom goal like "Run a 5K" has no number to measure. What should "progress" mean?
   - *Recommended:* leave custom goals as a tick box (no bar). If you want a bar, add an optional "target number + unit" and a small "update progress" button on the card.
 
+- **Category: ✨ Features.** 🟡 **Progressive overload hints: what is "the top of the range"?**
+  - *Done already:* the hint shows under "Last time" and applies with one tap (see Done).
+  - *Question:* the exercise has no rep range of its own, so I used 8 reps for compound lifts and 10 for isolation lifts, and "RPE not logged" counts as easy. OK, or do you want a range per exercise?
+  - *Recommended:* keep these defaults. Programs with a target rep/RPE already use their own target.
+
+- **Category: ✨ Features.** 🟡 **Cardio and timed exercises.** Duration, distance, pace. Add a countdown / interval timer for HIIT, Tabata and EMOM.
+  - *Question:* this needs new set columns (seconds, distance), a different set row, and a timer that works with the screen locked (needs `expo-notifications`, which is in Skipped).
+  - *Recommended:* ship duration + distance fields and pace first (no timer). Do the interval timer together with the rest-timer notification work.
+
+- **Category: ✨ Features.** 🟡 **Remember bar and plates per exercise.** Show "per side" as plain text.
+  - *Question:* earlier you chose one remembered bar for everything. Switch to per exercise?
+  - *Recommended:* yes: store `{bar, disabled plates}` per exercise id in the key-value store and add a "per side: 2 × 45, 1 × 25" text line. Needs the plate calculator opened from an exercise.
+
+- **Category: ✨ Features.** 🟡 **Dumbbell / kettlebell steps** from the user's real rack. **Plates and bar per gym.** **Plate-loaded vs selectorized machine toggle.**
+  - *Question:* these three all change what "next weight up" means. Do you want one "equipment" model (per gym: bar, plates, dumbbell list, machine step) used by hints and the plate calculator?
+  - *Recommended:* yes. Add `bar_lbs`, `plates_json`, `dumbbells_json` to `locations` and `exercises.load_type`. Round overload hints to the gym's real steps. Done together it is about half a day.
+
+- **Category: ✨ Features.** 🟡 **Manual training max / 1RM per exercise** (`exercise_maxes` table). **Percentage calculator → active workout** (one tap to send sets).
+  - *Question:* which number should the % calculator start from: the manual max if set, else the best estimated 1RM of the last 90 days?
+  - *Recommended:* yes, that order. Build the table first, then a "Send to workout" button that fills unticked sets.
+
+- **Category: ✨ Features.** 🟡 **Progression engines:** linear, double progression, 5/3/1, GZCL. Ship templates.
+  - *Question:* which one first? They all need a program to remember "where you are" (week, cycle, training max).
+  - *Recommended:* double progression first (uses the program's rep range and the overload hint), then linear. Leave 5/3/1 and GZCL until training maxes exist.
+
+- **Category: ✨ Features.** 🟡 **Strength standards** (beginner → elite by bodyweight).
+  - *Question:* standards depend on sex and on which lifts count. Exercise ids change between installs, so matching has to be by name. OK to cover only squat, bench, deadlift and overhead press, with a "male/female" setting?
+  - *Recommended:* yes, and keep the table in one file so it is easy to correct.
+
+- **Category: ✨ Features.** 🟡 **Different units per field:** weight, distance, measurements.
+  - *Question:* everything is stored in pounds. Keep storing pounds and convert only when showing and typing (my recommendation), or store the unit with each value?
+  - *Recommended:* store pounds, add a unit setting per field, and add the `unit` column to CSV. It touches every screen that shows weight, so do it as its own round.
+
+- **Category: ✨ Features.** 🟡 **Share a workout as an image** with PR highlights. **Social-lite profile card** as an image.
+  - *Question:* making a real image file needs `react-native-view-shot` (and `expo-sharing` for the file). Both are native modules, so you would need a new dev-client build. OK?
+  - *Recommended:* yes, add both and rebuild once. The card view already exists.
+
+- **Category: ✨ Features.** 🟡 **Notes templates** (part of "How did it feel" rating) and the **dumbbell-pair helper** (part of "More Tools").
+  - *Question:* what should a note template be (tap-to-insert phrases like "felt strong", or a fill-in form), and what should the pair helper do (total weight of two dumbbells, or which pair makes a target)?
+  - *Recommended:* notes: a row of 4 editable phrase chips in the notes box. Pair helper: skip it; the % and plate tools cover it.
+
 ---
 
 ## ⏸️ Skipped for now
@@ -363,6 +355,31 @@ You marked these as "skip for now." They stay on the list so they aren't lost.
 ---
 
 ## ✅ Done
+
+**Features round** (passed typecheck, lint and `npm test`)
+- [x] Progressive overload hint under each exercise ("Try 140 × 8"), one tap fills the unticked sets. Rule in `src/utils/training.ts` (`suggestNext`): every set at the top of the range and RPE ≤ 8 → +5 lb (+2.5 for isolation), else +1 rep. A program's target RPE and reps use the RPE chart instead.
+- [x] "Last time" line on each exercise: date, top set and total volume.
+- [x] Warm-up generator: exercise menu > "Add warm-up sets" adds 40/60/80% ramps (8/5/3 reps, rounded to 5 lb, never under the 45 lb bar). Sets are renumbered in the database too (`set_number` is now saved on update).
+- [x] Set types: Normal / Drop / Failure / AMRAP / Backoff / Myo-reps (migration 12, tap the "Normal" chip while editing a set). Everything except warm-ups counts toward volume.
+- [x] RPE half steps (quick chips 6-10 in 0.5 steps, "reps in reserve" text) and "Apply RPE to all sets" in the exercise menu.
+- [x] Per-hand flag for dumbbells and kettlebells (exercise menu, migration 12). Volume counts both hands in Stats, History, workout detail and the finish screen; the column reads "Lbs/hd".
+- [x] Assisted exercises: already covered by bodyweight exercises with a negative added load (see Fixes). No change needed.
+- [x] Quick-add custom exercise: "Create 'cable pullover'" button when a search finds nothing (the "+ New" form is prefilled).
+- [x] Better exercise search: typo-friendly fallback when nothing matches ("bnch pres" finds Bench Press), recently trained first when the box is empty, muscle and equipment filters were already there.
+- [x] Merge tool: Settings > Merge Duplicate Exercises. History, programs and goals move to the kept exercise; the duplicate goes to Deleted Exercises (restorable). One transaction.
+- [x] Daily readiness check-in (sleep, soreness, mood 1-5) on Stats with a trend chart and "workouts felt X on high-readiness days vs Y" (migration 12).
+- [x] "How did it feel" rating shows as ★ n/5 in History.
+- [x] More Tools tabs: 1RM calculator (Epley, Brzycki, Lombardi), RPE chart, warm-up calculator.
+- [x] RPE-based loads: a program's `target_rpe` + target reps now turn into a suggested load from last time's top set.
+- [x] "Save as Program" also on any past workout's detail screen (it was only on the finish screen).
+- [x] Stats trends: best 1RM per exercise (with the open lift goal as a dashed line), weekly volume, bodyweight with 7-day average, goal line and projected date.
+- [x] Weekly hard sets per muscle against MEV / MAV / MRV (last 7 days). Also covers "Training density".
+- [x] Muscle balance in plain words (push vs pull, quads vs hamstrings).
+- [x] Deload alert on Stats when weekly volume or average RPE rose 4 weeks in a row.
+- [x] Recovery list: how long ago each muscle was trained.
+- [x] Workout-complete insights: volume vs your last 4 sessions with the same name, best set, and rep drop-off (fatigue) flags.
+- [x] Full-detail JSON export (Settings > Export Everything) with the schema written in `docs/export-schema.md`.
+- [x] "Resume" for an in-progress workout on launch: already exists (the "Resume Workout?" prompt in Train). No change needed.
 
 **Data round** (passed typecheck, lint and `npm test`)
 - [x] Indexes `idx_le_exercise`, `idx_le_workout`, `idx_ls_exercise`, `idx_workouts_finished` (migration 6).

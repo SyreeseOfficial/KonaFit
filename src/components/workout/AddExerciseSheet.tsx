@@ -359,6 +359,17 @@ export function AddExerciseSheet({ visible, onClose, onSelect, multiSelect = fal
                                 ? "No exercises match your search"
                                 : "No exercises yet"}
                             </Text>
+                            {query.trim() !== "" && (
+                              <TouchableOpacity
+                                onPress={openCreate}
+                                className="mt-4 h-11 px-5 rounded-xl bg-crimson dark:bg-blue-500 items-center justify-center"
+                                activeOpacity={0.85}
+                              >
+                                <Text className="font-montserrat-bold text-white text-sm" numberOfLines={1}>
+                                  Create “{query.trim()}”
+                                </Text>
+                              </TouchableOpacity>
+                            )}
                           </View>
                         }
                       />
