@@ -96,3 +96,13 @@ Then scan the QR code with your dev client app on your phone. The tunnel mode by
 2. **Preserve Visual Theme:** Never deviate from the light and dark design tokens (blue accent) mapped in `docs/UI_UX_SPEC.md`.
 3. **No Decorative Fluff:** Code features with high utility, minimal micro-interactions, and tight data density.
 4. **Update the Log:** Every major feature or architecture change must be documented in `docs/UPDATE_LOG.md` with date, scope, changes, and reasoning.
+
+---
+
+## 📖 License
+
+MIT License — feel free to fork, modify, and use for your own training needs.
+
+---
+
+Built by **Syreese Delos Santos** • [Portfolio](https://syreeseofficial.com) • [GitHub](https://github.com/syreeseofficial)
