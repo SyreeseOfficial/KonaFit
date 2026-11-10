@@ -10,7 +10,7 @@ import { ReadinessForm } from "../stats/ReadinessCard";
 import { EmptyState } from "../EmptyState";
 import { loadSnapshot, clearSnapshot, type BoxingSnapshot } from "../../utils/boxingSnapshot";
 import { hasLastSetup, getLastSetup, getGetReadySec } from "../../utils/boxingSettings";
-import { sessionHref } from "../../utils/boxingRoute";
+import { sessionHref } from "../../utils/boxingTimer";
 import { formatTime, localDateKey } from "../../utils/time";
 import { getTodayReadiness } from "../../db/insightQueries";
 import { getPrograms, deleteProgram, cloneProgram, archiveProgram } from "../../db/programQueries";

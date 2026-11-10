@@ -27,12 +27,7 @@ This repository utilizes a multi-file documentation context strategy to keep bui
 
 When building or modifying components, refer to these specialized context files in the directory:
 
-* 📄 **docs/UI_UX_SPEC.md** — Defines the "KonaFit" visual design token system (light and dark themes with a blue accent, geometric typography) and navigation layouts.
-* 📄 **docs/FEATURES_LOGGING.md** — Detailed requirements for the Active Workout workspace, exercise row layouts, ghost-text pre-filling, superset UI logic, and per-set notes.
-* 📄 **docs/FEATURES_CALCULATORS.md** — Logic, math configurations, smart rounding algorithms, and CSS/HTML proportional rendering for the Plate and Set percentage calculators.
-* 📄 **docs/FEATURES_STATS_PROGRAMS.md** — Specifications for the Program Builder, monthly Habit Calendar grid, data analytics dashboard, anatomical volume heatmaps, and export sheets.
 * 📄 **docs/SYSTEM_ARCHITECTURE.md** — Explicit coding conventions, database schemas, and state management guidelines.
-* 📄 **docs/DEVELOPER_DIRECTIONS.md** — Engineer persona, multi-file context protocol, and update logging requirements.
 
 ---
 
@@ -92,10 +87,9 @@ Then scan the QR code with your dev client app on your phone. The tunnel mode by
 
 ## 🛑 Coding Conventions for AI Contributors
 
-1. **Read the Spec First:** Always reference the dedicated `.md` spec sheets before generating or modifying code blocks.
-2. **Preserve Visual Theme:** Never deviate from the light and dark design tokens (blue accent) mapped in `docs/UI_UX_SPEC.md`.
+1. **Read the Spec First:** Read `docs/SYSTEM_ARCHITECTURE.md` before generating or modifying code.
+2. **Preserve Visual Theme:** Never deviate from the existing light and dark design tokens (blue accent) in `tailwind.config.js`.
 3. **No Decorative Fluff:** Code features with high utility, minimal micro-interactions, and tight data density.
-4. **Update the Log:** Every major feature or architecture change must be documented in `docs/UPDATE_LOG.md` with date, scope, changes, and reasoning.
 
 ---
 

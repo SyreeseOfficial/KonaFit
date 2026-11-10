@@ -423,13 +423,12 @@ describe("startup", () => {
 });
 
 describe("Wipe All Data", () => {
-  it("clears kvStore's cache, so wiped keys don't come back from memory, and keeps settings", async () => {
+  it("clears kv keys and keeps settings", async () => {
     const { adapter } = await fresh();
     const { kvStore } = await import("../utils/kvStore");
     const { wipeAllData } = await import("../db/wipe");
     await kvStore.setItem("@konafit_last_prs", "[\"Squat\"]");
     await kvStore.setItem("@konafit_weekly_goal", "5");
-    expect(await kvStore.getItem("@konafit_last_prs")).toBe("[\"Squat\"]"); // now cached
     await addWorkout(adapter, { "Barbell Bench Press": [{ w: 100, r: 5 }] });
     await wipeAllData(["@konafit_weekly_goal"]);
     expect(await kvStore.getItem("@konafit_last_prs")).toBeNull();

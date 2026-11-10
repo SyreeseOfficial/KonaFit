@@ -10,7 +10,7 @@ export async function loadCueSettings(): Promise<void> {
   [bell, warning] = await Promise.all([getBellEnabled(), getWarningEnabled()]);
 }
 
-// ponytail: haptics-only until an audio package is approved (docs/BOXING_BUILD_NOTES.md D1); play a bundled tone in these.
+// ponytail: haptics-only until an audio package is approved; play a bundled tone in these.
 export const cues = {
   roundStart: () => { if (bell) haptics.heavy(); },
   roundEnd: () => { if (bell) haptics.heavy(); },

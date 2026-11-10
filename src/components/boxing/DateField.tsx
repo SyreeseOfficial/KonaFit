@@ -3,7 +3,7 @@ import type { DateFields } from "../../utils/dateEdit";
 
 const box = "bg-surface-3 dark:bg-zinc-700 text-text-primary dark:text-white font-mono text-base text-center py-3 rounded-xl";
 
-/** Month / day / year text fields. (No native date picker package is installed; see BOXING_BUILD_NOTES D3.) */
+/** Month / day / year text fields. (No native date picker package is installed.) */
 export function DateField({ value, onChange }: { value: DateFields; onChange: (v: DateFields) => void }) {
   const set = (k: keyof DateFields, max: number) => (v: string) => onChange({ ...value, [k]: v.replace(/\D/g, "").slice(0, max) });
   const sep = <Text className="font-mono text-text-muted dark:text-zinc-500 text-xl">/</Text>;

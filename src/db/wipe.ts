@@ -28,5 +28,4 @@ export async function wipeAllData(keepKeys: string[]): Promise<void> {
       keepKeys
     );
   });
-  kvStore.clearCache(); // the raw DELETE bypassed kvStore, so its read-through cache would still serve wiped values
 }

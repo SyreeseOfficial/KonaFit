@@ -235,3 +235,23 @@ export function sessionProgress(state: TimerState, now: number): number {
 /** Seconds actually worked + rested (pauses and get-ready excluded). */
 export const activeSeconds = (state: TimerState): number =>
   state.rounds.reduce((a, r) => a + r.actualWorkSec + r.actualRestSec, 0);
+
+/** "Morning Boxing" (before noon), "Afternoon Boxing" (noon to 4:59pm), else "Evening Boxing". Uses the device's local hour. */
+export function boxingName(startedAtMs: number): string {
+  const h = new Date(startedAtMs).getHours();
+  return `${h < 12 ? "Morning" : h < 17 ? "Afternoon" : "Evening"} Boxing`;
+}
+
+/** Navigation target that starts a session with this setup. */
+export const sessionHref = (s: TimerSetup) =>
+  ({
+    pathname: "/boxing/session",
+    params: { rounds: String(s.rounds), workSec: String(s.workSec), restSec: String(s.restSec), getReadySec: String(s.getReadySec) },
+  }) as never;
+
+/** Setup from the route params, or null if they are missing or invalid. */
+export function setupFromParams(p: Record<string, string | string[] | undefined>): TimerSetup | null {
+  const n = (k: string) => (typeof p[k] === "string" ? parseInt(p[k] as string, 10) : NaN);
+  const setup = { rounds: n("rounds"), workSec: n("workSec"), restSec: n("restSec"), getReadySec: n("getReadySec") };
+  return validateSetup(setup) === null ? setup : null;
+}

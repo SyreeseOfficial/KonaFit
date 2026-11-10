@@ -1,9 +1,8 @@
-import { boxingName } from "../utils/boxingNames";
 import { toBoxingSession } from "../utils/boxingSave";
 import { parseFlag, parseGetReady, parseLastSetup, DEFAULT_BOXING_PLAN, BOXING_PRESERVED_KEYS } from "../utils/boxingSettings";
 import {
   createTimer, advance, pause, resume, skipRest, addSeconds, endEarly, remainingSec, currentPhase, warningDue,
-  buildPhases, parseClock, cueFor, sessionProgress, roundResults, activeSeconds, plannedTotalSec, validateSetup, type TimerSetup,
+  buildPhases, parseClock, cueFor, sessionProgress, roundResults, activeSeconds, plannedTotalSec, validateSetup, boxingName, type TimerSetup,
 } from "../utils/boxingTimer";
 jest.mock("expo-sqlite", () => ({})); // boxingSettings -> kvStore -> database; these tests only use the pure parsers
 

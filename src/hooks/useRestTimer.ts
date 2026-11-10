@@ -60,7 +60,7 @@ export function useRestTimer() {
         setIsRunning(false);
         haptics.restEnd();
       } else {
-        if ((left === 10 || left === 5) && tickedRef.current !== left) { tickedRef.current = left; haptics.tick(); }
+        if ((left === 10 || left === 5) && tickedRef.current !== left) { tickedRef.current = left; haptics.tap(); }
         setRemaining(left);
       }
     };

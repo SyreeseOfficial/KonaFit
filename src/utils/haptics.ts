@@ -44,7 +44,5 @@ export const haptics = {
   /** New PR: success buzz, delayed a beat so it doesn't merge with the set-done click. */
   pr: () => { if (level !== "off") wait(150).then(() => notify(Notify.Success)); },
   /** Rest over: two heavy thumps. */
-  restEnd: () => { if (level !== "off") { Haptics.impactAsync(Impact.Heavy); wait(140).then(() => Haptics.impactAsync(Impact.Heavy)); } },
-  /** Countdown tick in the last seconds of rest. */
-  tick: () => impact(Impact.Light, Impact.Medium),
+  restEnd: () => { impact(Impact.Heavy, Impact.Heavy); if (level !== "off") wait(140).then(() => Haptics.impactAsync(Impact.Heavy)); },
 };

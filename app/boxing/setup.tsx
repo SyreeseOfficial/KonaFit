@@ -4,10 +4,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { ChevronLeft, Minus, Plus } from "lucide-react-native";
 import { getLastSetup, getGetReadySec, setLastSetup, setGetReadySec } from "../../src/utils/boxingSettings";
-import { validateSetup, parseClock, MIN_WORK_SEC, MAX_GET_READY_SEC, type TimerSetup } from "../../src/utils/boxingTimer";
+import { sessionHref, validateSetup, parseClock, MIN_WORK_SEC, MAX_GET_READY_SEC, type TimerSetup } from "../../src/utils/boxingTimer";
 import { cleanInt, cleanClock } from "../../src/utils/numberInput";
 import { formatTime } from "../../src/utils/time";
-import { sessionHref } from "../../src/utils/boxingRoute";
 import { haptics } from "../../src/utils/haptics";
 
 const MAX_ROUNDS = 99;

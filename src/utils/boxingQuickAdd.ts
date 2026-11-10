@@ -1,5 +1,4 @@
-import { boxingName } from "./boxingNames";
-import { MIN_WORK_SEC } from "./boxingTimer";
+import { boxingName, MIN_WORK_SEC } from "./boxingTimer";
 import type { BoxingSession } from "../types/boxing";
 
 export type QuickAddInput = {
