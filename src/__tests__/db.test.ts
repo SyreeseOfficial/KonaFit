@@ -377,6 +377,16 @@ describe("history paging and filter", () => {
     expect(await q.history.getWorkoutHistory(50, 0, "squat")).toHaveLength(2);
     expect(await q.history.getWorkoutHistory(50, 0, "deadlift")).toHaveLength(0);
     expect((await q.history.getWorkoutHistory(50, 0, "bench"))[0].exercise_count).toBe(1); // totals are not narrowed by the filter
+
+    // date range, muscle and volume sort
+    const since = t - 2.5 * DAY;
+    expect(await q.history.getWorkoutHistory(50, 0, "", undefined, { sinceSec: since })).toHaveLength(3);
+    const byVolume = await q.history.getWorkoutHistory(50, 0, "", undefined, { sort: "volume" });
+    expect(byVolume.map((w) => w.total_volume)).toEqual([...byVolume.map((w) => w.total_volume)].sort((a, b) => b - a));
+    expect(await q.history.getWorkoutHistory(50, 0, "", undefined, { muscle: "No Such Muscle" })).toHaveLength(0);
+    const chest = await q.history.getWorkoutHistory(50, 0, "", undefined, { muscle: "Chest" });
+    expect(chest.length).toBeGreaterThan(0);
+    expect(chest.length).toBeLessThan(5);
   });
 });
 

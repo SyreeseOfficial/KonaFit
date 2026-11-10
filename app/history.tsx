@@ -1,13 +1,26 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { View, Text, TouchableOpacity, FlatList, RefreshControl, Alert, TextInput } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, RefreshControl, Alert, TextInput, Modal, Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { ChevronLeft, ChevronRight, MapPin, Plus, Search } from "lucide-react-native";
-import { getWorkoutHistory, type WorkoutSummary, type WorkoutType } from "../src/db/historyQueries";
+import { router, useLocalSearchParams } from "expo-router";
+import { ChevronLeft, ChevronRight, MapPin, Plus, Search, SlidersHorizontal } from "lucide-react-native";
+import { getWorkoutHistory, type WorkoutSummary, type WorkoutType, type HistoryFilters } from "../src/db/historyQueries";
+import { MUSCLE_GROUPS } from "../src/components/workout/AddExerciseSheet";
+import { EmptyState } from "../src/components/EmptyState";
 import { deleteWorkout } from "../src/db/workoutQueries";
 import { formatDuration, formatShortDate, formatVolume } from "../src/utils/exportUtils";
 
 const PAGE_SIZE = 50;
+const RANGES = [[0, "All time"], [30, "30 days"], [90, "90 days"], [365, "1 year"]] as const;
+
+const Chip = ({ on, label, onPress }: { on: boolean; label: string; onPress: () => void }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    className={`px-4 h-11 items-center justify-center rounded-full ${on ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
+    activeOpacity={0.7}
+  >
+    <Text className={`font-montserrat-semibold text-sm ${on ? "text-white" : "text-text-primary dark:text-white"}`}>{label}</Text>
+  </TouchableOpacity>
+);
 
 type Row = { kind: "month"; key: string; label: string } | { kind: "workout"; key: string; w: WorkoutSummary };
 
@@ -31,12 +44,25 @@ export default function HistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState(""); // debounced query
+  const { exercise } = useLocalSearchParams<{ exercise?: string }>(); // from the Exercise page: "show every squat session"
+  const [query, setQuery] = useState(exercise ?? "");
+  const [filter, setFilter] = useState(exercise ?? ""); // debounced query
+  const [muscle, setMuscle] = useState<string | undefined>();
+  const [rangeDays, setRangeDays] = useState(0); // 0 = all time
+  const [sort, setSort] = useState<"date" | "volume">("date");
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [kind, setKind] = useState<WorkoutType | undefined>(undefined); // All / Lift / Boxing
   const requestRef = useRef(0); // a newer reload makes older in-flight pages stale
   const loadingMoreRef = useRef(false);
-  const rows = useMemo(() => withMonthHeaders(workouts), [workouts]);
+  const rows = useMemo(
+    () => (sort === "date" ? withMonthHeaders(workouts) : workouts.map((w): Row => ({ kind: "workout", key: String(w.id), w }))),
+    [workouts, sort]
+  );
+  const activeCount = (muscle ? 1 : 0) + (rangeDays ? 1 : 0) + (sort !== "date" ? 1 : 0);
+  // Boxing sessions have no exercises, so the lift-only filters switch off with the Boxing tab.
+  const extra = useCallback((): HistoryFilters => (kind === "boxing" ? {} : {
+    muscle, sort, sinceSec: rangeDays ? Math.floor(Date.now() / 1000) - rangeDays * 86400 : undefined,
+  }), [kind, muscle, sort, rangeDays]);
 
   useEffect(() => {
     const t = setTimeout(() => setFilter(query.trim()), 300);
@@ -65,7 +91,7 @@ export default function HistoryScreen() {
     const req = ++requestRef.current;
     if (spinner) setRefreshing(true);
     try {
-      const page = await getWorkoutHistory(PAGE_SIZE, 0, kind === "boxing" ? "" : filter, kind);
+      const page = await getWorkoutHistory(PAGE_SIZE, 0, kind === "boxing" ? "" : filter, kind, extra());
       if (req !== requestRef.current) return;
       setWorkouts(page);
       setHasMore(page.length === PAGE_SIZE);
@@ -75,7 +101,7 @@ export default function HistoryScreen() {
         setLoading(false);
       }
     }
-  }, [filter, kind]);
+  }, [filter, kind, extra]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -84,14 +110,14 @@ export default function HistoryScreen() {
     loadingMoreRef.current = true;
     const req = requestRef.current;
     try {
-      const page = await getWorkoutHistory(PAGE_SIZE, workouts.length, kind === "boxing" ? "" : filter, kind);
+      const page = await getWorkoutHistory(PAGE_SIZE, workouts.length, kind === "boxing" ? "" : filter, kind, extra());
       if (req !== requestRef.current) return;
       setWorkouts((prev) => [...prev, ...page]);
       setHasMore(page.length === PAGE_SIZE);
     } finally {
       loadingMoreRef.current = false;
     }
-  }, [hasMore, workouts.length, filter, kind]);
+  }, [hasMore, workouts.length, filter, kind, extra]);
 
   return (
     <SafeAreaView className="flex-1 bg-obsidian dark:bg-zinc-950">
@@ -128,6 +154,19 @@ export default function HistoryScreen() {
             </TouchableOpacity>
           );
         })}
+        {kind !== "boxing" && (
+          <TouchableOpacity
+            onPress={() => setSheetOpen(true)}
+            className={`ml-auto flex-row items-center px-4 py-2 rounded-full ${activeCount ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
+            activeOpacity={0.7}
+            accessibilityLabel="Filter and sort"
+          >
+            <SlidersHorizontal size={14} color={activeCount ? "#FFFFFF" : "#64748B"} />
+            <Text className={`font-montserrat-semibold text-sm ml-1.5 ${activeCount ? "text-white" : "text-text-primary dark:text-white"}`}>
+              {activeCount ? `Filters · ${activeCount}` : "Filters"}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {kind !== "boxing" && (
@@ -164,11 +203,11 @@ export default function HistoryScreen() {
         contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 20, paddingTop: 12, gap: 8 }}
         ListEmptyComponent={
           loading ? null : (
-            <View className="flex-1 items-center justify-center pt-20">
-              <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-base">
-                {filter && kind !== "boxing" ? "No workouts with that exercise" : kind === "boxing" ? "No boxing sessions yet" : "No workouts yet"}
-              </Text>
-            </View>
+            filter || muscle || rangeDays
+              ? <EmptyState message="No workouts match these filters." actionLabel="Clear filters" onAction={() => { setQuery(""); setFilter(""); setMuscle(undefined); setRangeDays(0); }} />
+              : kind === "boxing"
+                ? <EmptyState message="No boxing sessions yet." actionLabel="Log a past session" onAction={() => router.push("/boxing/quick-add" as never)} />
+                : <EmptyState message="No workouts yet." actionLabel="Start a workout" onAction={() => router.replace("/(tabs)/train" as never)} />
           )
         }
         renderItem={({ item: row }) => {
@@ -223,6 +262,37 @@ export default function HistoryScreen() {
           );
         }}
       />
+      <Modal visible={sheetOpen} transparent animationType="slide" onRequestClose={() => setSheetOpen(false)}>
+        <Pressable className="flex-1 bg-black/50 justify-end" onPress={() => setSheetOpen(false)}>
+          <Pressable>
+            <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl px-5 pt-5 pb-10" style={{ maxHeight: "85%" }}>
+              <ScrollView>
+                <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs uppercase tracking-widest mb-3">Sort</Text>
+                <View className="flex-row" style={{ gap: 8 }}>
+                  <Chip on={sort === "date"} label="Newest" onPress={() => setSort("date")} />
+                  <Chip on={sort === "volume"} label="Most volume" onPress={() => setSort("volume")} />
+                </View>
+                <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs uppercase tracking-widest mt-6 mb-3">Date range</Text>
+                <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                  {RANGES.map(([d, label]) => <Chip key={d} on={rangeDays === d} label={label} onPress={() => setRangeDays(d)} />)}
+                </View>
+                <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs uppercase tracking-widest mt-6 mb-3">Muscle group</Text>
+                <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                  <Chip on={!muscle} label="Any" onPress={() => setMuscle(undefined)} />
+                  {MUSCLE_GROUPS.map((m) => <Chip key={m} on={muscle === m} label={m} onPress={() => setMuscle(m)} />)}
+                </View>
+              </ScrollView>
+              <TouchableOpacity
+                onPress={() => setSheetOpen(false)}
+                className="mt-5 h-12 items-center justify-center rounded-2xl bg-crimson dark:bg-blue-500"
+                activeOpacity={0.85}
+              >
+                <Text className="font-montserrat-bold text-white text-base">Done</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }

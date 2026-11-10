@@ -35,6 +35,7 @@ import { logSessionEvent } from "../../src/db/workoutQueries";
 import { saveWorkoutLocation } from "../../src/db/locationQueries";
 import { formatVolume, formatShortDate, formatDuration } from "../../src/utils/exportUtils";
 import { getPrograms, deleteProgram, cloneProgram, archiveProgram } from "../../src/db/programQueries";
+import { EmptyState } from "../../src/components/EmptyState";
 import { getWorkoutHistory, type WorkoutSummary } from "../../src/db/historyQueries";
 import { kvStore } from "../../src/utils/kvStore";
 import { haptics } from "../../src/utils/haptics";
@@ -427,11 +428,7 @@ export default function TrainScreen() {
             </View>
 
             {programs.length === 0 ? (
-              <View className="bg-surface dark:bg-zinc-900 px-5 py-6 rounded-2xl items-center">
-                <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm text-center">
-                  No programs yet.{"\n"}Tap + to build a reusable template.
-                </Text>
-              </View>
+              <EmptyState message={"No programs yet.\nTap + to build a reusable template."} />
             ) : (
               <View style={{ gap: 8 }}>
                 {programs.map((item) => (

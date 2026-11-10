@@ -36,6 +36,7 @@ export type SetRecord = {
 
 export type ExerciseRecord = {
   id: number;
+  exercise_id: number | null; // null if the exercise row was purged
   exercise_name: string;
   muscle_group: string;
   order_index: number;
@@ -57,8 +58,14 @@ export type WorkoutDetail = {
   totalVolume: number;
 };
 
-/** Newest first. `exerciseQuery` keeps only workouts with an exercise whose name contains every word. */
-export async function getWorkoutHistory(limit = 20, offset = 0, exerciseQuery = "", type?: WorkoutType): Promise<WorkoutSummary[]> {
+export type HistoryFilters = {
+  muscle?: string; // keeps workouts that trained this muscle group (exercises list several, "Lats, Chest")
+  sinceSec?: number; // keeps workouts started at or after this unix time (seconds)
+  sort?: "date" | "volume"; // default date, newest first
+};
+
+/** Newest first (or biggest first with `sort: "volume"`). `exerciseQuery` keeps only workouts with an exercise whose name contains every word. */
+export async function getWorkoutHistory(limit = 20, offset = 0, exerciseQuery = "", type?: WorkoutType, { muscle, sinceSec, sort }: HistoryFilters = {}): Promise<WorkoutSummary[]> {
   const db = await getDatabase();
   const words = exerciseQuery.toLowerCase().replace(/[%_]/g, "").split(/\s+/).filter(Boolean);
   const filter = words.length
@@ -77,10 +84,12 @@ export async function getWorkoutHistory(limit = 20, offset = 0, exerciseQuery = 
      LEFT JOIN logged_exercises le ON le.workout_id = w.id
      LEFT JOIN logged_sets ls ON ls.logged_exercise_id = le.id
      WHERE w.finished_at IS NOT NULL ${type ? "AND w.type = ?" : ""} ${filter}
+       ${muscle ? "AND EXISTS (SELECT 1 FROM logged_exercises m JOIN exercises mx ON mx.id = m.exercise_id WHERE m.workout_id = w.id AND INSTR(', ' || mx.muscle_group || ',', ', ' || ? || ',') > 0)" : ""}
+       ${sinceSec != null ? "AND w.started_at >= ?" : ""}
      GROUP BY w.id
-     ORDER BY w.started_at DESC, w.id DESC
+     ORDER BY ${sort === "volume" ? "total_volume DESC, " : ""}w.started_at DESC, w.id DESC
      LIMIT ? OFFSET ?`,
-    [...(type ? [type] : []), ...words.map((w) => `%${w}%`), limit, offset]
+    [...(type ? [type] : []), ...words.map((w) => `%${w}%`), ...(muscle ? [muscle] : []), ...(sinceSec != null ? [sinceSec] : []), limit, offset]
   );
 }
 
@@ -132,10 +141,10 @@ export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail
   if (!workout) return null;
 
   const exerciseRows = await db.getAllAsync<{
-    id: number; exercise_name: string; muscle_group: string; order_index: number; notes: string | null;
+    id: number; exercise_id: number | null; exercise_name: string; muscle_group: string; order_index: number; notes: string | null;
     bw_lbs: number; is_bodyweight: number; hands: number; target_type: string;
   }>(
-    `SELECT le.id, le.exercise_name, COALESCE(e.muscle_group, '') as muscle_group, le.order_index, le.notes,
+    `SELECT le.id, le.exercise_id, le.exercise_name, COALESCE(e.muscle_group, '') as muscle_group, le.order_index, le.notes,
             COALESCE(e.target_type, 'reps') AS target_type,
             CASE WHEN ${isBodyweightSql()} THEN COALESCE(${LATEST_BODYWEIGHT_SQL}, 0) ELSE 0 END AS bw_lbs,
             ${isBodyweightSql()} AS is_bodyweight,

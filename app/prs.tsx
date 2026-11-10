@@ -123,6 +123,13 @@ export default function PRsScreen() {
                 <PRCard label="Best Reps" value={`${prs.maxReps.reps} reps`} set={prs.maxReps} />
                 <PRCard label="Best Est. 1RM" value={`${Math.round(estimateOneRm(oneRM!.weightLbs!, oneRM!.reps!))} lbs`} set={oneRM!} />
                 <PRCard label="Best Volume (one set)" value={`${volume!.weightLbs! * volume!.reps!} lbs`} set={volume!} />
+                <TouchableOpacity
+                  onPress={() => router.push({ pathname: "/exercise/[id]", params: { id: String(selected!.id), name: selected!.name } } as never)}
+                  className="h-12 items-center justify-center rounded-2xl bg-surface-2 dark:bg-zinc-800"
+                  activeOpacity={0.7}
+                >
+                  <Text className="font-montserrat-semibold text-text-primary dark:text-white text-sm">Open {selected!.name}</Text>
+                </TouchableOpacity>
               </>
             )}
           </ScrollView>

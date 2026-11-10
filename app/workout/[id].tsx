@@ -280,9 +280,16 @@ function LiftWorkoutDetail() {
         {workout.exercises.map((ex) => (
           <View key={ex.id} className="mx-5 mb-3 bg-surface dark:bg-zinc-900 rounded-2xl overflow-hidden">
             <View className="px-5 py-4 border-b border-surface-2 dark:border-zinc-800">
-              <Text className="font-montserrat-bold text-text-primary dark:text-white text-base">
-                {ex.exercise_name}
-              </Text>
+              <TouchableOpacity
+                disabled={ex.exercise_id == null}
+                onPress={() => router.push({ pathname: "/exercise/[id]", params: { id: String(ex.exercise_id), name: ex.exercise_name } } as never)}
+                activeOpacity={0.7}
+                accessibilityRole="link"
+              >
+                <Text className="font-montserrat-bold text-text-primary dark:text-white text-base">
+                  {ex.exercise_name}
+                </Text>
+              </TouchableOpacity>
               {ex.muscle_group ? (
                 <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs mt-0.5">{ex.muscle_group}</Text>
               ) : null}

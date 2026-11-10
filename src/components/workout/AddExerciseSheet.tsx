@@ -20,7 +20,7 @@ import { Search, X, ChevronDown, ChevronLeft, Check } from "lucide-react-native"
 import { searchExercises, createCustomExercise } from "../../db/workoutQueries";
 import type { Exercise } from "../../types/workout";
 
-const MUSCLE_GROUPS = [
+export const MUSCLE_GROUPS = [
   "Chest", "Front Delts", "Mid Delts", "Rear Delts",
   "Biceps", "Forearms", "Triceps", "Lats", "Upper Back",
   "Lower Back", "Abs", "Neck", "Glutes", "Quads",

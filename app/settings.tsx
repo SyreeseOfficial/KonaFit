@@ -36,7 +36,7 @@ import {
   getDefaultRestSeconds,
   getWeeklyGoal,
 } from "../src/utils/settings";
-import { HAPTICS_KEY, loadHapticsSetting, setHapticsEnabled } from "../src/utils/haptics";
+import { haptics, HAPTICS_KEY, loadHapticsSetting, setHapticsLevel, type HapticLevel } from "../src/utils/haptics";
 
 const REST_STEP = 15;
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -120,7 +120,7 @@ function ChipGroup<T extends string>({
 
 export default function SettingsScreen() {
   const [restSeconds, setRestSeconds] = useState(DEFAULT_REST_SECONDS);
-  const [hapticsOn, setHapticsOn] = useState(true);
+  const [hapticLevel, setHapticLevel] = useState<HapticLevel>("normal");
   const [theme, setThemePref] = useState<ThemePref>("system");
   const [weeklyGoal, setWeeklyGoal] = useState(DEFAULT_WEEKLY_GOAL);
   const [restDays, setRestDays] = useState<number[]>([]);
@@ -133,7 +133,7 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     getDefaultRestSeconds().then(setRestSeconds);
-    loadHapticsSetting().then(setHapticsOn);
+    loadHapticsSetting().then(setHapticLevel);
     loadTheme().then(setThemePref);
     getWeeklyGoal().then(setWeeklyGoal);
     getRestDays().then(setRestDays);
@@ -160,9 +160,10 @@ export default function SettingsScreen() {
     await kvStore.setItem(WEEKLY_GOAL_KEY, String(next));
   }, [weeklyGoal]);
 
-  const handleHaptics = useCallback(async (v: "on" | "off") => {
-    setHapticsOn(v === "on");
-    await setHapticsEnabled(v === "on");
+  const handleHaptics = useCallback(async (v: HapticLevel) => {
+    setHapticLevel(v);
+    await setHapticsLevel(v);
+    haptics.tap(); // let them feel the new strength
   }, []);
 
   const adjustGetReady = useCallback(async (delta: number) => {
@@ -242,10 +243,11 @@ export default function SettingsScreen() {
             <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Haptics</Text>
             <ChipGroup
               options={[
-                { key: "on", label: "On" },
                 { key: "off", label: "Off" },
+                { key: "normal", label: "Normal" },
+                { key: "strong", label: "Strong" },
               ]}
-              value={hapticsOn ? "on" : "off"}
+              value={hapticLevel}
               onChange={handleHaptics}
             />
           </View>

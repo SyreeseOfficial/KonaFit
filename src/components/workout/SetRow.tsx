@@ -28,7 +28,7 @@ function PRBadgeChip({ badge }: { badge: PRBadge }) {
   }, []);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
-    <Animated.View style={style} className={`${badge === "F" ? "bg-zinc-500" : "bg-amber-500"} px-1.5 py-0.5 rounded`}>
+    <Animated.View style={style} className={`${badge === "F" ? "bg-zinc-500" : "bg-amber-700"} px-1.5 py-0.5 rounded`}>
       <Text className="font-mono-medium text-white" style={{ fontSize: 11, lineHeight: 14 }}>
         {PR_LABELS[badge]}
       </Text>
@@ -48,9 +48,11 @@ type Props = {
   onToggleComplete: () => void;
   onToggleWarmup: () => void;
   onRemove: () => void;
+  firstRef?: (input: TextInput | null) => void; // lets the parent focus this row's first field
+  onNextRow?: () => void; // "Next" on the last field jumps to the next row
 };
 
-export function SetRow({ set, bodyweight, targetType, ghost, prevSet, isNext, onUpdate, onCommitEdit, onToggleComplete, onToggleWarmup, onRemove }: Props) {
+export function SetRow({ set, bodyweight, targetType, ghost, prevSet, isNext, onUpdate, onCommitEdit, onToggleComplete, onToggleWarmup, onRemove, firstRef, onNextRow }: Props) {
   const completed = set.isCompleted;
   const [focused, setFocused] = useState<SetField | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
@@ -102,7 +104,7 @@ export function SetRow({ set, bodyweight, targetType, ghost, prevSet, isNext, on
 
       {/* Previous (ghost) */}
       <View className="flex-1 mx-1 items-center">
-        <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs" numberOfLines={1}>
+        <Text className="font-mono text-text-secondary dark:text-zinc-500 text-xs" numberOfLines={1}>
           {previousText}
         </Text>
       </View>
@@ -115,19 +117,19 @@ export function SetRow({ set, bodyweight, targetType, ghost, prevSet, isNext, on
         return (
           <TextInput
             key={f}
-            ref={(r) => { inputRefs.current[f] = r; }}
+            ref={(r) => { inputRefs.current[f] = r; if (i === 0) firstRef?.(r); }}
             className={`${inputBase} ${meta.width} mr-1.5`}
             value={set[f] ?? ""}
             onChangeText={(v) => { const c = meta.clean(v, bodyweight); if (c !== null) onUpdate({ [f]: c }); }}
             keyboardType={weight && bodyweight ? "numbers-and-punctuation" : meta.keyboard}
             selectTextOnFocus
-            returnKeyType={next ? "next" : "done"}
-            blurOnSubmit={!next}
-            onSubmitEditing={next ? () => inputRefs.current[next]?.focus() : undefined}
+            returnKeyType={next || onNextRow ? "next" : "done"}
+            blurOnSubmit={!next && !onNextRow}
+            onSubmitEditing={next ? () => inputRefs.current[next]?.focus() : onNextRow}
             onFocus={() => setFocused(f)}
             onBlur={handleBlur}
             style={[
-              f === "rpe" ? { fontSize: 14 } : set.isGhostFilled ? { opacity: 0.45 } : undefined,
+              f === "rpe" ? { fontSize: 14 } : set.isGhostFilled ? { opacity: 0.65 } : undefined,
               focused === f ? focusBorder : undefined,
             ]}
           />
@@ -136,7 +138,7 @@ export function SetRow({ set, bodyweight, targetType, ghost, prevSet, isNext, on
 
       {/* Complete */}
       <TouchableOpacity
-        onPress={() => { haptics.tap(); onToggleComplete(); }}
+        onPress={() => { if (completed) haptics.tap(); else haptics.setDone(); onToggleComplete(); }}
         className="w-12 h-12 items-center justify-center"
         activeOpacity={0.7}
       >

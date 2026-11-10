@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
 import { haptics } from "../../utils/haptics";
 import { MoreHorizontal, X, FileText, PlusCircle, ArrowLeftRight, ChevronDown, ChevronUp, Check, History, ArrowUp, ArrowDown, Link } from "lucide-react-native";
 import { SetRow } from "./SetRow";
-import { ExerciseHistoryModal } from "./ExerciseHistoryModal";
+import { router } from "expo-router";
 import { ExerciseHint } from "./ExerciseHint";
 import type { ActiveExercise, SetPatch } from "../../types/workout";
 import { columnsFor, FIELD_META } from "../../utils/setFields";
@@ -82,7 +82,7 @@ export function ExerciseBlock({
   const [menuOpen, setMenuOpen] = useState(false);
   const [warmupPickOpen, setWarmupPickOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const firstInputs = useRef<Record<string, TextInput | null>>({}); // first field of each row, for the "Next" key
   const [notesText, setNotesText] = useState(exercise.notes);
   const [saveAsDefault, setSaveAsDefault] = useState(false);
 
@@ -208,6 +208,8 @@ export function ExerciseBlock({
               onToggleComplete={() => onToggleComplete(set.localId)}
               onToggleWarmup={() => onToggleWarmup(set.localId)}
               onRemove={() => onRemoveSet(set.localId)}
+              firstRef={(r) => { firstInputs.current[set.localId] = r; }}
+              onNextRow={exercise.sets[i + 1] ? () => firstInputs.current[exercise.sets[i + 1].localId]?.focus() : undefined}
             />
           ))}
 
@@ -232,7 +234,7 @@ export function ExerciseBlock({
               <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">Add set</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => setHistoryOpen(true)} accessibilityLabel="Exercise history" className="w-11 h-11 items-center justify-center" activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => router.push({ pathname: "/exercise/[id]", params: { id: String(exercise.exerciseId), name: exercise.exerciseName } } as never)} accessibilityLabel="Exercise history" className="w-11 h-11 items-center justify-center" activeOpacity={0.7}>
               <History size={18} color="#64748B" />
             </TouchableOpacity>
 
@@ -246,14 +248,6 @@ export function ExerciseBlock({
           </View>
         </>
       )}
-
-      {/* ── Exercise History / PRs ───────────────────── */}
-      <ExerciseHistoryModal
-        visible={historyOpen}
-        exerciseId={exercise.exerciseId}
-        exerciseName={exercise.exerciseName}
-        onClose={() => setHistoryOpen(false)}
-      />
 
       {/* ── Context menu ─────────────────────────────────────── */}
       <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)} onShow={() => setWarmupPickOpen(false)}>

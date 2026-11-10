@@ -12,6 +12,7 @@ import {
   Platform,
 } from "react-native";
 import { Plus, X, Check, ChevronRight } from "lucide-react-native";
+import { EmptyState } from "../EmptyState";
 import {
   getGoals,
   createGoal,
@@ -442,11 +443,7 @@ export function GoalsSection() {
       {loading ? (
         <ActivityIndicator size="small" color="#2563EB" style={{ marginTop: 16 }} />
       ) : goals.length === 0 ? (
-        <View className="py-6 items-center bg-surface dark:bg-zinc-900 rounded-2xl">
-          <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm text-center">
-            No goals yet.{"\n"}Tap + to set your first goal.
-          </Text>
-        </View>
+        <EmptyState message={"No goals yet.\nTap + to set your first goal."} />
       ) : (
         goals.map((goal) => (
           <GoalCard

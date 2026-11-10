@@ -538,7 +538,7 @@ export function useWorkoutSession() {
               let prBadges: PRBadge[] | undefined;
               if (nowComplete && !s.isWarmup && weight != null && reps != null) {
                 prBadges = computePRBadges(e, s.localId, weight, reps, e.histPRs);
-                if (isRealPR(prBadges)) haptics.success();
+                if (isRealPR(prBadges)) haptics.pr();
               }
 
               const updated = { ...s, isCompleted: nowComplete, isGhostFilled: false, prBadges: nowComplete ? prBadges : undefined };

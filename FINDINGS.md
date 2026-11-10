@@ -81,17 +81,11 @@ Everything here was worked through in the Features round: finished jobs are unde
 
 ## 🎨 Look & feel
 
-- 🟡 **Haptics:** different buzz for set done, PR and rest end. Make strength a setting. Respect the phone's "reduce haptics." Add a tick every 5 s in the last 10 s of rest.
-- 🟡 **Keyboard:** number pad with decimal. "Next" button that moves across rows (`returnKeyType="next"`).
 - 🟡 **Bigger text test.** Try 200% font size on both phones. Fixed row heights probably clip.
-- 🟡 **Check light mode contrast** for ghost text and PR badges (needs 4.5:1).
 - 🟡 **Onboarding:** 3 screens to pick units, weekly goal, starter program and plate set.
-- 🟡 **Empty states with an action** for history, programs, goals and photos.
 - 🟡 **Undo for goals and photos** too, like sets already have.
 - 🟡 **"Workout in progress" banner** on every tab, with elapsed time and a way back.
-- 🟡 **History filters:** by exercise, muscle, date range. Sort by volume. Answer "show every squat session."
 - 🟡 **History swipe to repeat, long-press to delete.** Monthly headers with totals. Undo for deletions.
-- 🟡 **One Exercise page.** Tap any exercise to see history, PRs, 1RM chart and notes together.
 - 🟡 **Swipe a set:** left to delete, right to duplicate. Haptic + undo.
 - 🟡 **Tab badges:** a dot for an unfinished workout on Train, a dot for a new PR on Stats.
 - 🟡 **"Previous" in SetRow:** show date and RPE. Tap to copy it into the row. Long-press to see the last 3 sessions.
@@ -355,6 +349,14 @@ You marked these as "skip for now." They stay on the list so they aren't lost.
 ---
 
 ## ✅ Done
+
+**Look & feel round** (passed typecheck, lint and `npm test`)
+- [x] Haptics: set done, PR (delayed success buzz) and rest end (double thump) feel different. Ticks at 10 s and 5 s left in rest. Settings > Haptics is Off / Normal / Strong. iOS can't read the system "reduce haptics" switch from JS, so the in-app level is the control.
+- [x] Keyboard: number pads were already decimal where needed. "Next" on the last field of a set now jumps to the first field of the next set.
+- [x] Light-mode contrast: ghost "previous" text uses the secondary grey, ghost-filled values are 65% opaque, PR badges are amber-700 (all ≥ 4.5:1). Other muted greys are not audited yet.
+- [x] Empty states with an action button: history (Start a workout / Clear filters), photos (Programs and Goals keep the "Tap +" hint, no button) (`src/components/EmptyState.tsx`).
+- [x] History filters sheet: muscle group, date range (30 d / 90 d / 1 y), sort by most volume. The Exercise page's "Show every session" opens History pre-filtered to that exercise.
+- [x] One Exercise page (`app/exercise/[id].tsx`): PRs, est. 1RM chart, recent sets, notes. Opened from the workout's history icon, exercise names on a past workout, and the PRs screen. Replaces `ExerciseHistoryModal`.
 
 **Features round** (passed typecheck, lint and `npm test`)
 - [x] Progressive overload hint under each exercise ("Try 140 × 8"), one tap fills the unticked sets. Rule in `src/utils/training.ts` (`suggestNext`): every set at the top of the range and RPE ≤ 8 → +5 lb (+2.5 for isolation), else +1 rep. A program's target RPE and reps use the RPE chart instead.

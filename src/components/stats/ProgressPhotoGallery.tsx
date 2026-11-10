@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, Image, TouchableOpacity, Modal, Alert,
 } from "react-native";
 import { Camera, X, Trash2 } from "lucide-react-native";
+import { EmptyState } from "../EmptyState";
 import { getProgressPhotos, deleteProgressPhoto, type ProgressPhoto } from "../../db/photoQueries";
 import { addProgressPhoto, deletePhotoFile, photoPath } from "../../utils/photoFiles";
 
@@ -86,12 +87,7 @@ export function ProgressPhotoGallery({ refreshKey }: Props) {
       </View>
 
       {photos.length === 0 ? (
-        <View className="bg-surface dark:bg-zinc-900 p-6 items-center rounded-2xl">
-          <Camera size={28} color="#94A3B8" />
-          <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm mt-2 text-center">
-            No progress photos yet.{"\n"}Add one during a workout or tap Add.
-          </Text>
-        </View>
+        <EmptyState icon={<Camera size={28} color="#64748B" />} message="No progress photos yet." actionLabel="Add photo" onAction={handleAdd} />
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View className="flex-row gap-3">

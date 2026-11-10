@@ -14,6 +14,7 @@ export function useRestTimer() {
   const [step, setStep] = useState(DEFAULT_REST_STEP);
   // Wall-clock end time, so backgrounding or a late tick can't make the countdown drift.
   const endTimeRef = useRef(0);
+  const tickedRef = useRef(0); // last countdown second that buzzed, so a 250 ms poll buzzes once
 
   // Reload the Settings default on focus (Train stays mounted while Settings is open).
   // Skipped while running; the cleanup drops a late result if a run starts first.
@@ -33,6 +34,7 @@ export function useRestTimer() {
   const start = useCallback((seconds?: number) => {
     const duration = Math.min(seconds ?? totalSeconds, MAX_REST_SECONDS);
     endTimeRef.current = Date.now() + duration * 1000;
+    tickedRef.current = 0;
     setTotalSeconds(duration);
     setRemaining(duration);
     setIsRunning(true);
@@ -56,8 +58,9 @@ export function useRestTimer() {
         endTimeRef.current = 0;
         setRemaining(0);
         setIsRunning(false);
-        haptics.success(); // rest is over
+        haptics.restEnd();
       } else {
+        if ((left === 10 || left === 5) && tickedRef.current !== left) { tickedRef.current = left; haptics.tick(); }
         setRemaining(left);
       }
     };
