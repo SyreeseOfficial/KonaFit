@@ -1,4 +1,4 @@
-# Smoke: the app boots, tabs render, nothing crashes. Cheap enough for every build.
+# Smoke: the app boots, Train renders and Stats opens, nothing crashes. Cheap enough for every build.
 appId: com.syreeseofficial.konafit
 ---
 - launchApp:
@@ -6,5 +6,5 @@ appId: com.syreeseofficial.konafit
 - assertVisible: "Start"
 - tapOn: "Stats"
 - assertVisible: ".*"
-- tapOn: "Train"
+- tapOn: "Back"
 - assertVisible: "Start"

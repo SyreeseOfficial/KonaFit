@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Modal, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
-import { Plus, Settings, ChevronRight, MoreHorizontal, Copy, Archive, Trash2 } from "lucide-react-native";
+import { Plus, Settings, BarChart2, ChevronRight, MoreHorizontal, Copy, Archive, Trash2 } from "lucide-react-native";
 import { WeeklyGoal } from "./WeeklyGoal";
 import { GoalsSection } from "./GoalsSection";
 import { StartSheet } from "./StartSheet";
@@ -98,9 +98,14 @@ export function TrainIdle({ startWorkout, repeatLastWorkout, startUnlessBoxingRu
         <Text className="font-montserrat-bold text-text-primary dark:text-white text-3xl">
           Train
         </Text>
-        <TouchableOpacity onPress={() => router.push("/settings")} hitSlop={8} activeOpacity={0.7}>
-          <Settings size={20} color="#94A3B8" />
-        </TouchableOpacity>
+        <View className="flex-row items-center gap-4">
+          <TouchableOpacity onPress={() => router.push("/stats" as never)} hitSlop={8} activeOpacity={0.7} accessibilityLabel="Stats">
+            <BarChart2 size={20} color="#94A3B8" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/settings")} hitSlop={8} activeOpacity={0.7} accessibilityLabel="Settings">
+            <Settings size={20} color="#94A3B8" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <WeeklyGoal />

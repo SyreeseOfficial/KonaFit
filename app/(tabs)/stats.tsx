@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { ScrollView, View, Text, RefreshControl, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
-import { Download, Settings } from "lucide-react-native";
+import { ChevronLeft, Download } from "lucide-react-native";
 import {
   getStatsTotals,
   getTotalPRCount,
@@ -100,21 +100,17 @@ export default function StatsScreen() {
       >
         {/* Header */}
         <View className="flex-row items-center justify-between px-5 pt-6 pb-4">
-          <Text className="font-montserrat-bold text-text-primary dark:text-white text-3xl">
-            Stats
-          </Text>
-          <View className="flex-row items-center gap-4">
-            <TouchableOpacity onPress={handleExportCsv} hitSlop={8} activeOpacity={0.7}>
-              <Download size={20} color="#94A3B8" />
+          <View className="flex-row items-center gap-3">
+            <TouchableOpacity onPress={() => router.back()} hitSlop={8} activeOpacity={0.7} accessibilityLabel="Back">
+              <ChevronLeft size={26} color="#94A3B8" />
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => router.push("/settings")}
-              hitSlop={8}
-              activeOpacity={0.7}
-            >
-              <Settings size={20} color="#94A3B8" />
-            </TouchableOpacity>
+            <Text className="font-montserrat-bold text-text-primary dark:text-white text-3xl">
+              Stats
+            </Text>
           </View>
+          <TouchableOpacity onPress={handleExportCsv} hitSlop={8} activeOpacity={0.7} accessibilityLabel="Export CSV">
+            <Download size={20} color="#94A3B8" />
+          </TouchableOpacity>
         </View>
 
         <WeeklyGoal />
