@@ -5,6 +5,7 @@ import {
   getTodayReadiness, saveReadiness, getReadinessTrend, getReadinessVsRating, type Readiness,
 } from "../../db/insightQueries";
 import type { TrendPoint } from "../../db/statsQueries";
+import { logError } from "../../utils/errors";
 
 const FIELDS: { key: keyof Readiness; label: string; low: string; high: string }[] = [
   { key: "sleep", label: "Sleep", low: "poor", high: "great" },
@@ -18,7 +19,7 @@ export function ReadinessForm({ onSaved }: { onSaved?: () => void }) {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    getTodayReadiness().then((r) => { if (r) { setValue(r); setSaved(true); } }).catch(console.error);
+    getTodayReadiness().then((r) => { if (r) { setValue(r); setSaved(true); } }).catch(logError);
   }, []);
 
   const complete = value.sleep != null && value.soreness != null && value.mood != null;
@@ -70,8 +71,8 @@ export function ReadinessCard({ refreshKey }: { refreshKey?: number }) {
   const [split, setSplit] = useState<{ high: number | null; low: number | null }>({ high: null, low: null });
 
   const load = () => {
-    getReadinessTrend().then(setTrend).catch(console.error);
-    getReadinessVsRating().then(setSplit).catch(console.error);
+    getReadinessTrend().then(setTrend).catch(logError);
+    getReadinessVsRating().then(setSplit).catch(logError);
   };
   useEffect(load, [refreshKey]);
 

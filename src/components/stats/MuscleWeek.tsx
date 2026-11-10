@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { View, Text } from "react-native";
 import { getHardSetsLastWeek, getLastTrainedByGroup } from "../../db/insightQueries";
 import { LANDMARKS, landmarkStatus, muscleBalance, setsByMuscle, type LandmarkStatus } from "../../utils/training";
+import { logError } from "../../utils/errors";
 
 const STATUS_COLOR: Record<LandmarkStatus, string> = { low: "#94A3B8", ok: "#2563EB", high: "#10B981", over: "#EF4444" };
 const STATUS_TEXT: Record<LandmarkStatus, string> = { low: "below MEV", ok: "building", high: "productive", over: "above MRV" };
@@ -19,7 +20,7 @@ export function MuscleWeek({ refreshKey }: { refreshKey?: number }) {
       for (const r of last) for (const m of r.muscle_group.split(",").map((x) => x.trim()).filter(Boolean)) latest[m] = Math.max(latest[m] ?? 0, r.last);
       const nowSecs = Date.now() / 1000;
       setRecovery(Object.entries(latest).map(([muscle, t]) => ({ muscle, hours: Math.round((nowSecs - t) / 3600) })).sort((a, b) => a.hours - b.hours));
-    })().catch(console.error);
+    })().catch(logError);
   }, [refreshKey]);
 
   const rows = Object.keys(LANDMARKS).filter((m) => (sets[m] ?? 0) > 0).sort((a, b) => sets[b] - sets[a]);

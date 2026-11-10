@@ -12,6 +12,7 @@ import { buildQuickSession } from "../../src/utils/boxingQuickAdd";
 import { saveBoxingSession } from "../../src/db/boxingQueries";
 import { APP_VERSION } from "../../src/utils/appVersion";
 import { cleanInt, cleanClock } from "../../src/utils/numberInput";
+import { logError } from "../../src/utils/errors";
 
 const label = "font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase mb-2";
 const input = "bg-surface-2 dark:bg-zinc-800 px-4 py-3 font-mono-medium text-text-primary dark:text-white text-lg rounded-xl";
@@ -41,7 +42,7 @@ export default function QuickAddBoxing() {
       const id = await saveBoxingSession(built, APP_VERSION);
       router.replace(`/workout/${id}` as never);
     } catch (e) {
-      console.error(e);
+      logError(e, "quick-add boxing");
       setSaving(false);
       Alert.alert("Couldn't save", "Nothing was lost. Try again.");
     }

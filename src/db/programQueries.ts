@@ -1,4 +1,5 @@
 import { getDatabase } from "./database";
+import { parseJson, isStringArray } from "../utils/safeJson";
 import type { Program, ProgramDay, ProgramExercise, ProgramSummary } from "../types/program";
 
 // ─── Programs ─────────────────────────────────────────────────────────────────
@@ -29,7 +30,7 @@ export async function getPrograms(): Promise<ProgramSummary[]> {
   return rows.map((r) => ({
     ...r,
     programType: (r.programType || "weekly") as import("../types/program").ProgramType,
-    focusTags: r.focusTags ? JSON.parse(r.focusTags) : [],
+    focusTags: parseJson(r.focusTags, isStringArray, []),
   }));
 }
 
@@ -119,7 +120,7 @@ export async function getArchivedPrograms(): Promise<ProgramSummary[]> {
   return rows.map((r) => ({
     ...r,
     programType: (r.programType || "weekly") as import("../types/program").ProgramType,
-    focusTags: r.focusTags ? JSON.parse(r.focusTags) : [],
+    focusTags: parseJson(r.focusTags, isStringArray, []),
   }));
 }
 
@@ -191,7 +192,7 @@ export async function getProgramWithDays(id: number): Promise<Program | null> {
     durationWeeks: prog.duration_weeks,
     programType: (prog.program_type ?? "weekly") as import("../types/program").ProgramType,
     workoutDurationMin: prog.workout_duration_min,
-    focusTags: prog.focus_tags ? JSON.parse(prog.focus_tags) : [],
+    focusTags: parseJson(prog.focus_tags, isStringArray, []),
     equipment: prog.equipment,
     difficulty: prog.difficulty,
     createdAt: prog.created_at,

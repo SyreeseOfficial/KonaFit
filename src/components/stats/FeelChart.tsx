@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { LineChart } from "./LineChart";
 import { getFeelTrend, type FeelField, type TrendPoint } from "../../db/statsQueries";
+import { logError } from "../../utils/errors";
 
 const FIELDS: { key: FeelField; label: string }[] = [
   { key: "rating", label: "Rating" },
@@ -15,7 +16,7 @@ export function FeelChart({ refreshKey }: { refreshKey?: number }) {
   const [data, setData] = useState<TrendPoint[]>([]);
 
   useEffect(() => {
-    getFeelTrend(field).then(setData).catch(console.error);
+    getFeelTrend(field).then(setData).catch(logError);
   }, [field, refreshKey]);
 
   return (

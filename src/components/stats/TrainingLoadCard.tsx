@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { View, Text } from "react-native";
 import { SectionHeader } from "./SectionHeader";
 import { getTrainingLoad, type TrainingLoad } from "../../db/boxingStats";
+import { logError } from "../../utils/errors";
 
 /** Weekly training load (session RPE x minutes, lifting + boxing) with the change vs last week. No good/bad judgement. */
 export function TrainingLoadCard({ refreshKey }: { refreshKey?: number }) {
   const [load, setLoad] = useState<TrainingLoad | null>(null);
-  useEffect(() => { getTrainingLoad().then(setLoad).catch(console.error); }, [refreshKey]);
+  useEffect(() => { getTrainingLoad().then(setLoad).catch(logError); }, [refreshKey]);
   if (!load) return null;
 
   const empty = load.thisWeek === 0 && load.lastWeek === 0;

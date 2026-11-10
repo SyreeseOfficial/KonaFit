@@ -8,12 +8,12 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MapPin, Plus, X } from "lucide-react-native";
 import { getLocations, type Location } from "../../db/locationQueries";
 import type { WorkoutFeel } from "../../db/workoutQueries";
+import { confirm } from "../../utils/confirm";
 
 /** "7.5" -> 7.5; blank or nonsense -> null; capped at 24 h. */
 export const parseSleepHours = (text: string): number | null => {
@@ -91,15 +91,8 @@ export function LocationSheet({ visible, onSave, onDiscard, onCancel }: Props) {
     setShowInput(false);
   }, [inputText]);
 
-  const handleDiscard = useCallback(() => {
-    Alert.alert(
-      "Discard Workout",
-      "Delete this workout? This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Discard", style: "destructive", onPress: onDiscard },
-      ]
-    );
+  const handleDiscard = useCallback(async () => {
+    if (await confirm({ title: "Discard Workout", message: "Delete this workout? This cannot be undone.", confirmText: "Discard", destructive: true })) onDiscard();
   }, [onDiscard]);
 
   return (

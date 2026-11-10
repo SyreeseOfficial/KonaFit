@@ -10,6 +10,8 @@ import {
   PLATES, OPTIONAL_PLATES, BAR_OPTIONS, planLoad, CUSTOM_PLATE_COLORS,
   type PlateConfig, type PlateResult,
 } from "../../utils/plateCalc";
+import { parseJson, isBoolRecord } from "../../utils/safeJson";
+import { logError } from "../../utils/errors";
 
 const PLATE_W = 14;
 const BAR_H = 10;
@@ -20,6 +22,9 @@ const COLLAR_COLOR = "#94A3B8";
 const ENABLED_KEY = "@konafit_plate_enabled";
 const CUSTOM_KEY  = "@konafit_custom_plates";
 const BAR_KEY     = "@konafit_plate_bar";
+
+const isPlateList = (x: unknown): x is PlateConfig[] =>
+  Array.isArray(x) && x.every((p) => p && typeof p.weight === "number" && typeof p.label === "string" && typeof p.color === "string" && typeof p.textColor === "string" && typeof p.heightPx === "number");
 
 function PlateConfigPanel({
   visible, allPlates, enabled, onToggle, onAddCustom, onDeleteCustom, onClose,
@@ -162,8 +167,8 @@ export function PlateCalculator({ initialWeight }: Props) {
 
   useEffect(() => {
     Promise.all([kvStore.getItem(ENABLED_KEY), kvStore.getItem(CUSTOM_KEY), kvStore.getItem(BAR_KEY)]).then(([e, c, b]) => {
-      if (e) setEnabled({ ...OPTIONAL_PLATES, ...JSON.parse(e) });
-      if (c) setCustomPlates(JSON.parse(c));
+      if (e) setEnabled({ ...OPTIONAL_PLATES, ...parseJson(e, isBoolRecord, {}) });
+      if (c) setCustomPlates(parseJson(c, isPlateList, []));
       const saved = BAR_OPTIONS.findIndex((o) => o.label === b);
       if (saved >= 0) setBarIdx(saved);
     });
@@ -175,7 +180,7 @@ export function PlateCalculator({ initialWeight }: Props) {
   const handleToggle = useCallback(async (key: string) => {
     setEnabled((prev) => {
       const next = { ...prev, [key]: prev[key] === false };
-      kvStore.setItem(ENABLED_KEY, JSON.stringify(next)).catch(console.error);
+      kvStore.setItem(ENABLED_KEY, JSON.stringify(next)).catch(logError);
       return next;
     });
   }, []);
@@ -183,12 +188,12 @@ export function PlateCalculator({ initialWeight }: Props) {
   const handleAddCustom = useCallback(async (plate: PlateConfig) => {
     setCustomPlates((prev) => {
       const next = [...prev, plate];
-      kvStore.setItem(CUSTOM_KEY, JSON.stringify(next)).catch(console.error);
+      kvStore.setItem(CUSTOM_KEY, JSON.stringify(next)).catch(logError);
       return next;
     });
     setEnabled((prev) => {
       const next = { ...prev, [String(plate.weight)]: true };
-      kvStore.setItem(ENABLED_KEY, JSON.stringify(next)).catch(console.error);
+      kvStore.setItem(ENABLED_KEY, JSON.stringify(next)).catch(logError);
       return next;
     });
   }, []);
@@ -196,7 +201,7 @@ export function PlateCalculator({ initialWeight }: Props) {
   const handleDeleteCustom = useCallback(async (weight: number) => {
     setCustomPlates((prev) => {
       const next = prev.filter((p) => p.weight !== weight);
-      kvStore.setItem(CUSTOM_KEY, JSON.stringify(next)).catch(console.error);
+      kvStore.setItem(CUSTOM_KEY, JSON.stringify(next)).catch(logError);
       return next;
     });
   }, []);
@@ -252,7 +257,7 @@ export function PlateCalculator({ initialWeight }: Props) {
         {BAR_OPTIONS.map((opt, i) => (
           <TouchableOpacity
             key={opt.label}
-            onPress={() => { setBarIdx(i); kvStore.setItem(BAR_KEY, opt.label).catch(console.error); }}
+            onPress={() => { setBarIdx(i); kvStore.setItem(BAR_KEY, opt.label).catch(logError); }}
             className={`px-3 py-2 rounded-full ${barIdx === i ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
             activeOpacity={0.7}
           >

@@ -30,6 +30,8 @@ import { haptics } from "../../src/utils/haptics";
 import { isRealPR } from "../../src/utils/prBadges";
 import type { WorkoutFeel } from "../../src/db/workoutQueries";
 import type { Exercise } from "../../src/types/workout";
+import { logError } from "../../src/utils/errors";
+import { confirm } from "../../src/utils/confirm";
 
 const LAST_PRS_KEY = "@konafit_last_prs";
 
@@ -143,21 +145,14 @@ export default function TrainScreen() {
 
     const doLaunch = async () => {
       if (session) {
-        Alert.alert(
-          "Active Workout",
-          "You have a workout in progress. Starting a new one will discard it.",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Discard & Launch",
-              style: "destructive",
-              onPress: async () => {
-                await discardWorkout();
-                await launchFromProgramDay(parseInt(programDayId, 10));
-              },
-            },
-          ]
-        );
+        if (!(await confirm({
+          title: "Active Workout",
+          message: "You have a workout in progress. Starting a new one will discard it.",
+          confirmText: "Discard & Launch",
+          destructive: true,
+        }))) return;
+        await discardWorkout();
+        await launchFromProgramDay(parseInt(programDayId, 10));
       } else {
         await startUnlessBoxingRunning(() => launchFromProgramDay(parseInt(programDayId, 10)));
       }
@@ -184,14 +179,11 @@ export default function TrainScreen() {
     if (!(await addWarmups(exerciseLocalId, count))) Alert.alert("No working weight yet", "Enter a weight for a working set first, then add warm-ups.");
   }, [addWarmups]);
 
-  const handleFinish = useCallback(() => {
+  const handleFinish = useCallback(async () => {
     if (!session) return;
     // An empty workout would count toward streak, history and hours; offer to discard it instead.
     if (!session.exercises.some((e) => e.sets.some((s) => s.isCompleted))) {
-      Alert.alert("No sets completed", "Tick at least one set to log this workout, or discard it.", [
-        { text: "Keep Going", style: "cancel" },
-        { text: "Discard Workout", style: "destructive", onPress: discardWorkout },
-      ]);
+      if (await confirm({ title: "No sets completed", message: "Tick at least one set to log this workout, or discard it.", confirmText: "Discard Workout", cancelText: "Keep Going", destructive: true })) discardWorkout();
       return;
     }
     setLocationSheetOpen(true);
@@ -207,7 +199,7 @@ export default function TrainScreen() {
       try {
         if (location) await saveWorkoutLocation(workoutId, location);
       } catch (e) {
-        console.error("Failed to save location:", e);
+        logError(e, "save location");
       }
 
       // Capture PRs before session is cleared
@@ -219,7 +211,7 @@ export default function TrainScreen() {
         await finishWorkout(undefined, feel);
       } catch (e) {
         // The session is only cleared after a successful save, so the sets are still on screen.
-        console.error("Failed to finish workout:", e);
+        logError(e, "finish workout");
         Alert.alert("Couldn't save workout", "Your sets are still here. Tap Finish to try again.");
         return;
       }
@@ -276,7 +268,7 @@ export default function TrainScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
-                  discardCachedSession(cachedSession).catch(console.error);
+                  discardCachedSession(cachedSession).catch(logError);
                   setCachedSession(null);
                   setRecoveryVisible(false);
                 }}
@@ -311,7 +303,7 @@ export default function TrainScreen() {
         onFinish={handleFinish}
         onTools={() => router.push("/tools")}
         onCamera={handleCameraPress}
-        onPauseChange={(paused) => { logSessionEvent(session.workoutId, paused ? "pause" : "resume").catch(console.error); }}
+        onPauseChange={(paused) => { logSessionEvent(session.workoutId, paused ? "pause" : "resume").catch(logError); }}
         restTimer={restTimer}
         setsDone={allSets.filter((x) => x.isCompleted).length}
         setsTotal={allSets.length}
@@ -380,12 +372,9 @@ export default function TrainScreen() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() =>
-              Alert.alert("Cancel Workout", "Delete this workout and discard all sets?", [
-                { text: "Keep Going", style: "cancel" },
-                { text: "Cancel Workout", style: "destructive", onPress: discardWorkout },
-              ])
-            }
+            onPress={async () => {
+              if (await confirm({ title: "Cancel Workout", message: "Delete this workout and discard all sets?", confirmText: "Cancel Workout", cancelText: "Keep Going", destructive: true })) discardWorkout();
+            }}
             className="flex-row items-center gap-2 h-11 pl-3"
             activeOpacity={0.7}
           >
@@ -409,21 +398,18 @@ export default function TrainScreen() {
       <AddExerciseSheet
         visible={swappingExerciseLocalId !== null}
         onClose={() => setSwappingExerciseLocalId(null)}
-        onSelect={(ex) => {
+        onSelect={async (ex) => {
           const localId = swappingExerciseLocalId;
           if (!localId) return;
           setSwappingExerciseLocalId(null);
           const logged = session.exercises.find((e) => e.localId === localId)?.sets
             .filter((s) => s.isCompleted || s.weightLbs !== "" || s.reps !== "").length ?? 0;
           if (logged === 0) { swapExercise(localId, ex.id, ex.name, ex.muscle_group); return; }
-          Alert.alert(
-            "Swap exercise?",
-            `Your ${logged} logged ${logged === 1 ? "set stays" : "sets stay"} but now count as ${ex.name}, and their PR badges are cleared.`,
-            [
-              { text: "Cancel", style: "cancel" },
-              { text: "Swap", onPress: () => swapExercise(localId, ex.id, ex.name, ex.muscle_group) },
-            ]
-          );
+          if (await confirm({
+            title: "Swap exercise?",
+            message: `Your ${logged} logged ${logged === 1 ? "set stays" : "sets stay"} but now count as ${ex.name}, and their PR badges are cleared.`,
+            confirmText: "Swap",
+          })) swapExercise(localId, ex.id, ex.name, ex.muscle_group);
         }}
       />
 

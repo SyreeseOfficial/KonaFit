@@ -36,7 +36,9 @@ import {
   getDefaultRestSeconds,
   getWeeklyGoal,
 } from "../src/utils/settings";
+import { Diagnostics } from "../src/components/settings/Diagnostics";
 import { haptics, HAPTICS_KEY, loadHapticsSetting, setHapticsLevel, type HapticLevel } from "../src/utils/haptics";
+import { logError } from "../src/utils/errors";
 
 const REST_STEP = 15;
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -209,7 +211,7 @@ export default function SettingsScreen() {
     setWipeText("");
     try {
       await wipeAllData([...PRESERVED_KEYS, ...BOXING_PRESERVED_KEYS, HAPTICS_KEY, THEME_KEY]);
-      await removeOrphanPhotos().catch(console.error); // the photo rows are gone, so every photo file is now an orphan
+      await removeOrphanPhotos().catch(logError); // the photo rows are gone, so every photo file is now an orphan
       Alert.alert("Done", "All workout data has been deleted.");
     } catch (e) {
       Alert.alert("Error", String(e));
@@ -437,6 +439,10 @@ export default function SettingsScreen() {
             onPress={() => router.push("/merge-exercises" as never)}
           />
         </View>
+
+        {/* ── Diagnostics ─────────────────────────────────────────────────── */}
+        <SectionLabel title="Diagnostics" />
+        <Diagnostics />
 
         {/* ── Danger Zone ─────────────────────────────────────────────────── */}
         <SectionLabel title="Danger Zone" />

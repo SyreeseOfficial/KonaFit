@@ -9,6 +9,7 @@ import { SESSION_TAGS, type BoxingRound, type BoxingSession, type FocusChip } fr
 import { cleanClock } from "../../utils/numberInput";
 import { initDateEdits, dateEditsToTimestamp, type InfoEdits } from "../../utils/dateEdit";
 import { draftFromRound, draftToRound, newDraft, roundsDuration, type RoundDraft } from "../../utils/boxingEdit";
+import { logError } from "../../utils/errors";
 
 const label = "font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase mb-2";
 const input = "bg-surface-2 dark:bg-zinc-800 px-4 py-3 font-montserrat text-text-primary dark:text-white text-base rounded-xl";
@@ -49,7 +50,7 @@ export function BoxingEdit({ session, chips, onCancel, onSave }: Props) {
         rpe, tags, notes: notes.trim() || null, rounds: list,
       });
     } catch (e) {
-      console.error(e);
+      logError(e, "edit boxing session");
       setSaving(false);
       Alert.alert("Couldn't save", "Your edits are still here. Try again.");
     }

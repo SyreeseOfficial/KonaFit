@@ -6,6 +6,7 @@ import {
 } from "../utils/boxingTimer";
 import { cues, loadCueSettings } from "../utils/boxingCues";
 import { saveSnapshot, loadSnapshot, clearSnapshot, updateRoundLog, type RoundLogEntry } from "../utils/boxingSnapshot";
+import { logError } from "../utils/errors";
 
 const TICK_MS = 250;
 
@@ -36,7 +37,7 @@ export function useBoxingSession(newSetup: TimerSetup | null) {
   const commit = useCallback((next: Session) => {
     ref.current = next;
     setSession(next);
-    saveSnapshot(next).catch(console.error);
+    saveSnapshot(next).catch(logError);
   }, []);
 
   // Start fresh or restore. Runs once; the setup is fixed for the life of the screen.

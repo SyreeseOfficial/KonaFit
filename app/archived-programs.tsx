@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  Alert,
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -16,6 +15,7 @@ import {
   deleteProgram,
 } from "../src/db/programQueries";
 import type { ProgramSummary } from "../src/types/program";
+import { confirm } from "../src/utils/confirm";
 
 const TYPE_LABEL: Record<string, string> = {
   single: "Single",
@@ -43,19 +43,10 @@ export default function ArchivedProgramsScreen() {
     load();
   };
 
-  const handleDelete = (p: ProgramSummary) => {
-    Alert.alert(
-      "Delete Program",
-      `Permanently delete "${p.name}"? This cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => { await deleteProgram(p.id); load(); },
-        },
-      ]
-    );
+  const handleDelete = async (p: ProgramSummary) => {
+    if (!(await confirm({ title: "Delete Program", message: `Permanently delete "${p.name}"? This cannot be undone.`, confirmText: "Delete", destructive: true }))) return;
+    await deleteProgram(p.id);
+    load();
   };
 
   return (

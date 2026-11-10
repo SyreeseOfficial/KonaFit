@@ -7,6 +7,7 @@ import {
 import { getWeeklyLoad, getLiftGoalOneRm, getBodyweightGoal } from "../../db/insightQueries";
 import { deloadAlert, movingAverage, projectGoalDate } from "../../utils/training";
 import { compactNumber } from "../../utils/format";
+import { logError } from "../../utils/errors";
 
 const Card = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <View className="bg-surface dark:bg-zinc-900 rounded-2xl p-4 mb-4">
@@ -39,14 +40,14 @@ export function TrendCards({ refreshKey }: { refreshKey?: number }) {
       setAlert(deloadAlert(load.filter((w) => !w.current)));
       setBw(bwPoints);
       setBwGoal(goal);
-    })().catch(console.error);
+    })().catch(logError);
   }, [refreshKey]);
 
   useEffect(() => {
     if (exerciseId == null) return;
     Promise.all([getOneRMHistory(exerciseId), getLiftGoalOneRm(exerciseId)])
       .then(([points, goal]) => { setRm(points.map((p) => ({ x: p.date, y: p.oneRM }))); setRmGoal(goal); })
-      .catch(console.error);
+      .catch(logError);
   }, [exerciseId, refreshKey]);
 
   const avg = movingAverage(bw);

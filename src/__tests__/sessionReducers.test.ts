@@ -110,6 +110,14 @@ describe("saved session format", () => {
     expect(R.parseSession("{not json")).toBeNull();
     expect(R.parseSession(null)).toBeNull();
   });
+
+  it("drops a right-version save whose shape is wrong", () => {
+    const bad = (exercises: unknown) => JSON.stringify({ schemaVersion: R.SESSION_SCHEMA_VERSION, session: { workoutId: 1, startedAt: 5, exercises } });
+    expect(R.parseSession(bad("nope"))).toBeNull();
+    expect(R.parseSession(bad([{ localId: "a" }]))).toBeNull();
+    expect(R.parseSession(bad([ex("a", [set(1, { reps: 5 as unknown as string })])]))).toBeNull(); // reps must be a string
+    expect(R.parseSession(bad([ex("a", [set(1)])]))).not.toBeNull();
+  });
 });
 
 describe("applySuggestion / insertWarmups", () => {

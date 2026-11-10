@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { ChevronLeft, ChevronDown, ChevronUp, Trash2, Pencil } from "lucide-react-native";
@@ -10,6 +10,8 @@ import { formatShortDate } from "../../utils/exportUtils";
 import { formatTime } from "../../utils/time";
 import { BoxingEdit } from "./BoxingEdit";
 import type { BoxingSession, FocusChip } from "../../types/boxing";
+import { logError } from "../../utils/errors";
+import { confirm } from "../../utils/confirm";
 
 const card = "mx-5 bg-surface dark:bg-zinc-900 rounded-2xl mb-4";
 
@@ -26,13 +28,13 @@ export function BoxingDetail({ id }: { id: number }) {
     setSession(s);
     setChips(c);
   }, [id]);
-  useEffect(() => { reload().catch(console.error).finally(() => setLoading(false)); }, [reload]);
+  useEffect(() => { reload().catch(logError).finally(() => setLoading(false)); }, [reload]);
 
-  const handleDelete = () =>
-    Alert.alert("Delete Session", "Permanently delete this boxing session? This cannot be undone.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => { await deleteWorkout(id); router.back(); } },
-    ]);
+  const handleDelete = async () => {
+    if (!(await confirm({ title: "Delete Session", message: "Permanently delete this boxing session? This cannot be undone.", confirmText: "Delete", destructive: true }))) return;
+    await deleteWorkout(id);
+    router.back();
+  };
 
   if (loading || !session) {
     return (

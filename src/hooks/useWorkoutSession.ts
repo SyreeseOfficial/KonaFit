@@ -32,10 +32,11 @@ import { warmupRamp } from "../utils/training";
 import { ghostExtra, copyFields } from "../utils/setFields";
 import { APP_VERSION } from "../utils/appVersion";
 import { uid, defaultSet, saveToStorage } from "../utils/sessionCache";
+import { logError } from "../utils/errors";
 
 // Write the order the user sees (array position) to the DB in one transaction.
 const persistOrder = (exercises: ActiveExercise[]) =>
-  setLoggedExerciseOrder(exercises.flatMap((e) => (e.dbId != null ? [e.dbId] : []))).catch(console.error);
+  setLoggedExerciseOrder(exercises.flatMap((e) => (e.dbId != null ? [e.dbId] : []))).catch(logError);
 
 export function useWorkoutSession() {
   const [session, setSession] = useState<ActiveSession | null>(null);
@@ -45,7 +46,7 @@ export function useWorkoutSession() {
   const runUndo = useCallback(async () => {
     const undo = pendingUndo;
     setPendingUndo(null);
-    await undo?.run().catch(console.error);
+    await undo?.run().catch(logError);
   }, [pendingUndo]);
 
   // The snapshot in kv_store is debounced (trailing 500 ms) and flushed when the app leaves the foreground.
@@ -59,7 +60,7 @@ export function useWorkoutSession() {
   const flushPending = useCallback(() => {
     const pending = pendingRef.current;
     cancelPending();
-    if (pending) saveToStorage(pending).catch(console.error);
+    if (pending) saveToStorage(pending).catch(logError);
   }, [cancelPending]);
   // Typing in a set row marks it dirty; its DB row is written once typing pauses (400 ms), on blur, on Finish, or when the app backgrounds.
   const latestRef = useRef<ActiveSession | null>(null);
@@ -75,7 +76,7 @@ export function useWorkoutSession() {
     await Promise.all(dirty.map(([setLocalId, exerciseLocalId]) => {
       const e = cur.exercises.find((x) => x.localId === exerciseLocalId);
       const set = e?.sets.find((x) => x.localId === setLocalId);
-      return e?.dbId && set ? upsertLoggedSet({ ...set, loggedExerciseId: e.dbId }).catch(console.error) : undefined;
+      return e?.dbId && set ? upsertLoggedSet({ ...set, loggedExerciseId: e.dbId }).catch(logError) : undefined;
     }));
   }, []);
   const markDirty = useCallback((exerciseLocalId: string, setLocalId: string, delayMs: number) => {
@@ -184,7 +185,7 @@ export function useWorkoutSession() {
       const libraryNote = info.note;
 
       if (libraryNote) {
-        updateLoggedExerciseNotes(dbId, libraryNote).catch(console.error);
+        updateLoggedExerciseNotes(dbId, libraryNote).catch(logError);
       }
 
       const setCount = ghost.length > 0 ? ghost.length : 1;
@@ -248,7 +249,7 @@ export function useWorkoutSession() {
       ]);
       const libraryNote = info.note;
       if (libraryNote) {
-        updateLoggedExerciseNotes(dbId, libraryNote).catch(console.error);
+        updateLoggedExerciseNotes(dbId, libraryNote).catch(logError);
       }
       const setCount = ghost.length > 0 ? ghost.length : 1;
       const sets: ActiveSet[] = [];
@@ -285,7 +286,7 @@ export function useWorkoutSession() {
             perHand: info.perHand,
             targetType: info.targetType,
       };
-      setLoggedExerciseSuperset([target.dbId, dbId], supersetId).catch(console.error);
+      setLoggedExerciseSuperset([target.dbId, dbId], supersetId).catch(logError);
       updateSession((prev) => {
         const next = R.addSupersetAfter(prev, targetLocalId, newExercise, supersetId);
         persistOrder(next.exercises);
@@ -383,7 +384,7 @@ export function useWorkoutSession() {
     const after = next.exercises.find((e) => e.localId === exerciseLocalId);
     if (after?.dbId) {
       after.sets.forEach((s, i) => {
-        if (s !== before?.sets[i]) upsertLoggedSet({ ...s, loggedExerciseId: after.dbId! }).catch(console.error);
+        if (s !== before?.sets[i]) upsertLoggedSet({ ...s, loggedExerciseId: after.dbId! }).catch(logError);
       });
     }
   };
@@ -436,7 +437,7 @@ export function useWorkoutSession() {
       updateSession((prev) => {
         const next = R.insertWarmups(prev, exerciseLocalId, warmups);
         const after = next.exercises.find((e) => e.localId === exerciseLocalId)!;
-        after.sets.forEach((s) => upsertLoggedSet({ ...s, loggedExerciseId: after.dbId! }).catch(console.error)); // new rows and renumbered old ones
+        after.sets.forEach((s) => upsertLoggedSet({ ...s, loggedExerciseId: after.dbId! }).catch(logError)); // new rows and renumbered old ones
         return next;
       });
       return true;
@@ -450,7 +451,7 @@ export function useWorkoutSession() {
       const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
       if (!exercise) return;
       const perHand = !exercise.perHand;
-      setExercisePerHand(exercise.exerciseId, perHand).catch(console.error);
+      setExercisePerHand(exercise.exerciseId, perHand).catch(logError);
       updateSession((prev) => ({
         ...prev,
         exercises: prev.exercises.map((e) => (e.exerciseId === exercise.exerciseId ? { ...e, perHand } : e)),
@@ -506,7 +507,7 @@ export function useWorkoutSession() {
 
               const updated = { ...s, isCompleted: nowComplete, isGhostFilled: false, prBadges: nowComplete ? prBadges : undefined };
               if (e.dbId) {
-                upsertLoggedSet({ ...updated, loggedExerciseId: e.dbId }).catch(console.error);
+                upsertLoggedSet({ ...updated, loggedExerciseId: e.dbId }).catch(logError);
               }
               return updated;
             }),
@@ -531,7 +532,7 @@ export function useWorkoutSession() {
               const updated = { ...s, isWarmup: !s.isWarmup };
               if (e.dbId) {
                 upsertLoggedSet({ ...updated, loggedExerciseId: e.dbId }).catch(
-                  console.error
+                  logError
                 );
               }
               return updated;
@@ -550,8 +551,8 @@ export function useWorkoutSession() {
         ...prev,
         exercises: prev.exercises.map((e) => {
           if (e.localId !== exerciseLocalId) return e;
-          if (e.dbId) updateLoggedExerciseNotes(e.dbId, notes).catch(console.error);
-          if (saveAsDefault) updateExerciseLibraryNote(e.exerciseId, notes).catch(console.error);
+          if (e.dbId) updateLoggedExerciseNotes(e.dbId, notes).catch(logError);
+          if (saveAsDefault) updateExerciseLibraryNote(e.exerciseId, notes).catch(logError);
           return { ...e, notes };
         }),
       }));
@@ -656,7 +657,7 @@ export function useWorkoutSession() {
           ]);
           const libraryNote = info.note;
           if (libraryNote) {
-            updateLoggedExerciseNotes(dbId, libraryNote).catch(console.error);
+            updateLoggedExerciseNotes(dbId, libraryNote).catch(logError);
           }
           const warmups = pe.warmupSets ?? 0;
           const working = ghost.length > 0 ? ghost.length : (pe.targetSets ?? 3);
@@ -708,8 +709,8 @@ export function useWorkoutSession() {
       setSession(newSession);
     } catch (e) {
       // All or nothing: a half-built workout would otherwise linger in the DB and in history queries.
-      console.error("Failed to start workout", e);
-      await deleteWorkout(workoutId).catch(console.error);
+      logError(e, "start workout");
+      await deleteWorkout(workoutId).catch(logError);
       Alert.alert("Couldn't start workout", "Nothing was saved. Please try again.");
     }
   }, []);

@@ -122,11 +122,27 @@ export const SESSION_SCHEMA_VERSION = 1;
 export const serializeSession = (session: ActiveSession): string =>
   JSON.stringify({ schemaVersion: SESSION_SCHEMA_VERSION, session });
 
+const isObj = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
+const isStr = (x: unknown) => typeof x === "string";
+const isNum = (x: unknown) => typeof x === "number" && Number.isFinite(x);
+
+/** Runtime check of the fields the workout screen reads without a fallback. Optional fields (added over time) are not checked. */
+export function isActiveSession(x: unknown): x is ActiveSession {
+  if (!isObj(x) || !isNum(x.workoutId) || !isNum(x.startedAt) || !Array.isArray(x.exercises)) return false;
+  return x.exercises.every(
+    (e) =>
+      isObj(e) && isStr(e.localId) && isNum(e.exerciseId) && isStr(e.exerciseName) && isStr(e.muscleGroup) &&
+      Array.isArray(e.ghostSets) && isObj(e.histPRs) && Array.isArray(e.sets) &&
+      e.sets.every((st) => isObj(st) && isStr(st.localId) && isNum(st.setNumber) && isStr(st.weightLbs) && isStr(st.reps) &&
+        isStr(st.rpe) && typeof st.isWarmup === "boolean" && typeof st.isCompleted === "boolean")
+  );
+}
+
 export function parseSession(raw: string | null): ActiveSession | null {
   if (!raw) return null;
   try {
     const data = JSON.parse(raw);
-    return data?.schemaVersion === SESSION_SCHEMA_VERSION && data.session ? (data.session as ActiveSession) : null;
+    return data?.schemaVersion === SESSION_SCHEMA_VERSION && isActiveSession(data.session) ? data.session : null;
   } catch {
     return null;
   }

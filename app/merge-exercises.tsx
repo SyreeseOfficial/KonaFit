@@ -6,6 +6,7 @@ import { ChevronLeft } from "lucide-react-native";
 import { AddExerciseSheet } from "../src/components/workout/AddExerciseSheet";
 import { mergeExercises } from "../src/db/workoutQueries";
 import type { Exercise } from "../src/types/workout";
+import { confirm } from "../src/utils/confirm";
 
 /** Pick the duplicate and the exercise to keep; history, programs and goals move to the kept one. */
 export default function MergeExercisesScreen() {
@@ -15,29 +16,22 @@ export default function MergeExercisesScreen() {
 
   const pick = (ex: Exercise) => (picking === "from" ? setFrom(ex) : setInto(ex));
 
-  const confirm = () => {
+  const handleMerge = async () => {
     if (!from || !into) return;
-    Alert.alert(
-      "Merge exercises?",
-      `All history for "${from.name}" moves to "${into.name}". "${from.name}" goes to Deleted Exercises, where you can restore it.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Merge",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await mergeExercises(from.id, into.id);
-              Alert.alert("Merged", `"${from.name}" is now part of "${into.name}".`);
-              setFrom(null);
-              setInto(null);
-            } catch (e) {
-              Alert.alert("Couldn't merge", e instanceof Error ? e.message : String(e));
-            }
-          },
-        },
-      ]
-    );
+    if (!(await confirm({
+      title: "Merge exercises?",
+      message: `All history for "${from.name}" moves to "${into.name}". "${from.name}" goes to Deleted Exercises, where you can restore it.`,
+      confirmText: "Merge",
+      destructive: true,
+    }))) return;
+    try {
+      await mergeExercises(from.id, into.id);
+      Alert.alert("Merged", `"${from.name}" is now part of "${into.name}".`);
+      setFrom(null);
+      setInto(null);
+    } catch (e) {
+      Alert.alert("Couldn't merge", e instanceof Error ? e.message : String(e));
+    }
   };
 
   const slot = (label: string, ex: Exercise | null, which: "from" | "into") => (
@@ -63,7 +57,7 @@ export default function MergeExercisesScreen() {
         {slot("Duplicate (goes away)", from, "from")}
         {slot("Keep this one", into, "into")}
         <TouchableOpacity
-          onPress={confirm}
+          onPress={handleMerge}
           disabled={!from || !into}
           className={`py-4 items-center rounded-2xl mt-2 ${from && into ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
           activeOpacity={0.85}

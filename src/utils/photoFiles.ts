@@ -25,3 +25,7 @@ export async function removeOrphanPhotos(): Promise<void> {
   const onDisk = await FileSystem.readDirectoryAsync(dir());
   for (const name of findOrphans(onDisk, await getPhotoFileNames())) await deletePhotoFile(name);
 }
+
+export async function photoFileExists(fileName: string): Promise<boolean> {
+  return (await FileSystem.getInfoAsync(photoPath(fileName))).exists;
+}

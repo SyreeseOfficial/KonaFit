@@ -16,6 +16,8 @@ import { boxingName } from "../../src/utils/boxingNames";
 import { APP_VERSION } from "../../src/utils/appVersion";
 import { TimerControls } from "../../src/components/boxing/TimerControls";
 import { TimerFace, PHASE_BG } from "../../src/components/boxing/TimerFace";
+import { logError } from "../../src/utils/errors";
+import { confirm } from "../../src/utils/confirm";
 
 /** Optional logging card shown during rest. Keyed by phase, so each rest starts closed on the round just finished. */
 function RestLog({ finishedRound, log, chips, onChange }: {
@@ -50,7 +52,7 @@ export default function BoxingSessionScreen() {
 
   const [saving, setSaving] = useState(false);
   const [chips, setChips] = useState<FocusChip[]>([]);
-  useFocusEffect(useCallback(() => { getFocusChips().then(setChips).catch(console.error); }, [])); // reload after Manage chips
+  useFocusEffect(useCallback(() => { getFocusChips().then(setChips).catch(logError); }, [])); // reload after Manage chips
 
   // Screen stays on while a session is live.
   const live = !!b.timer && !b.timer.done;
@@ -72,21 +74,17 @@ export default function BoxingSessionScreen() {
       await b.clear();
       router.replace({ pathname: "/boxing/complete", params: { id: String(id) } } as never);
     } catch (e) {
-      console.error("Failed to save boxing session", e);
+      logError(e, "save boxing session");
       setSaving(false);
       Alert.alert("Couldn't save session", "Nothing was lost. Tap Save to try again.");
     }
   };
-  const discard = () =>
-    Alert.alert("Discard session?", "This session won't be saved.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Discard", style: "destructive", onPress: leave },
-    ]);
-  const confirmEnd = () =>
-    Alert.alert("End session?", "Rounds finished so far are kept.", [
-      { text: "Keep Going", style: "cancel" },
-      { text: "End", style: "destructive", onPress: () => b.endEarly() },
-    ]);
+  const discard = async () => {
+    if (await confirm({ title: "Discard session?", message: "This session won't be saved.", confirmText: "Discard", destructive: true })) leave();
+  };
+  const confirmEnd = async () => {
+    if (await confirm({ title: "End session?", message: "Rounds finished so far are kept.", confirmText: "End", cancelText: "Keep Going", destructive: true })) b.endEarly();
+  };
 
   if (t.done) {
     return (

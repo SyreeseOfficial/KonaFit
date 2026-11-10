@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { Scale } from "lucide-react-native";
 import {
   logBodyweight,
@@ -9,6 +9,7 @@ import {
   type BodyweightEntry,
 } from "../../db/statsQueries";
 import { cleanDecimal, MIN_BODYWEIGHT, MAX_BODYWEIGHT } from "../../utils/numberInput";
+import { confirm } from "../../utils/confirm";
 
 type Props = { onSaved: () => void; refreshKey?: number };
 
@@ -43,20 +44,12 @@ export function BodyweightLogger({ onSaved, refreshKey }: Props) {
     } finally { setSaving(false); }
   };
 
-  const handleDelete = (entry: BodyweightEntry) => {
-    Alert.alert("Delete entry?", `${entry.weight_lbs} lbs on ${formatEntryDate(entry.logged_at)}`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await deleteBodyweight(entry.id);
-          if (editingId === entry.id) { setEditingId(null); setBodyweight(""); }
-          await loadHistory();
-          onSaved();
-        },
-      },
-    ]);
+  const handleDelete = async (entry: BodyweightEntry) => {
+    if (!(await confirm({ title: "Delete entry?", message: `${entry.weight_lbs} lbs on ${formatEntryDate(entry.logged_at)}`, confirmText: "Delete", destructive: true }))) return;
+    await deleteBodyweight(entry.id);
+    if (editingId === entry.id) { setEditingId(null); setBodyweight(""); }
+    await loadHistory();
+    onSaved();
   };
 
   return (

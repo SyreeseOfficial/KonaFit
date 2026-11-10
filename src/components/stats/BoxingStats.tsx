@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { LineChart } from "./LineChart";
 import { SectionHeader } from "./SectionHeader";
 import { getBoxingBuckets, hasBoxingSessions, roundsTrend, minutesTrend, rpeTrend, type BoxingBucket, type BoxingPeriod } from "../../db/boxingStats";
+import { logError } from "../../utils/errors";
 
 const Card = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <View className="bg-surface dark:bg-zinc-900 rounded-2xl p-4 mb-4">
@@ -22,7 +23,7 @@ export function BoxingStats({ refreshKey }: { refreshKey?: number }) {
       const has = await hasBoxingSessions();
       setShow(has);
       setBuckets(has ? await getBoxingBuckets(period, 12) : []);
-    })().catch(console.error);
+    })().catch(logError);
   }, [period, refreshKey]);
 
   if (!show) return null;

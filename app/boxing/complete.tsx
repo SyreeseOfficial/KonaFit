@@ -8,6 +8,7 @@ import { buildRecap, type Recap } from "../../src/utils/boxingRecap";
 import { formatTime } from "../../src/utils/time";
 import { formatShortDate } from "../../src/utils/exportUtils";
 import type { BoxingSession, FocusChip } from "../../src/types/boxing";
+import { logError } from "../../src/utils/errors";
 
 const card = "mx-5 bg-surface dark:bg-zinc-900 rounded-2xl mb-4";
 const heading = "font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase mb-3";
@@ -41,7 +42,7 @@ export default function BoxingCompleteScreen() {
       if (!session) return router.back();
       const [chips, prior] = await Promise.all([getFocusChips({ includeHidden: true }), getPriorAvgRpes(session.startedAt, session.id!)]);
       setData({ session, recap: buildRecap(session, prior), chips });
-    })().catch(console.error);
+    })().catch(logError);
   }, [id]);
 
   if (!data) {

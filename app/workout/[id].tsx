@@ -43,6 +43,7 @@ import { cleanDecimal, cleanInt, MAX_WEIGHT, MAX_REPS } from "../../src/utils/nu
 import type { Exercise } from "../../src/types/workout";
 import { columnsFor, FIELD_META, fmtClock, clockToSec, type SetField } from "../../src/utils/setFields";
 import { initDateEdits, dateEditsToTimestamp, type InfoEdits } from "../../src/utils/dateEdit";
+import { confirm } from "../../src/utils/confirm";
 
 const initInfoEdits = (workout: WorkoutDetail): InfoEdits => initDateEdits(workout.started_at, workout.duration_seconds);
 const infoEditsToTimestamp = dateEditsToTimestamp;
@@ -130,17 +131,10 @@ function LiftWorkoutDetail() {
   }, [workout, nameText, reload]);
 
   const handleDeleteSet = useCallback(async (setId: number) => {
-    Alert.alert("Delete Set", "Remove this set permanently?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete", style: "destructive",
-        onPress: async () => {
-          await deleteLoggedSetFromHistory(setId);
-          setSetEdits((prev) => { const next = { ...prev }; delete next[setId]; return next; });
-          reload();
-        },
-      },
-    ]);
+    if (!(await confirm({ title: "Delete Set", message: "Remove this set permanently?", confirmText: "Delete", destructive: true }))) return;
+    await deleteLoggedSetFromHistory(setId);
+    setSetEdits((prev) => { const next = { ...prev }; delete next[setId]; return next; });
+    reload();
   }, [reload]);
 
   const handleAddExercise = useCallback(async (exercise: Exercise) => {
@@ -150,18 +144,11 @@ function LiftWorkoutDetail() {
     reload();
   }, [workout, reload]);
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = useCallback(async () => {
     if (!workout) return;
-    Alert.alert("Delete Workout", "Permanently delete this workout? This cannot be undone.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete", style: "destructive",
-        onPress: async () => {
-          await deleteWorkout(workout.id);
-          router.back();
-        },
-      },
-    ]);
+    if (!(await confirm({ title: "Delete Workout", message: "Permanently delete this workout? This cannot be undone.", confirmText: "Delete", destructive: true }))) return;
+    await deleteWorkout(workout.id);
+    router.back();
   }, [workout]);
 
   const handleShareMarkdown = useCallback(async () => {

@@ -2,13 +2,7 @@ import { getDatabase } from "./database";
 import { BOXING_CHIP_GROUPS } from "../types/boxing";
 import type { BoxingPlan, BoxingRound, BoxingSession, FocusChip } from "../types/boxing";
 
-const parseJson = <T>(s: string | null, fallback: T): T => {
-  try {
-    return s ? (JSON.parse(s) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-};
+import { parseJson, isNumberArray, isStringArray } from "../utils/safeJson";
 
 /** Writes the workout (type 'boxing', already finished) and its rounds in one transaction. Returns the workout id. */
 export async function saveBoxingSession(session: BoxingSession, appVersion?: string): Promise<number> {
@@ -81,13 +75,13 @@ export async function getBoxingSession(id: number): Promise<BoxingSession | null
   const rows = await db.getAllAsync<RoundRow>(
     "SELECT * FROM boxing_rounds WHERE workout_id = ? ORDER BY round_number", [id]);
   const rounds: BoxingRound[] = rows.map((r) => ({
-    roundNumber: r.round_number, rpe: r.rpe, focusTags: parseJson<number[]>(r.focus_tags, []), focusNote: r.focus_note,
+    roundNumber: r.round_number, rpe: r.rpe, focusTags: parseJson(r.focus_tags, isNumberArray, []), focusNote: r.focus_note,
     workSeconds: r.work_seconds, restSeconds: r.rest_seconds,
     actualWorkSeconds: r.actual_work_seconds, actualRestSeconds: r.actual_rest_seconds,
   }));
   return {
     id: w.id, name: w.name, startedAt: w.started_at, finishedAt: w.finished_at ?? w.started_at,
-    durationSeconds: w.duration_seconds ?? 0, rpe: w.rpe, tags: parseJson<string[]>(w.session_tags, []),
+    durationSeconds: w.duration_seconds ?? 0, rpe: w.rpe, tags: parseJson(w.session_tags, isStringArray, []),
     notes: w.notes, rounds,
   };
 }

@@ -5,6 +5,7 @@ import { router, useFocusEffect } from "expo-router";
 import { ChevronLeft, Eye, EyeOff, Pencil, Check } from "lucide-react-native";
 import { getFocusChips, addFocusChip, renameFocusChip, setFocusChipHidden } from "../../src/db/boxingQueries";
 import { BOXING_CHIP_GROUPS, type FocusChip } from "../../src/types/boxing";
+import { logError } from "../../src/utils/errors";
 
 const label = "font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase mb-2";
 
@@ -15,7 +16,7 @@ export default function ManageChipsScreen() {
   const [newGroup, setNewGroup] = useState<string>(BOXING_CHIP_GROUPS[0]);
   const [editing, setEditing] = useState<{ id: number; text: string } | null>(null);
 
-  const load = useCallback(() => { getFocusChips({ includeHidden: true }).then(setChips).catch(console.error); }, []);
+  const load = useCallback(() => { getFocusChips({ includeHidden: true }).then(setChips).catch(logError); }, []);
   useFocusEffect(load);
 
   async function add() {

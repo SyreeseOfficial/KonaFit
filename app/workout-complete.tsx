@@ -6,6 +6,7 @@ import { CheckCircle, MapPin, Clock, Dumbbell, Zap, TrendingUp } from "lucide-re
 import { getWorkoutDetail, type WorkoutDetail } from "../src/db/historyQueries";
 import { createProgramFromWorkout } from "../src/db/programQueries";
 import { formatDuration, formatShortDate, formatVolume } from "../src/utils/exportUtils";
+import { parseJson, isStringArray } from "../src/utils/safeJson";
 import { kvStore } from "../src/utils/kvStore";
 import { getPriorVolumes } from "../src/db/insightQueries";
 import { sessionInsights } from "../src/utils/training";
@@ -30,7 +31,7 @@ export default function WorkoutCompleteScreen() {
     setWorkout(detail);
     setPriorVolumes(prior);
     if (rawPrs) {
-      try { setPrs(JSON.parse(rawPrs)); } catch {}
+      setPrs(parseJson(rawPrs, isStringArray, []));
       kvStore.removeItem(LAST_PRS_KEY).catch(() => {});
     }
   }, [workoutId]);

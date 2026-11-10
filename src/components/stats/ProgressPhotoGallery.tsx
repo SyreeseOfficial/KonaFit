@@ -6,6 +6,7 @@ import { Camera, X, Trash2 } from "lucide-react-native";
 import { EmptyState } from "../EmptyState";
 import { getProgressPhotos, deleteProgressPhoto, type ProgressPhoto } from "../../db/photoQueries";
 import { addProgressPhoto, deletePhotoFile, photoPath } from "../../utils/photoFiles";
+import { confirm } from "../../utils/confirm";
 
 type Props = { refreshKey?: number };
 
@@ -49,18 +50,11 @@ export function ProgressPhotoGallery({ refreshKey }: Props) {
   }, [load]);
 
   const handleDelete = useCallback(async (photo: ProgressPhoto) => {
-    Alert.alert("Delete Photo", "Remove this progress photo?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete", style: "destructive",
-        onPress: async () => {
-          await deleteProgressPhoto(photo.id);
-          try { await deletePhotoFile(photo.photo_uri); } catch {}
-          setSelected(null);
-          load();
-        },
-      },
-    ]);
+    if (!(await confirm({ title: "Delete Photo", message: "Remove this progress photo?", confirmText: "Delete", destructive: true }))) return;
+    await deleteProgressPhoto(photo.id);
+    try { await deletePhotoFile(photo.photo_uri); } catch {}
+    setSelected(null);
+    load();
   }, [load]);
 
   return (

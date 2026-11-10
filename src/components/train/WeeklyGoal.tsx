@@ -4,6 +4,7 @@ import { useFocusEffect } from "expo-router";
 import { getWorkoutsThisWeek, getActivityDays, weekStartSecs } from "../../db/statsQueries";
 import { WeekStrip } from "./WeekStrip";
 import { getWeeklyGoal } from "../../utils/settings";
+import { logError } from "../../utils/errors";
 
 /** "2 / 4 this week" with a progress bar, plus the week strip; one focus load feeds both. The goal itself is set in Settings. */
 export function WeeklyGoal() {
@@ -12,7 +13,7 @@ export function WeeklyGoal() {
   useFocusEffect(useCallback(() => {
     Promise.all([getWorkoutsThisWeek(), getWeeklyGoal(), getActivityDays(weekStartSecs())])
       .then(([done, goal, days]) => setWeek({ done, goal, days }))
-      .catch(console.error);
+      .catch(logError);
   }, []));
 
   if (!week) return null;

@@ -1,4 +1,5 @@
 import * as SQLite from "expo-sqlite";
+import { logError } from "../utils/errors";
 
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -219,7 +220,7 @@ async function runMigrations(database: SQLite.SQLiteDatabase) {
         await database.execAsync(`PRAGMA user_version = ${v + 1}`);
       });
     } catch (e) {
-      console.error(`DB migration ${v + 1} failed`, e);
+      logError(e, `DB migration ${v + 1}`);
       throw e;
     }
   }

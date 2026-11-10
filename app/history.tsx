@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { View, Text, TouchableOpacity, FlatList, RefreshControl, Alert, TextInput, Modal, Pressable, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, RefreshControl, TextInput, Modal, Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { ChevronLeft, ChevronRight, MapPin, Plus, Search, SlidersHorizontal } from "lucide-react-native";
@@ -8,6 +8,7 @@ import { MUSCLE_GROUPS } from "../src/components/workout/AddExerciseSheet";
 import { EmptyState } from "../src/components/EmptyState";
 import { deleteWorkout } from "../src/db/workoutQueries";
 import { formatDuration, formatShortDate, formatVolume } from "../src/utils/exportUtils";
+import { confirm } from "../src/utils/confirm";
 
 const PAGE_SIZE = 50;
 const RANGES = [[0, "All time"], [30, "30 days"], [90, "90 days"], [365, "1 year"]] as const;
@@ -69,22 +70,10 @@ export default function HistoryScreen() {
     return () => clearTimeout(t);
   }, [query]);
 
-  const handleDelete = useCallback((w: WorkoutSummary) => {
-    Alert.alert(
-      "Delete Workout",
-      `Delete ${formatShortDate(w.started_at)}? This cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            await deleteWorkout(w.id);
-            setWorkouts((prev) => prev.filter((x) => x.id !== w.id));
-          },
-        },
-      ]
-    );
+  const handleDelete = useCallback(async (w: WorkoutSummary) => {
+    if (!(await confirm({ title: "Delete Workout", message: `Delete ${formatShortDate(w.started_at)}? This cannot be undone.`, confirmText: "Delete", destructive: true }))) return;
+    await deleteWorkout(w.id);
+    setWorkouts((prev) => prev.filter((x) => x.id !== w.id));
   }, []);
 
   const load = useCallback(async (spinner = false) => {

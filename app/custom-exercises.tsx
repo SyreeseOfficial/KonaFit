@@ -24,6 +24,7 @@ import {
   deleteExercise,
 } from "../src/db/workoutQueries";
 import type { Exercise } from "../src/types/workout";
+import { confirm } from "../src/utils/confirm";
 
 const MUSCLE_GROUPS = [
   "Chest", "Front Delts", "Mid Delts", "Rear Delts",
@@ -284,19 +285,15 @@ export default function CustomExercisesScreen() {
     load();
   };
 
-  const handleDelete = (ex: Exercise) => {
-    Alert.alert(
-      "Delete Exercise",
-      `Delete "${ex.name}"? It will be removed from the exercise list but existing workout history will keep the name.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => { await deleteExercise(ex.id); load(); },
-        },
-      ]
-    );
+  const handleDelete = async (ex: Exercise) => {
+    if (!(await confirm({
+      title: "Delete Exercise",
+      message: `Delete "${ex.name}"? It will be removed from the exercise list but existing workout history will keep the name.`,
+      confirmText: "Delete",
+      destructive: true,
+    }))) return;
+    await deleteExercise(ex.id);
+    load();
   };
 
   return (

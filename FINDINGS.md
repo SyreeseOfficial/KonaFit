@@ -132,17 +132,6 @@ Everything here was worked through in the Features round: finished jobs are unde
 - 🟡 **Stricter lint:** `eslint-plugin-react-hooks`, React Compiler lint, and `eslint-plugin-react-native` (`no-inline-styles`, `no-unused-styles`, `no-color-literals`).
 
 ### Cleaner code
-- 🟡 **Crash reporting** with Sentry (opt-in, no personal data). A migration crash is invisible now.
-- 🟡 **One `reportError` / `logError` helper** instead of 19 loose `console.error` calls. Keep the last 50 errors in `kv_store`. Show them in Settings → Diagnostics with a copy button. Show a toast for errors users can see.
-- 🟡 **Typed queries.** About 150 untyped `getAllAsync<...>` casts. Try `kysely` or typed helpers.
-- 🟡 **Keep SQL out of components.** All DB access in `src/db`, tested with the `better-sqlite3` shim.
-- 🟡 **Runtime check for saved JSON** (zod style). `JSON.parse(raw) as ActiveSession` trusts old shapes.
-- 🟡 **`TouchableOpacity` → `Pressable`.** 375 vs 77 uses. Make a shared `<Button>` with 44 px hit area, accessibility props, haptics.
-- 🟡 **One `confirm({title, message, destructive})`** instead of 28 separate `Alert.alert` calls.
-- 🟡 **Equipment-aware steps.** `RPE_VALUES` and `WEIGHT_STEPS` are hard-coded. Barbell 5 lb, dumbbell 2.5–5, machine 10. Allow custom steps.
-- 🟡 **Document `sqlFragments.ts`** (`isBodyweightSql`, `setLoadSql`) and where each is needed.
-- 🟡 **"DB doctor" in Settings.** Counts rows, finds orphans, unfinished workouts, missing photos. One-tap repair.
-- 🟡 **Startup crash recovery.** After repeated crashes, offer "Reset UI cache" without touching the database (`expo-updates`).
 
 ---
 
@@ -243,6 +232,12 @@ Claude parks jobs here when it needs a choice or help from me. Each entry: origi
 
 ## ⏸️ Skipped for now
 
+**Skipped by choice (cleaner code round)**
+- 🟡 **Crash reporting** with Sentry (opt-in, no personal data). A migration crash is invisible now.
+- 🟡 **`TouchableOpacity` → `Pressable`.** 375 vs 77 uses. `src/components/Button.tsx` now exists (44 px, role, label, haptics, press dim) and is used by Diagnostics and the recovery screen. Still to do: move the existing screens over, one screen at a time, and check each on the phone (the `activeOpacity` look changes to `active:opacity-70`).
+- 🟡 **Typed queries.** About 150 untyped `getAllAsync<...>` casts. Try `kysely` or typed helpers.
+- 🟡 **Equipment-aware steps.** Out of date: `RPE_VALUES` and `WEIGHT_STEPS` no longer exist; weight and RPE are free-typed. This only makes sense as a new ± stepper on set rows (barbell 5 lb, dumbbell 2.5–5, machine 10, custom). Decide if you want the stepper first.
+
 You marked these as "skip for now." They stay on the list so they aren't lost.
 
 - ♿ **Accessibility labels** (see Accessibility above).
@@ -342,6 +337,15 @@ You marked these as "skip for now." They stay on the list so they aren't lost.
 ---
 
 ## ✅ Done
+
+**Cleaner code round** (passed typecheck, lint and `npm test`; not run on a device)
+- [x] `logError(e, "context")` in `src/utils/errors.ts` replaces every `console.error` (a test blocks new ones). It logs, and keeps the last 50 errors (message + 6 stack lines, no workout data) in `kv_store`. Settings → Diagnostics → Error log shows them with Copy/share (share sheet) and Clear. No toast: the screens that show an error to the user already use an alert.
+- [x] `confirm({ title, message, confirmText, cancelText, destructive })` in `src/utils/confirm.ts` returns a promise. 20 yes/no dialogs use it. The ones with 3 buttons or only "OK" (photo source, boxing in progress, error notices) stay `Alert.alert`.
+- [x] Saved JSON is checked at runtime: `isActiveSession` (saved workout, wrong shapes are dropped instead of crashing), `src/utils/safeJson.ts` guards for focus tags, boxing round tags, plate settings, last PR list. Hand-written guards, no zod dependency.
+- [x] SQL stays in `src/db`: it already did; `architecture.test.ts` now fails if a screen, component or hook imports `expo-sqlite` or calls the database.
+- [x] `sqlFragments.ts` has a table of every fragment, what it means and where it is used.
+- [x] Settings → Diagnostics → Database check (`src/db/doctor.ts`): row counts, orphan rows, unfinished workouts, photos whose file is missing. One-tap Repair deletes only those (never finished workouts). Tested with deliberately broken rows.
+- [x] Startup crash recovery: a plain file counts launches that never got stable (10 s). After 2, the app shows "KonaFit didn't start last time" with Open KonaFit or Reset UI cache (drops the saved workout/boxing draft; nothing else). Render crashes also land on a recovery screen (`ErrorBoundary` in `app/_layout.tsx`). It does not use `expo-updates`: the app has no OTA setup, so there was nothing to reset there.
 
 **Speed round** (passed typecheck, lint and `npm test`; not profiled on a device)
 - [x] Workout screen: `SetRow` and `ExerciseBlock` are wrapped in `React.memo`. Every handler now takes the exercise/set id, so the screen passes the same stable functions to all blocks and only the row you edit re-renders. The hook's `addSet`, `removeSet`, `addWarmups`, `togglePerHand`, `swapExercise`, `removeExercise`, `addExercise` read `latestRef` instead of `session`, so they stay stable too.

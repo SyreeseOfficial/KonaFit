@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert, Modal, Pressable } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Modal, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { Plus, Settings, ChevronRight, MoreHorizontal, Copy, Archive, Trash2 } from "lucide-react-native";
@@ -18,6 +18,8 @@ import { getWorkoutHistory, type WorkoutSummary } from "../../db/historyQueries"
 import { formatVolume, formatShortDate, formatDuration } from "../../utils/exportUtils";
 import { kvStore } from "../../utils/kvStore";
 import type { ProgramSummary } from "../../types/program";
+import { logError } from "../../utils/errors";
+import { confirm } from "../../utils/confirm";
 
 const READINESS_SKIP_KEY = "@konafit_boxing_readiness_skip_day"; // local day the pre-boxing check-in was skipped
 
@@ -70,20 +72,11 @@ export function TrainIdle({ startWorkout, repeatLastWorkout, startUnlessBoxingRu
     hasLastSetup().then(async (has) => setLastBoxing(has ? await getLastSetup() : null)).catch(() => setLastBoxing(null));
   }, [loadPrograms, loadRecentWorkouts]));
 
-  const handleProgramDelete = (p: ProgramSummary) => {
+  const handleProgramDelete = async (p: ProgramSummary) => {
     setMenuProgram(null);
-    Alert.alert(
-      "Delete Program",
-      `Permanently delete "${p.name}"? This cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => { await deleteProgram(p.id); loadPrograms(); },
-        },
-      ]
-    );
+    if (!(await confirm({ title: "Delete Program", message: `Permanently delete "${p.name}"? This cannot be undone.`, confirmText: "Delete", destructive: true }))) return;
+    await deleteProgram(p.id);
+    loadPrograms();
   };
 
   const handleProgramArchive = async (p: ProgramSummary) => {
@@ -259,7 +252,7 @@ export function TrainIdle({ startWorkout, repeatLastWorkout, startUnlessBoxingRu
               <Text className="font-montserrat-bold text-white text-sm">Resume</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => { clearSnapshot().catch(console.error); setBoxingResume(null); }}
+              onPress={() => { clearSnapshot().catch(logError); setBoxingResume(null); }}
               className="bg-surface-2 dark:bg-zinc-800 py-4 items-center rounded-xl"
               activeOpacity={0.8}
             >

@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Alert,
   TextInput,
   Modal,
   Pressable,
@@ -36,6 +35,7 @@ import { AddExerciseSheet } from "../../src/components/workout/AddExerciseSheet"
 import { ExerciseTargetModal } from "../../src/components/programs/ExerciseTargetModal";
 import type { Program, ProgramDay, ProgramExercise } from "../../src/types/program";
 import type { Exercise } from "../../src/types/workout";
+import { confirm } from "../../src/utils/confirm";
 
 const DAY_NAMES = ["Day A", "Day B", "Day C", "Day D", "Day E", "Day F"];
 
@@ -79,15 +79,10 @@ export default function ProgramDetailScreen() {
     load();
   };
 
-  const handleDeleteDay = (day: ProgramDay) => {
-    Alert.alert("Delete Day", `Remove "${day.name}" and all its exercises?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => { await deleteProgramDay(day.id); load(); },
-      },
-    ]);
+  const handleDeleteDay = async (day: ProgramDay) => {
+    if (!(await confirm({ title: "Delete Day", message: `Remove "${day.name}" and all its exercises?`, confirmText: "Delete", destructive: true }))) return;
+    await deleteProgramDay(day.id);
+    load();
   };
 
   const handleSelectExercise = async (exercise: Exercise) => {
@@ -104,15 +99,10 @@ export default function ProgramDetailScreen() {
     load();
   };
 
-  const handleDeleteExercise = (ex: ProgramExercise) => {
-    Alert.alert("Remove Exercise", `Remove "${ex.exerciseName}"?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Remove",
-        style: "destructive",
-        onPress: async () => { await deleteProgramExercise(ex.id); load(); },
-      },
-    ]);
+  const handleDeleteExercise = async (ex: ProgramExercise) => {
+    if (!(await confirm({ title: "Remove Exercise", message: `Remove "${ex.exerciseName}"?`, confirmText: "Remove", destructive: true }))) return;
+    await deleteProgramExercise(ex.id);
+    load();
   };
 
   const handleSaveExerciseTarget = async (patch: {
@@ -132,18 +122,10 @@ export default function ProgramDetailScreen() {
     load();
   };
 
-  const handleDelete = () => {
-    Alert.alert("Delete Program", `Delete "${program.name}"? This cannot be undone.`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await deleteProgram(programId);
-          router.back();
-        },
-      },
-    ]);
+  const handleDelete = async () => {
+    if (!(await confirm({ title: "Delete Program", message: `Delete "${program.name}"? This cannot be undone.`, confirmText: "Delete", destructive: true }))) return;
+    await deleteProgram(programId);
+    router.back();
   };
 
   const handleClone = async () => {
