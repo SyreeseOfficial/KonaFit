@@ -82,6 +82,7 @@ describe("migrations", () => {
     ["logged_sets", "completed_at"], ["goals", "start_value"], ["goals", "direction"],
     ["workouts", "app_version"], ["workouts", "created_at"], ["exercises", "deleted_at"],
     ["workouts", "rating"], ["workouts", "energy"], ["workouts", "sleep_hours"], ["logged_sets", "rest_seconds"],
+    ["logged_sets", "duration_sec"], ["logged_sets", "distance_mi"], ["logged_sets", "calories"],
   ];
   const version = async (a: TestDb) => (await a.getFirstAsync<{ user_version: number }>("PRAGMA user_version"))!.user_version;
   const columns = async (a: TestDb, t: string) =>
@@ -761,5 +762,25 @@ describe("features round", () => {
     expect(out.tables.logged_sets).toHaveLength(1);
     expect(Object.keys(out.tables)).toEqual(expect.arrayContaining(["workouts", "readiness_checkins", "programs", "goals"]));
     expect(database).toBeTruthy();
+  });
+});
+
+describe("time and distance sets", () => {
+  it("saves duration/distance/calories, reads them back as ghost sets, and leaves volume alone", async () => {
+    const { adapter, q } = await fresh();
+    const ex = await q.workouts.createCustomExercise("Jump Rope", ["Cardio"], ["Bodyweight"], "distance", false);
+    const wid = await q.workouts.createWorkout();
+    const le = await q.workouts.createLoggedExercise(wid, ex.id, "Jump Rope", 0);
+    const base = { localId: "a", setNumber: 1, weightLbs: "", reps: "", rpe: "7", isWarmup: false, isCompleted: true, loggedExerciseId: le };
+    await q.workouts.upsertLoggedSet({ ...base, duration: "1:30", distance: "0.5", calories: "40" });
+    const row = (await adapter.getFirstAsync<Record<string, number | null>>("SELECT * FROM logged_sets"))!;
+    expect(row).toMatchObject({ duration_sec: 90, distance_mi: 0.5, calories: 40, reps: null });
+    await q.workouts.finalizeWorkout(wid);
+    const wid2 = await q.workouts.createWorkout();
+    const ghost = await q.workouts.getGhostSets(ex.id, wid2);
+    expect(ghost[0]).toMatchObject({ durationSec: 90, distance: 0.5, calories: 40, rpe: 7 });
+    const detail = await q.history.getWorkoutDetail(wid);
+    expect(detail!.exercises[0].target_type).toBe("distance");
+    expect(detail!.totalVolume).toBe(0);
   });
 });

@@ -2,6 +2,7 @@ import { getDatabase } from "./database";
 import type { ActiveSet, Exercise, GhostSet } from "../types/workout";
 import { isBodyweightSql } from "./sqlFragments";
 import { fuzzyMatches } from "../utils/fuzzy";
+import { clockToSec } from "../utils/setFields";
 
 export async function createWorkout(programDayId?: number, appVersion?: string): Promise<number> {
   const db = await getDatabase();
@@ -162,24 +163,27 @@ export async function upsertLoggedSet(set: ActiveSet & { loggedExerciseId: numbe
   const blankWeight = `COALESCE(?, (SELECT 0 FROM logged_exercises le WHERE le.id = ? AND ${isBodyweightSql()}))`;
   const reps = set.reps === "" ? null : parseInt(set.reps, 10);
   const rpe = set.rpe === "" ? null : parseFloat(set.rpe);
+  const durationSec = clockToSec(set.duration);
+  const distance = Number.isFinite(parseFloat(set.distance ?? "")) ? parseFloat(set.distance!) : null;
+  const calories = set.calories ? parseInt(set.calories, 10) : null;
   const notes = set.notes?.trim() ? set.notes.trim() : null;
 
   if (set.dbId) {
     await db.runAsync(
       `UPDATE logged_sets
-       SET weight_lbs = ${blankWeight}, reps = ?, rpe = ?, notes = ?, is_warmup = ?, is_completed = ?,
+       SET weight_lbs = ${blankWeight}, reps = ?, rpe = ?, duration_sec = ?, distance_mi = ?, calories = ?, notes = ?, is_warmup = ?, is_completed = ?,
            set_number = ?, set_type = ?,
            completed_at = CASE WHEN ? = 1 THEN COALESCE(completed_at, unixepoch()) END,
            rest_seconds = CASE WHEN ? = 1 THEN rest_seconds END
        WHERE id = ?`,
-      [weight, set.loggedExerciseId, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.setNumber, set.setType ?? null, set.isCompleted ? 1 : 0, set.isCompleted ? 1 : 0, set.dbId]
+      [weight, set.loggedExerciseId, reps, rpe, durationSec, distance, calories, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.setNumber, set.setType ?? null, set.isCompleted ? 1 : 0, set.isCompleted ? 1 : 0, set.dbId]
     );
     if (set.isCompleted) await stampRest(set.dbId);
   } else {
     const result = await db.runAsync(
-      `INSERT INTO logged_sets (logged_exercise_id, set_number, weight_lbs, reps, rpe, notes, is_warmup, is_completed, set_type, completed_at)
-       VALUES (?, ?, ${blankWeight}, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 1 THEN unixepoch() END)`,
-      [set.loggedExerciseId, set.setNumber, weight, set.loggedExerciseId, reps, rpe, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.setType ?? null, set.isCompleted ? 1 : 0]
+      `INSERT INTO logged_sets (logged_exercise_id, set_number, weight_lbs, reps, rpe, duration_sec, distance_mi, calories, notes, is_warmup, is_completed, set_type, completed_at)
+       VALUES (?, ?, ${blankWeight}, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 1 THEN unixepoch() END)`,
+      [set.loggedExerciseId, set.setNumber, weight, set.loggedExerciseId, reps, rpe, durationSec, distance, calories, notes, set.isWarmup ? 1 : 0, set.isCompleted ? 1 : 0, set.setType ?? null, set.isCompleted ? 1 : 0]
     );
     if (set.isCompleted) await stampRest(result.lastInsertRowId);
   }
@@ -267,8 +271,11 @@ export async function getGhostSets(
   );
   if (!lastWorkout) return [];
 
-  const rows = await db.getAllAsync<{ set_number: number; weight_lbs: number | null; reps: number | null; rpe: number | null; at: number }>(
-    `SELECT ls.set_number, ls.weight_lbs, ls.reps, ls.rpe, w.started_at AS at
+  const rows = await db.getAllAsync<{
+    set_number: number; weight_lbs: number | null; reps: number | null; rpe: number | null; at: number;
+    duration_sec: number | null; distance_mi: number | null; calories: number | null;
+  }>(
+    `SELECT ls.set_number, ls.weight_lbs, ls.reps, ls.rpe, ls.duration_sec, ls.distance_mi, ls.calories, w.started_at AS at
      FROM logged_sets ls
      JOIN logged_exercises le ON ls.logged_exercise_id = le.id
      JOIN workouts w ON w.id = le.workout_id
@@ -285,6 +292,9 @@ export async function getGhostSets(
     weightLbs: r.weight_lbs,
     reps: r.reps,
     rpe: r.rpe,
+    durationSec: r.duration_sec,
+    distance: r.distance_mi,
+    calories: r.calories,
     at: r.at,
   }));
 }
@@ -457,13 +467,13 @@ export async function getExerciseNotes(exerciseId: number): Promise<ExerciseNote
 }
 
 /** Library note plus whether the exercise is logged as added load on bodyweight. */
-export async function getExerciseInfo(exerciseId: number): Promise<{ note: string; isBodyweight: boolean; perHand: boolean }> {
+export async function getExerciseInfo(exerciseId: number): Promise<{ note: string; isBodyweight: boolean; perHand: boolean; targetType: string }> {
   const db = await getDatabase();
-  const row = await db.getFirstAsync<{ notes: string | null; equipment_type: string; per_hand: number }>(
-    "SELECT notes, equipment_type, per_hand FROM exercises WHERE id = ?",
+  const row = await db.getFirstAsync<{ notes: string | null; equipment_type: string; per_hand: number; target_type: string }>(
+    "SELECT notes, equipment_type, per_hand, target_type FROM exercises WHERE id = ?",
     [exerciseId]
   );
-  return { note: row?.notes ?? "", isBodyweight: /bodyweight/i.test(row?.equipment_type ?? ""), perHand: row?.per_hand === 1 };
+  return { note: row?.notes ?? "", isBodyweight: /bodyweight/i.test(row?.equipment_type ?? ""), perHand: row?.per_hand === 1, targetType: row?.target_type ?? "reps" };
 }
 
 export async function setExercisePerHand(exerciseId: number, perHand: boolean): Promise<void> {

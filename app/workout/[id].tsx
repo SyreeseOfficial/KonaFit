@@ -41,12 +41,24 @@ import { WorkoutShareCard } from "../../src/components/export/WorkoutShareCard";
 import { AddExerciseSheet } from "../../src/components/workout/AddExerciseSheet";
 import { cleanDecimal, cleanInt, MAX_WEIGHT, MAX_REPS } from "../../src/utils/numberInput";
 import type { Exercise } from "../../src/types/workout";
+import { columnsFor, FIELD_META, fmtClock, clockToSec, type SetField } from "../../src/utils/setFields";
 import { initDateEdits, dateEditsToTimestamp, type InfoEdits } from "../../src/utils/dateEdit";
 
 const initInfoEdits = (workout: WorkoutDetail): InfoEdits => initDateEdits(workout.started_at, workout.duration_seconds);
 const infoEditsToTimestamp = dateEditsToTimestamp;
 
 const inputBase = "bg-surface-3 dark:bg-zinc-700 text-text-primary dark:text-white font-mono text-base text-center py-3 rounded-xl";
+
+/** First column takes the spare width; the rest are fixed. */
+const colWidth = (f: SetField, i: number) => (i === 0 ? "flex-1" : f === "rpe" ? "w-14" : "w-16");
+
+function cell(s: SetRecord, f: SetField): string {
+  const v = {
+    weightLbs: s.weight_lbs, reps: s.reps, rpe: s.rpe, distance: s.distance_mi, calories: s.calories,
+    duration: s.duration_sec != null ? fmtClock(s.duration_sec) : null,
+  }[f];
+  return v != null ? String(v) : "—";
+}
 
 function LiftWorkoutDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -60,7 +72,7 @@ function LiftWorkoutDetail() {
   const [infoEdits, setInfoEdits] = useState<InfoEdits | null>(null);
   const [infoModalOpen, setInfoModalOpen] = useState(false);
   const [exerciseSheetOpen, setExerciseSheetOpen] = useState(false);
-  const [setEdits, setSetEdits] = useState<Record<number, { weight: string; reps: string; rpe: string }>>({});
+  const [setEdits, setSetEdits] = useState<Record<number, Partial<Record<SetField, string>>>>({});
 
   const reload = useCallback(async () => {
     const data = await getWorkoutDetail(parseInt(id, 10));
@@ -72,13 +84,16 @@ function LiftWorkoutDetail() {
 
   const enterEdit = useCallback(() => {
     if (!workout) return;
-    const buffers: Record<number, { weight: string; reps: string; rpe: string }> = {};
+    const buffers: Record<number, Partial<Record<SetField, string>>> = {};
     for (const ex of workout.exercises)
       for (const s of ex.sets)
         buffers[s.id] = {
-          weight: s.weight_lbs != null ? String(s.weight_lbs) : "",
+          weightLbs: s.weight_lbs != null ? String(s.weight_lbs) : "",
           reps: s.reps != null ? String(s.reps) : "",
           rpe: s.rpe != null ? String(s.rpe) : "",
+          duration: s.duration_sec != null ? fmtClock(s.duration_sec) : "",
+          distance: s.distance_mi != null ? String(s.distance_mi) : "",
+          calories: s.calories != null ? String(s.calories) : "",
         };
     setSetEdits(buffers);
     setInfoEdits(initInfoEdits(workout));
@@ -91,9 +106,12 @@ function LiftWorkoutDetail() {
       const setId = parseInt(idStr, 10);
       await updateLoggedSetValues(
         setId,
-        Number.isFinite(parseFloat(vals.weight)) ? parseFloat(vals.weight) : null,
-        vals.reps === "" ? null : parseInt(vals.reps, 10),
-        vals.rpe === "" ? null : parseFloat(vals.rpe),
+        Number.isFinite(parseFloat(vals.weightLbs ?? "")) ? parseFloat(vals.weightLbs!) : null,
+        vals.reps ? parseInt(vals.reps, 10) : null,
+        vals.rpe ? parseFloat(vals.rpe) : null,
+        clockToSec(vals.duration),
+        Number.isFinite(parseFloat(vals.distance ?? "")) ? parseFloat(vals.distance!) : null,
+        vals.calories ? parseInt(vals.calories, 10) : null,
       );
     }
     if (infoEdits) {
@@ -276,9 +294,9 @@ function LiftWorkoutDetail() {
             {/* Column headers */}
             <View className="flex-row px-5 py-2.5">
               <Text className="w-8 font-mono text-text-muted dark:text-zinc-500 text-xs">Set</Text>
-              <Text className="flex-1 font-mono text-text-muted dark:text-zinc-500 text-xs text-right">Lbs</Text>
-              <Text className="w-16 font-mono text-text-muted dark:text-zinc-500 text-xs text-right">Reps</Text>
-              <Text className="w-14 font-mono text-text-muted dark:text-zinc-500 text-xs text-right">RPE</Text>
+              {columnsFor(ex.target_type).map((f, i) => (
+                <Text key={f} className={`${colWidth(f, i)} font-mono text-text-muted dark:text-zinc-500 text-xs text-right`}>{FIELD_META[f].label}</Text>
+              ))}
               {editMode && <View className="w-8" />}
             </View>
 
@@ -297,30 +315,17 @@ function LiftWorkoutDetail() {
                   </Text>
                   {editMode && buf ? (
                     <>
-                      <TextInput
-                        className="flex-1 font-mono-medium text-text-primary dark:text-white text-sm text-right bg-surface-2 dark:bg-zinc-800 h-9 px-2 rounded-lg"
-                        value={buf.weight}
-                        onChangeText={(v) => setSetEdits((prev) => ({ ...prev, [s.id]: { ...prev[s.id], weight: cleanDecimal(v, MAX_WEIGHT, ex.is_bodyweight) ?? prev[s.id].weight } }))}
-                        keyboardType={ex.is_bodyweight ? "numbers-and-punctuation" : "decimal-pad"}
-                        placeholder="—"
-                        placeholderTextColor="#94A3B8"
-                      />
-                      <TextInput
-                        className="w-16 font-mono text-text-primary dark:text-white text-sm text-right bg-surface-2 dark:bg-zinc-800 h-9 px-2 ml-1.5 rounded-lg"
-                        value={buf.reps}
-                        onChangeText={(v) => setSetEdits((prev) => ({ ...prev, [s.id]: { ...prev[s.id], reps: cleanInt(v, MAX_REPS) ?? prev[s.id].reps } }))}
-                        keyboardType="number-pad"
-                        placeholder="—"
-                        placeholderTextColor="#94A3B8"
-                      />
-                      <TextInput
-                        className="w-14 font-mono text-text-muted dark:text-zinc-500 text-xs text-right bg-surface-2 dark:bg-zinc-800 h-9 px-2 ml-1.5 rounded-lg"
-                        value={buf.rpe}
-                        onChangeText={(v) => setSetEdits((prev) => ({ ...prev, [s.id]: { ...prev[s.id], rpe: v } }))}
-                        keyboardType="decimal-pad"
-                        placeholder="—"
-                        placeholderTextColor="#94A3B8"
-                      />
+                      {columnsFor(ex.target_type).map((f, i) => (
+                        <TextInput
+                          key={f}
+                          className={`${colWidth(f, i)} ${i > 0 ? "ml-1.5" : ""} font-mono text-text-primary dark:text-white text-sm text-right bg-surface-2 dark:bg-zinc-800 h-9 px-2 rounded-lg`}
+                          value={buf[f] ?? ""}
+                          onChangeText={(v) => setSetEdits((prev) => ({ ...prev, [s.id]: { ...prev[s.id], [f]: FIELD_META[f].clean(v, ex.is_bodyweight) ?? prev[s.id][f] } }))}
+                          keyboardType={f === "weightLbs" && ex.is_bodyweight ? "numbers-and-punctuation" : FIELD_META[f].keyboard}
+                          placeholder="—"
+                          placeholderTextColor="#94A3B8"
+                        />
+                      ))}
                       <TouchableOpacity
                         onPress={() => handleDeleteSet(s.id)}
                         className="w-8 items-center justify-center ml-1"
@@ -331,15 +336,11 @@ function LiftWorkoutDetail() {
                     </>
                   ) : (
                     <>
-                      <Text className="flex-1 font-mono-medium text-text-primary dark:text-white text-sm text-right">
-                        {s.weight_lbs != null ? s.weight_lbs : "—"}
-                      </Text>
-                      <Text className="w-16 font-mono text-text-primary dark:text-white text-sm text-right">
-                        {s.reps != null ? s.reps : "—"}
-                      </Text>
-                      <Text className="w-14 font-mono text-text-muted dark:text-zinc-500 text-xs text-right">
-                        {s.rpe != null ? s.rpe : "—"}
-                      </Text>
+                      {columnsFor(ex.target_type).map((f, i) => (
+                        <Text key={f} className={`${colWidth(f, i)} font-mono text-sm text-right ${f === "rpe" ? "text-text-muted dark:text-zinc-500 text-xs" : "text-text-primary dark:text-white"}`}>
+                          {cell(s, f)}
+                        </Text>
+                      ))}
                     </>
                   )}
                 </View>

@@ -3,6 +3,9 @@ export type GhostSet = {
   weightLbs: number | null;
   reps: number | null;
   rpe?: number | null; // absent in sessions cached before overload hints
+  durationSec?: number | null; // time/distance exercises; absent in older cached sessions
+  distance?: number | null; // miles
+  calories?: number | null;
   at?: number; // unix secs of the workout it came from
 };
 
@@ -17,6 +20,9 @@ export type ActiveSet = {
   weightLbs: string;
   reps: string;
   rpe: string;
+  duration?: string; // "m:ss" (time/distance exercises); absent in sessions cached before target types
+  distance?: string; // miles
+  calories?: string;
   notes?: string; // optional: sessions cached before per-set notes lack it
   isWarmup: boolean;
   setType?: SetType; // absent = normal working set
@@ -32,6 +38,10 @@ export type HistPRs = {
   repsByWeight?: { weight: number; reps: number }[]; // best reps at each weight; missing in older cached sessions
   bodyweightLbs?: number; // latest bodyweight, added to bodyweight-exercise load for volume PRs; missing in older cached sessions
 };
+
+export type SetPatch = Partial<
+  Pick<ActiveSet, "weightLbs" | "reps" | "duration" | "distance" | "calories" | "rpe" | "notes" | "setType">
+>;
 
 export type ActiveExercise = {
   localId: string;
@@ -49,6 +59,7 @@ export type ActiveExercise = {
   perHand?: boolean; // logged weight is one hand's; volume counts it twice
   targetReps?: string | null; // from the program day, e.g. "8-10"
   targetRpe?: number | null;
+  targetType?: string; // 'reps' | 'time' | ...: picks the set row's inputs; absent in older cached sessions = reps
   isBodyweight?: boolean; // weight is added load on top of bodyweight and may be negative (assisted); absent in older cached sessions
 };
 

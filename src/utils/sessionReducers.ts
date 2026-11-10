@@ -1,4 +1,5 @@
 import type { ActiveSession, ActiveExercise, ActiveSet } from "../types/workout";
+import { copyFields, isFilled } from "./setFields";
 
 // Pure state transitions for an active workout session. No DB, no React: the hook calls these and persists the result.
 // Untouched exercises and sets keep their object identity, so callers can diff by reference.
@@ -17,17 +18,17 @@ const mapExercise = (
   exercises: session.exercises.map((e) => (e.localId === exerciseLocalId ? fn(e) : e)),
 });
 
-/** Copy weight/reps/rpe from the last filled set into every other incomplete set. */
+/** Copy the type's inputs (weight/reps/rpe, time, ...) from the last filled set into every other incomplete set. */
 export function copyLastSetToAll(session: ActiveSession, exerciseLocalId: string): ActiveSession {
   return mapExercise(session, exerciseLocalId, (e) => {
-    const src = [...e.sets].reverse().find((s) => (s.weightLbs !== "" || e.isBodyweight) && s.reps !== "");
+    const src = [...e.sets].reverse().find((s) => isFilled(s, e.targetType, e.isBodyweight));
     if (!src) return e;
     return {
       ...e,
       sets: e.sets.map((s) =>
         s.isCompleted || s.localId === src.localId
           ? s
-          : { ...s, weightLbs: src.weightLbs, reps: src.reps, rpe: src.rpe, isGhostFilled: false }
+          : { ...s, ...copyFields(src, e.targetType), isGhostFilled: false }
       ),
     };
   });
@@ -104,7 +105,7 @@ export function moveExercise(session: ActiveSession, exerciseLocalId: string, di
   return { ...session, exercises: reindex(exercises) };
 }
 
-export type SwapTarget = Pick<ActiveExercise, "exerciseId" | "exerciseName" | "muscleGroup" | "ghostSets" | "histPRs" | "isBodyweight" | "perHand">;
+export type SwapTarget = Pick<ActiveExercise, "exerciseId" | "exerciseName" | "muscleGroup" | "ghostSets" | "histPRs" | "isBodyweight" | "perHand" | "targetType">;
 
 /** Replace the movement but keep the sets. PR badges were earned against the old movement, so they're cleared. */
 export function swapExercise(session: ActiveSession, exerciseLocalId: string, target: SwapTarget): ActiveSession {

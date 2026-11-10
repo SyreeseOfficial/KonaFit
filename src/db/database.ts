@@ -179,6 +179,12 @@ const MIGRATIONS: ((database: SQLite.SQLiteDatabase) => Promise<void>)[] = [
     await addColumn(database, "goals", "start_date", "INTEGER");
     await addColumn(database, "goals", "end_date", "INTEGER");
   },
+  // 16: time / distance / calories exercises log their own values (distance in miles); weight_lbs and reps stay null for them
+  async (database) => {
+    await addColumn(database, "logged_sets", "duration_sec", "INTEGER");
+    await addColumn(database, "logged_sets", "distance_mi", "REAL");
+    await addColumn(database, "logged_sets", "calories", "INTEGER");
+  },
 ];
 
 export const DEFAULT_BOXING_CHIPS: [group: string, names: string[]][] = [

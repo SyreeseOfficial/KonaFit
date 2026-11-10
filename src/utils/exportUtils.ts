@@ -1,6 +1,7 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { Share, Platform } from "react-native";
-import type { WorkoutDetail, CsvRow } from "../db/historyQueries";
+import type { WorkoutDetail, CsvRow, SetRecord } from "../db/historyQueries";
+import { columnsFor, setSummary } from "./setFields";
 import { localDateKey, formatTime } from "./time";
 import { compactNumber } from "./format";
 import { buildFullExport } from "../db/exportJson";
@@ -30,6 +31,12 @@ export const formatVolume = (lbs: number): string => `${compactNumber(lbs)} lbs`
 
 // ─── Markdown export ──────────────────────────────────────────────────────────
 
+/** "135 lbs × 5 reps" for lifts; "1:30", "2 mi · 18:00", "250 cal" for time/distance/calories exercises. */
+function setLine(s: SetRecord, targetType: string): string {
+  if (!columnsFor(targetType).includes("weightLbs")) return setSummary(s, targetType);
+  return `${s.weight_lbs != null ? `${s.weight_lbs} lbs` : "—"} × ${s.reps != null ? `${s.reps} reps` : "—"}`;
+}
+
 export function buildWorkoutMarkdown(workout: WorkoutDetail): string {
   const lines: string[] = [];
   lines.push(`# ${formatDate(workout.started_at)}`);
@@ -49,20 +56,16 @@ export function buildWorkoutMarkdown(workout: WorkoutDetail): string {
     if (warmSets.length > 0) {
       lines.push("**Warm-up:**");
       warmSets.forEach((s) => {
-        const w = s.weight_lbs != null ? `${s.weight_lbs} lbs` : "—";
-        const r = s.reps != null ? `${s.reps} reps` : "—";
-        lines.push(`- W${s.set_number}: ${w} × ${r}`);
+        lines.push(`- W${s.set_number}: ${setLine(s, ex.target_type)}`);
       });
       lines.push("");
     }
 
     workSets.forEach((s) => {
-      const w = s.weight_lbs != null ? `${s.weight_lbs} lbs` : "—";
-      const r = s.reps != null ? `${s.reps} reps` : "—";
       const rpe = s.rpe != null ? ` @ RPE ${s.rpe}` : "";
       const done = s.is_completed ? " ✓" : "";
       const note = s.notes ? ` — ${s.notes}` : "";
-      lines.push(`- Set ${s.set_number}: ${w} × ${r}${rpe}${done}${note}`);
+      lines.push(`- Set ${s.set_number}: ${setLine(s, ex.target_type)}${rpe}${done}${note}`);
     });
     lines.push("");
   }
@@ -85,7 +88,7 @@ export async function shareWorkoutMarkdown(workout: WorkoutDetail): Promise<void
 const CSV_HEADERS = [
   "Date", "Time", "Duration (min)", "Workout ID",
   "Exercise", "Muscle Group",
-  "Set", "Weight (lbs)", "Reps", "RPE", "Notes", "Warmup", "Completed",
+  "Set", "Weight (lbs)", "Reps", "Duration (sec)", "Distance (mi)", "Calories", "RPE", "Notes", "Warmup", "Completed",
 ];
 
 function escapeCsv(val: string | number | null): string {
@@ -105,7 +108,7 @@ export function buildCsv(rows: CsvRow[]): string {
     lines.push([
       r.date, r.time, r.duration_min, r.workout_id,
       r.exercise, r.muscle_group,
-      r.set_number, r.weight_lbs, r.reps, r.rpe, r.notes,
+      r.set_number, r.weight_lbs, r.reps, r.duration_sec, r.distance_mi, r.calories, r.rpe, r.notes,
       r.is_warmup, r.is_completed,
     ].map(escapeCsv).join(","));
   }

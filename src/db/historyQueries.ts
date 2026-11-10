@@ -25,6 +25,9 @@ export type SetRecord = {
   set_number: number;
   weight_lbs: number | null;
   reps: number | null;
+  duration_sec: number | null;
+  distance_mi: number | null; // miles
+  calories: number | null;
   rpe: number | null;
   notes: string | null;
   is_warmup: number;
@@ -38,6 +41,7 @@ export type ExerciseRecord = {
   order_index: number;
   notes: string | null;
   is_bodyweight: boolean; // weight is added load; may be negative (assisted)
+  target_type: string; // picks which columns the sets show
   sets: SetRecord[];
 };
 
@@ -129,9 +133,10 @@ export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail
 
   const exerciseRows = await db.getAllAsync<{
     id: number; exercise_name: string; muscle_group: string; order_index: number; notes: string | null;
-    bw_lbs: number; is_bodyweight: number; hands: number;
+    bw_lbs: number; is_bodyweight: number; hands: number; target_type: string;
   }>(
     `SELECT le.id, le.exercise_name, COALESCE(e.muscle_group, '') as muscle_group, le.order_index, le.notes,
+            COALESCE(e.target_type, 'reps') AS target_type,
             CASE WHEN ${isBodyweightSql()} THEN COALESCE(${LATEST_BODYWEIGHT_SQL}, 0) ELSE 0 END AS bw_lbs,
             ${isBodyweightSql()} AS is_bodyweight,
             ${handsSql()} AS hands
@@ -146,7 +151,7 @@ export async function getWorkoutDetail(workoutId: number): Promise<WorkoutDetail
   const exercises: ExerciseRecord[] = await Promise.all(
     exerciseRows.map(async (ex) => {
       const sets = await db.getAllAsync<SetRecord>(
-        `SELECT id, set_number, weight_lbs, reps, rpe, notes, is_warmup, is_completed
+        `SELECT id, set_number, weight_lbs, reps, duration_sec, distance_mi, calories, rpe, notes, is_warmup, is_completed
          FROM logged_sets WHERE logged_exercise_id = ? ORDER BY set_number ASC`,
         [ex.id]
       );
@@ -183,6 +188,9 @@ export type CsvRow = {
   set_number: number;
   weight_lbs: number | null;
   reps: number | null;
+  duration_sec: number | null;
+  distance_mi: number | null;
+  calories: number | null;
   rpe: number | null;
   notes: string | null;
   is_warmup: string;
@@ -195,13 +203,14 @@ export async function getAllWorkoutDataForExport(): Promise<CsvRow[]> {
     started_at: number; duration_seconds: number | null; workout_id: number;
     exercise_name: string; muscle_group: string;
     set_number: number; weight_lbs: number | null; reps: number | null;
+    duration_sec: number | null; distance_mi: number | null; calories: number | null;
     rpe: number | null; notes: string | null; is_warmup: number; is_completed: number;
   }>(
     `SELECT
        w.started_at, w.duration_seconds, w.id as workout_id,
        le.exercise_name,
        COALESCE(e.muscle_group, '') as muscle_group,
-       ls.set_number, ls.weight_lbs, ls.reps, ls.rpe, ls.notes,
+       ls.set_number, ls.weight_lbs, ls.reps, ls.duration_sec, ls.distance_mi, ls.calories, ls.rpe, ls.notes,
        ls.is_warmup, ls.is_completed
      FROM logged_sets ls
      JOIN logged_exercises le ON ls.logged_exercise_id = le.id
@@ -223,6 +232,9 @@ export async function getAllWorkoutDataForExport(): Promise<CsvRow[]> {
       set_number: r.set_number,
       weight_lbs: r.weight_lbs,
       reps: r.reps,
+      duration_sec: r.duration_sec,
+      distance_mi: r.distance_mi,
+      calories: r.calories,
       rpe: r.rpe,
       notes: r.notes,
       is_warmup: r.is_warmup ? "Yes" : "No",
@@ -242,12 +254,15 @@ export async function updateLoggedSetValues(
   setId: number,
   weightLbs: number | null,
   reps: number | null,
-  rpe: number | null
+  rpe: number | null,
+  durationSec: number | null = null,
+  distanceMi: number | null = null,
+  calories: number | null = null
 ): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
-    "UPDATE logged_sets SET weight_lbs = ?, reps = ?, rpe = ? WHERE id = ?",
-    [weightLbs, reps, rpe, setId]
+    "UPDATE logged_sets SET weight_lbs = ?, reps = ?, rpe = ?, duration_sec = ?, distance_mi = ?, calories = ? WHERE id = ?",
+    [weightLbs, reps, rpe, durationSec, distanceMi, calories, setId]
   );
 }
 

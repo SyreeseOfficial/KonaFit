@@ -16,7 +16,8 @@ import { MoreHorizontal, X, FileText, PlusCircle, ArrowLeftRight, ChevronDown, C
 import { SetRow } from "./SetRow";
 import { ExerciseHistoryModal } from "./ExerciseHistoryModal";
 import { ExerciseHint } from "./ExerciseHint";
-import type { ActiveExercise, ActiveSet } from "../../types/workout";
+import type { ActiveExercise, SetPatch } from "../../types/workout";
+import { columnsFor, FIELD_META } from "../../utils/setFields";
 
 type Props = {
   isCurrent?: boolean;
@@ -29,7 +30,7 @@ type Props = {
   onMoveDown?: () => void;
   onAddSet: () => void;
   onRemoveSet: (setLocalId: string) => void;
-  onUpdateSet: (setLocalId: string, patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe" | "notes" | "setType">>) => void;
+  onUpdateSet: (setLocalId: string, patch: SetPatch) => void;
   onCopyLastToAll: () => void;
   onApplySuggestion: (weight: number, reps: number) => void;
   onAddWarmups: (count: number) => void;
@@ -184,9 +185,11 @@ export function ExerciseBlock({
           <View className="flex-row items-center px-3 pt-1 pb-2">
             <Text className="w-10 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Set</Text>
             <Text className="flex-1 mx-1 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Previous</Text>
-            <Text className="w-16 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">{exercise.perHand ? "Lbs/hd" : "Lbs"}</Text>
-            <Text className="w-12 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">Reps</Text>
-            <Text className="w-10 mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs">RPE</Text>
+            {columnsFor(exercise.targetType).map((f) => (
+              <Text key={f} className={`${FIELD_META[f].width} mr-1.5 text-center font-mono text-text-muted dark:text-zinc-500 text-xs`}>
+                {f === "weightLbs" && exercise.perHand ? "Lbs/hd" : FIELD_META[f].label}
+              </Text>
+            ))}
             <View className="w-12" />
           </View>
 
@@ -196,6 +199,7 @@ export function ExerciseBlock({
               key={set.localId}
               set={set}
               bodyweight={exercise.isBodyweight}
+              targetType={exercise.targetType}
               prevSet={exercise.sets[i - 1]}
               isNext={isCurrent && i === exercise.sets.findIndex((x) => !x.isCompleted)}
               ghost={exercise.ghostSets.find((g) => g.setNumber === set.setNumber)}

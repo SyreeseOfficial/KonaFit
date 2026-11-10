@@ -3,7 +3,7 @@ import { AppState, Alert } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { kvStore } from "../utils/kvStore";
 import { haptics } from "../utils/haptics";
-import type { ActiveSession, ActiveExercise, ActiveSet } from "../types/workout";
+import type { ActiveSession, ActiveExercise, ActiveSet, SetPatch } from "../types/workout";
 import {
   createWorkout,
   finalizeWorkout,
@@ -30,6 +30,7 @@ import { computePRBadges, isRealPR } from "../utils/prBadges";
 import type { PRBadge } from "../types/workout";
 import * as R from "../utils/sessionReducers";
 import { warmupRamp } from "../utils/training";
+import { ghostExtra, copyFields } from "../utils/setFields";
 import { APP_VERSION } from "../utils/appVersion";
 
 const SESSION_KEY = "@konafit_active_session_v1";
@@ -244,6 +245,7 @@ export function useWorkoutSession() {
                 isGhostFilled: true,
               }
             : {}),
+          ...ghostExtra(g),
         });
       }
 
@@ -260,6 +262,7 @@ export function useWorkoutSession() {
         histPRs,
         isBodyweight: info.isBodyweight,
             perHand: info.perHand,
+            targetType: info.targetType,
       };
 
       updateSession((prev) => ({
@@ -304,6 +307,7 @@ export function useWorkoutSession() {
                 isGhostFilled: true,
               }
             : {}),
+          ...ghostExtra(g),
         });
       }
       const newExercise: ActiveExercise = {
@@ -320,6 +324,7 @@ export function useWorkoutSession() {
         histPRs,
         isBodyweight: info.isBodyweight,
             perHand: info.perHand,
+            targetType: info.targetType,
       };
       setLoggedExerciseSuperset([target.dbId, dbId], supersetId).catch(console.error);
       updateSession((prev) => {
@@ -337,10 +342,10 @@ export function useWorkoutSession() {
       if (!exercise?.dbId) return;
       const setNumber = exercise.sets.length + 1;
       const dbId = await createLoggedSet(exercise.dbId, setNumber);
-      // Copy lbs/reps/rpe from the last set so the user doesn't retype them
+      // Copy the type's inputs (lbs/reps/rpe, time, ...) from the last set so the user doesn't retype them
       const lastSet = exercise.sets[exercise.sets.length - 1];
       const prefill = lastSet
-        ? { weightLbs: lastSet.weightLbs, reps: lastSet.reps, rpe: lastSet.rpe, isGhostFilled: false }
+        ? { ...copyFields(lastSet, exercise.targetType), isGhostFilled: false }
         : {};
       updateSession((prev) => ({
         ...prev,
@@ -384,7 +389,7 @@ export function useWorkoutSession() {
     (
       exerciseLocalId: string,
       setLocalId: string,
-      patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe" | "notes" | "isWarmup" | "isCompleted" | "setType">>
+      patch: SetPatch & Partial<Pick<ActiveSet, "isWarmup" | "isCompleted">>
     ) => {
       updateSession((prev) => ({
         ...prev,
@@ -394,7 +399,7 @@ export function useWorkoutSession() {
             ...e,
             sets: e.sets.map((s) => {
               if (s.localId !== setLocalId) return s;
-              const isEditingValue = "weightLbs" in patch || "reps" in patch;
+              const isEditingValue = ["weightLbs", "reps", "duration", "distance", "calories"].some((k) => k in patch);
               return { ...s, ...patch, ...(isEditingValue ? { isGhostFilled: false } : {}) };
             }),
           };
@@ -621,6 +626,7 @@ export function useWorkoutSession() {
           histPRs,
           isBodyweight: info.isBodyweight,
             perHand: info.perHand,
+            targetType: info.targetType,
         })
       );
     },
@@ -700,7 +706,7 @@ export function useWorkoutSession() {
               isWarmup,
               ...(g?.weightLbs != null && g?.reps != null
                 ? { weightLbs: String(g.weightLbs), reps: String(g.reps), isGhostFilled: true }
-                : {}),
+                : ghostExtra(g)),
             });
           }
           let supersetId: string | undefined;
@@ -722,6 +728,7 @@ export function useWorkoutSession() {
             histPRs,
             isBodyweight: info.isBodyweight,
             perHand: info.perHand,
+            targetType: info.targetType,
             targetReps: pe.targetReps,
             targetRpe: pe.targetRpe,
           };

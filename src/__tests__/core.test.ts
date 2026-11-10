@@ -145,12 +145,12 @@ describe("buildCsv", () => {
   const row = {
     date: "2026-06-15", time: "11:30 PM", duration_min: 60, workout_id: 1,
     exercise: 'Curl, "EZ"', muscle_group: "Biceps", set_number: 1,
-    weight_lbs: 40, reps: 10, rpe: null, notes: null, is_warmup: "No", is_completed: "Yes",
+    weight_lbs: 40, reps: 10, duration_sec: null, distance_mi: null, calories: null, rpe: null, notes: null, is_warmup: "No", is_completed: "Yes",
   };
   it("writes a header and quotes commas and quotes", () => {
     const lines = buildCsv([row]).split("\n");
     expect(lines[0].startsWith("Date,Time")).toBe(true);
-    expect(lines[1]).toBe('2026-06-15,11:30 PM,60,1,"Curl, ""EZ""",Biceps,1,40,10,,,No,Yes');
+    expect(lines[1]).toBe('2026-06-15,11:30 PM,60,1,"Curl, ""EZ""",Biceps,1,40,10,,,,,,No,Yes');
   });
   it("prefixes formula-like text with a quote", () => {
     expect(buildCsv([{ ...row, exercise: "=SUM(A1)" }]).split("\n")[1]).toContain(",'=SUM(A1),");

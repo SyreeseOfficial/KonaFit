@@ -3,8 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, Modal, Pressable, useColorSche
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { Check, Trash2 } from "lucide-react-native";
 import { haptics } from "../../utils/haptics";
-import { cleanDecimal, cleanInt, MAX_WEIGHT, MAX_REPS } from "../../utils/numberInput";
-import type { ActiveSet, GhostSet, PRBadge, SetType } from "../../types/workout";
+import { columnsFor, isFilled, copyFields, ghostText, FIELD_META, type SetField } from "../../utils/setFields";
+import type { ActiveSet, GhostSet, PRBadge, SetPatch, SetType } from "../../types/workout";
 
 const PR_LABELS: Record<PRBadge, string> = { W: "PR WT", R: "PR REP", V: "PR VOL", F: "FIRST TIME" };
 
@@ -39,23 +39,24 @@ function PRBadgeChip({ badge }: { badge: PRBadge }) {
 type Props = {
   set: ActiveSet;
   bodyweight?: boolean; // weight is added load: may be negative (assisted)
+  targetType?: string; // picks the inputs: lbs/reps/rpe, time, distance + time, calories
   ghost?: GhostSet;
   prevSet?: ActiveSet;
   isNext?: boolean; // the set to do now
-  onUpdate: (patch: Partial<Pick<ActiveSet, "weightLbs" | "reps" | "rpe" | "notes" | "setType">>) => void;
+  onUpdate: (patch: SetPatch) => void;
   onCommitEdit: () => void;
   onToggleComplete: () => void;
   onToggleWarmup: () => void;
   onRemove: () => void;
 };
 
-export function SetRow({ set, bodyweight, ghost, prevSet, isNext, onUpdate, onCommitEdit, onToggleComplete, onToggleWarmup, onRemove }: Props) {
+export function SetRow({ set, bodyweight, targetType, ghost, prevSet, isNext, onUpdate, onCommitEdit, onToggleComplete, onToggleWarmup, onRemove }: Props) {
   const completed = set.isCompleted;
-  const [focused, setFocused] = useState<"weight" | "reps" | "rpe" | null>(null);
+  const [focused, setFocused] = useState<SetField | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const repsRef = useRef<TextInput>(null);
-  const rpeRef = useRef<TextInput>(null);
+  const columns = columnsFor(targetType);
+  const inputRefs = useRef<Partial<Record<SetField, TextInput | null>>>({});
   const kind: Kind = set.isWarmup ? "warmup" : set.setType ?? "normal";
 
   const pickKind = (k: Kind) => {
@@ -66,13 +67,7 @@ export function SetRow({ set, bodyweight, ghost, prevSet, isNext, onUpdate, onCo
   };
   const note = set.notes ?? "";
 
-  const previousText = set.isGhostFilled
-    ? "—"
-    : ghost?.weightLbs != null && ghost?.reps != null
-    ? `${ghost.weightLbs} × ${ghost.reps}`
-    : ghost?.weightLbs != null
-    ? `${ghost.weightLbs} lb`
-    : "—";
+  const previousText = set.isGhostFilled ? "—" : ghostText(ghost, targetType);
 
   const inputBase = "h-12 bg-surface-2 dark:bg-zinc-800 text-center font-mono-medium text-text-primary dark:text-white text-base rounded-lg";
   const focusBorder = { borderWidth: 1, borderColor: useColorScheme() === "dark" ? "#3B82F6" : "#2563EB" };
@@ -112,50 +107,32 @@ export function SetRow({ set, bodyweight, ghost, prevSet, isNext, onUpdate, onCo
         </Text>
       </View>
 
-      {/* Lbs */}
-      <TextInput
-        className={`${inputBase} w-16 mr-1.5`}
-        value={set.weightLbs}
-        onChangeText={(v) => { const c = cleanDecimal(v, MAX_WEIGHT, bodyweight); if (c !== null) onUpdate({ weightLbs: c }); }}
-        keyboardType={bodyweight ? "numbers-and-punctuation" : "decimal-pad"}
-        selectTextOnFocus
-        returnKeyType="next"
-        blurOnSubmit={false}
-        onSubmitEditing={() => repsRef.current?.focus()}
-        onFocus={() => setFocused("weight")}
-        onBlur={handleBlur}
-        style={[set.isGhostFilled ? { opacity: 0.45 } : undefined, focused === "weight" ? focusBorder : undefined]}
-      />
-
-      {/* Reps */}
-      <TextInput
-        ref={repsRef}
-        className={`${inputBase} w-12 mr-1.5`}
-        value={set.reps}
-        onChangeText={(v) => { const c = cleanInt(v, MAX_REPS); if (c !== null) onUpdate({ reps: c }); }}
-        keyboardType="number-pad"
-        selectTextOnFocus
-        returnKeyType="next"
-        blurOnSubmit={false}
-        onSubmitEditing={() => rpeRef.current?.focus()}
-        onFocus={() => setFocused("reps")}
-        onBlur={handleBlur}
-        style={[set.isGhostFilled ? { opacity: 0.45 } : undefined, focused === "reps" ? focusBorder : undefined]}
-      />
-
-      {/* RPE */}
-      <TextInput
-        ref={rpeRef}
-        className={`${inputBase} w-10 mr-1.5`}
-        value={set.rpe}
-        onChangeText={(v) => { const c = cleanDecimal(v, 10); if (c !== null) onUpdate({ rpe: c }); }}
-        keyboardType="decimal-pad"
-        selectTextOnFocus
-        returnKeyType="done"
-        onFocus={() => setFocused("rpe")}
-        onBlur={handleBlur}
-        style={[{ fontSize: 14 }, focused === "rpe" ? focusBorder : undefined]}
-      />
+      {/* Inputs for this exercise type */}
+      {columns.map((f, i) => {
+        const meta = FIELD_META[f];
+        const next = columns[i + 1];
+        const weight = f === "weightLbs";
+        return (
+          <TextInput
+            key={f}
+            ref={(r) => { inputRefs.current[f] = r; }}
+            className={`${inputBase} ${meta.width} mr-1.5`}
+            value={set[f] ?? ""}
+            onChangeText={(v) => { const c = meta.clean(v, bodyweight); if (c !== null) onUpdate({ [f]: c }); }}
+            keyboardType={weight && bodyweight ? "numbers-and-punctuation" : meta.keyboard}
+            selectTextOnFocus
+            returnKeyType={next ? "next" : "done"}
+            blurOnSubmit={!next}
+            onSubmitEditing={next ? () => inputRefs.current[next]?.focus() : undefined}
+            onFocus={() => setFocused(f)}
+            onBlur={handleBlur}
+            style={[
+              f === "rpe" ? { fontSize: 14 } : set.isGhostFilled ? { opacity: 0.45 } : undefined,
+              focused === f ? focusBorder : undefined,
+            ]}
+          />
+        );
+      })}
 
       {/* Complete */}
       <TouchableOpacity
@@ -192,9 +169,9 @@ export function SetRow({ set, bodyweight, ghost, prevSet, isNext, onUpdate, onCo
     {/* Quick-entry toolbar: repeat previous set + note (ml-auto keeps Note right when alone) */}
     {focused !== null && (
       <View className="flex-row items-center px-3 pb-2">
-        {prevSet && prevSet.weightLbs !== "" && prevSet.reps !== "" && (
+        {prevSet && isFilled(prevSet, targetType, bodyweight) && (
           <TouchableOpacity
-            onPress={() => onUpdate({ weightLbs: prevSet.weightLbs, reps: prevSet.reps })}
+            onPress={() => onUpdate(copyFields(prevSet, targetType, false))}
             className={chip}
             activeOpacity={0.7}
           >
