@@ -81,27 +81,13 @@ Everything here was worked through in the Features round: finished jobs are unde
 
 ## 🎨 Look & feel
 
-- 🟡 **Bigger text test.** Try 200% font size on both phones. Fixed row heights probably clip.
-- 🟡 **Onboarding:** 3 screens to pick units, weekly goal, starter program and plate set.
-- 🟡 **Undo for goals and photos** too, like sets already have.
-- 🟡 **"Workout in progress" banner** on every tab, with elapsed time and a way back.
-- 🟡 **History swipe to repeat, long-press to delete.** Monthly headers with totals. Undo for deletions.
-- 🟡 **Swipe a set:** left to delete, right to duplicate. Haptic + undo.
-- 🟡 **Tab badges:** a dot for an unfinished workout on Train, a dot for a new PR on Stats.
-- 🟡 **"Previous" in SetRow:** show date and RPE. Tap to copy it into the row. Long-press to see the last 3 sessions.
-- 🟡 **Faster weight steps:** ±2.5, ±5, ±10, ±25 with press-and-hold. Good for 315 → 405 jumps.
-- 🟡 **Show e1RM and a delta** ("+5 lb / +1 rep") after you finish a set.
-- 🟡 **Undo a mistaken tick** with a 5-second snackbar.
-- 🟡 **Workout-complete screen:** share image, notes prompt, and a peek at the next planned session.
-- 🟡 **Tap on Weekly Goal** should show progress (see Bugs).
+*Empty: every job was parked in ⏸️ Skipped for now this round.*
 
 ---
 
 ## ♿ Accessibility
 
-- 🟡 **Labels everywhere.** The app has exactly **one** `accessibilityLabel`. Icon-only buttons (set done, add set, rest timer ±15 s, menus) are silent for TalkBack / VoiceOver. Add `accessibilityRole`, `accessibilityLabel` and `accessibilityState` to every Touchable in `SetRow`, `ExerciseBlock`, `RestTimerBar`, `WorkspaceHeader` and the tab bar. *(Parked in Skipped for now.)*
-- 🟡 **Roles and hints.** Add roles for buttons, tabs, switches. Add hints for hidden gestures (long-press to remove a set).
-- 🟡 **Dynamic Type.** Add `maxFontSizeMultiplier` so 200% text doesn't break `SetRow`'s fixed `h-11` inputs.
+*Empty: every job was parked in ⏸️ Skipped for now this round.*
 
 ---
 
@@ -177,11 +163,6 @@ Claude parks jobs here when it needs a choice or help from me. Each entry: origi
   - *Question:* a custom goal like "Run a 5K" has no number to measure. What should "progress" mean?
   - *Recommended:* leave custom goals as a tick box (no bar). If you want a bar, add an optional "target number + unit" and a small "update progress" button on the card.
 
-- **Category: ✨ Features.** 🟡 **Progressive overload hints: what is "the top of the range"?**
-  - *Done already:* the hint shows under "Last time" and applies with one tap (see Done).
-  - *Question:* the exercise has no rep range of its own, so I used 8 reps for compound lifts and 10 for isolation lifts, and "RPE not logged" counts as easy. OK, or do you want a range per exercise?
-  - *Recommended:* keep these defaults. Programs with a target rep/RPE already use their own target.
-
 - **Category: ✨ Features.** 🟡 **Cardio and timed exercises.** Duration, distance, pace. Add a countdown / interval timer for HIIT, Tabata and EMOM.
   - *Question:* this needs new set columns (seconds, distance), a different set row, and a timer that works with the screen locked (needs `expo-notifications`, which is in Skipped).
   - *Recommended:* ship duration + distance fields and pace first (no timer). Do the interval timer together with the rest-timer notification work.
@@ -189,10 +170,6 @@ Claude parks jobs here when it needs a choice or help from me. Each entry: origi
 - **Category: ✨ Features.** 🟡 **Remember bar and plates per exercise.** Show "per side" as plain text.
   - *Question:* earlier you chose one remembered bar for everything. Switch to per exercise?
   - *Recommended:* yes: store `{bar, disabled plates}` per exercise id in the key-value store and add a "per side: 2 × 45, 1 × 25" text line. Needs the plate calculator opened from an exercise.
-
-- **Category: ✨ Features.** 🟡 **Dumbbell / kettlebell steps** from the user's real rack. **Plates and bar per gym.** **Plate-loaded vs selectorized machine toggle.**
-  - *Question:* these three all change what "next weight up" means. Do you want one "equipment" model (per gym: bar, plates, dumbbell list, machine step) used by hints and the plate calculator?
-  - *Recommended:* yes. Add `bar_lbs`, `plates_json`, `dumbbells_json` to `locations` and `exercises.load_type`. Round overload hints to the gym's real steps. Done together it is about half a day.
 
 - **Category: ✨ Features.** 🟡 **Manual training max / 1RM per exercise** (`exercise_maxes` table). **Percentage calculator → active workout** (one tap to send sets).
   - *Question:* which number should the % calculator start from: the manual max if set, else the best estimated 1RM of the last 90 days?
@@ -202,21 +179,9 @@ Claude parks jobs here when it needs a choice or help from me. Each entry: origi
   - *Question:* which one first? They all need a program to remember "where you are" (week, cycle, training max).
   - *Recommended:* double progression first (uses the program's rep range and the overload hint), then linear. Leave 5/3/1 and GZCL until training maxes exist.
 
-- **Category: ✨ Features.** 🟡 **Strength standards** (beginner → elite by bodyweight).
-  - *Question:* standards depend on sex and on which lifts count. Exercise ids change between installs, so matching has to be by name. OK to cover only squat, bench, deadlift and overhead press, with a "male/female" setting?
-  - *Recommended:* yes, and keep the table in one file so it is easy to correct.
-
-- **Category: ✨ Features.** 🟡 **Different units per field:** weight, distance, measurements.
-  - *Question:* everything is stored in pounds. Keep storing pounds and convert only when showing and typing (my recommendation), or store the unit with each value?
-  - *Recommended:* store pounds, add a unit setting per field, and add the `unit` column to CSV. It touches every screen that shows weight, so do it as its own round.
-
 - **Category: ✨ Features.** 🟡 **Share a workout as an image** with PR highlights. **Social-lite profile card** as an image.
   - *Question:* making a real image file needs `react-native-view-shot` (and `expo-sharing` for the file). Both are native modules, so you would need a new dev-client build. OK?
   - *Recommended:* yes, add both and rebuild once. The card view already exists.
-
-- **Category: ✨ Features.** 🟡 **Notes templates** (part of "How did it feel" rating) and the **dumbbell-pair helper** (part of "More Tools").
-  - *Question:* what should a note template be (tap-to-insert phrases like "felt strong", or a fill-in form), and what should the pair helper do (total weight of two dumbbells, or which pair makes a target)?
-  - *Recommended:* notes: a row of 4 editable phrase chips in the notes box. Pair helper: skip it; the % and plate tools cover it.
 
 ---
 
@@ -230,7 +195,6 @@ Claude parks jobs here when it needs a choice or help from me. Each entry: origi
 
 You marked these as "skip for now." They stay on the list so they aren't lost.
 
-- ♿ **Accessibility labels** (see Accessibility above).
 - 📊 **Backup is incomplete.** Make one zip: `konafit.db` + `photos/` + `manifest.json` (app version, schema version, date). Restore refuses a newer schema. Run `PRAGMA wal_checkpoint(TRUNCATE)` (or `VACUUM INTO`) first, because WAL is on.
 - ✨ **Rest timer auto-start.** When a non-warm-up set is ticked, start the timer. Heavy lifts 3 min, isolation 60 s. RPE 9+ adds 30 s.
 - ✨ **Rest timer end cue.** Haptic, sound, and a local notification so it fires with the screen locked.
@@ -302,10 +266,26 @@ You marked these as "skip for now." They stay on the list so they aren't lost.
 - 🟡 **Lock-screen state.** While backgrounded, show elapsed time and the rest timer (Android service / iOS Live Activity).
 - 🟡 **Floating mini plate calculator** on the weight field.
 - 🟡 **Silent mode** setting turns off all sounds and haptics.
+- 🟡 **Bigger text test.** Try 200% font size on both phones. Fixed row heights probably clip.
+- 🟡 **Onboarding:** 3 screens to pick units, weekly goal, starter program and plate set.
+- 🟡 **Undo for goals and photos** too, like sets already have.
+- 🟡 **"Workout in progress" banner** on every tab, with elapsed time and a way back.
+- 🟡 **History swipe to repeat, long-press to delete.** Monthly headers with totals. Undo for deletions.
+- 🟡 **Swipe a set:** left to delete, right to duplicate. Haptic + undo.
+- 🟡 **Tab badges:** a dot for an unfinished workout on Train, a dot for a new PR on Stats.
+- 🟡 **"Previous" in SetRow:** show date and RPE. Tap to copy it into the row. Long-press to see the last 3 sessions.
+- 🟡 **Faster weight steps:** ±2.5, ±5, ±10, ±25 with press-and-hold. Good for 315 → 405 jumps.
+- 🟡 **Show e1RM and a delta** ("+5 lb / +1 rep") after you finish a set.
+- 🟡 **Undo a mistaken tick** with a 5-second snackbar.
+- 🟡 **Workout-complete screen:** share image, notes prompt, and a peek at the next planned session.
+- 🟡 **Tap on Weekly Goal** should show progress (see Bugs).
 
 ### Moved from ♿ Accessibility
 - 🟡 **Reduce motion.** `PRBadgeChip` springs and `LayoutAnimation` ignores the phone setting. Check `AccessibilityInfo.isReduceMotionEnabled()`.
 - 🟡 **Screen reader actions** on `SetRow` (complete, warm-up, remove). Long-press can't be triggered by a screen reader.
+- 🟡 **Labels everywhere.** The app has exactly **one** `accessibilityLabel`. Icon-only buttons (set done, add set, rest timer ±15 s, menus) are silent for TalkBack / VoiceOver. Add `accessibilityRole`, `accessibilityLabel` and `accessibilityState` to every Touchable in `SetRow`, `ExerciseBlock`, `RestTimerBar`, `WorkspaceHeader` and the tab bar.
+- 🟡 **Roles and hints.** Add roles for buttons, tabs, switches. Add hints for hidden gestures (long-press to remove a set).
+- 🟡 **Dynamic Type.** Add `maxFontSizeMultiplier` so 200% text doesn't break `SetRow`'s fixed `h-11` inputs.
 
 ### Moved from 🔒 Privacy & security
 - 🟡 **Optional app lock** (fingerprint / face with `expo-local-authentication`) for photos and app open.
@@ -323,6 +303,24 @@ You marked these as "skip for now." They stay on the list so they aren't lost.
 - 🟡 **Watch Play Console vitals** (crash-free sessions, ANRs). Note how to read them.
 - 🟡 **Schema docs + ER diagram** generated from the migrations.
 - 🟡 **Dev-client build docs** (Node version, `npx expo start`, `npm test`).
+
+### Moved from 🙋 Needs my decision
+- **Category: ✨ Features.** 🟡 **Progressive overload hints: what is "the top of the range"?**
+  - *Done already:* the hint shows under "Last time" and applies with one tap (see Done).
+  - *Question:* the exercise has no rep range of its own, so I used 8 reps for compound lifts and 10 for isolation lifts, and "RPE not logged" counts as easy. OK, or do you want a range per exercise?
+  - *Recommended:* keep these defaults. Programs with a target rep/RPE already use their own target.
+- **Category: ✨ Features.** 🟡 **Dumbbell / kettlebell steps** from the user's real rack. **Plates and bar per gym.** **Plate-loaded vs selectorized machine toggle.**
+  - *Question:* these three all change what "next weight up" means. Do you want one "equipment" model (per gym: bar, plates, dumbbell list, machine step) used by hints and the plate calculator?
+  - *Recommended:* yes. Add `bar_lbs`, `plates_json`, `dumbbells_json` to `locations` and `exercises.load_type`. Round overload hints to the gym's real steps. Done together it is about half a day.
+- **Category: ✨ Features.** 🟡 **Strength standards** (beginner → elite by bodyweight).
+  - *Question:* standards depend on sex and on which lifts count. Exercise ids change between installs, so matching has to be by name. OK to cover only squat, bench, deadlift and overhead press, with a "male/female" setting?
+  - *Recommended:* yes, and keep the table in one file so it is easy to correct.
+- **Category: ✨ Features.** 🟡 **Different units per field:** weight, distance, measurements.
+  - *Question:* everything is stored in pounds. Keep storing pounds and convert only when showing and typing (my recommendation), or store the unit with each value?
+  - *Recommended:* store pounds, add a unit setting per field, and add the `unit` column to CSV. It touches every screen that shows weight, so do it as its own round.
+- **Category: ✨ Features.** 🟡 **Notes templates** (part of "How did it feel" rating) and the **dumbbell-pair helper** (part of "More Tools").
+  - *Question:* what should a note template be (tap-to-insert phrases like "felt strong", or a fill-in form), and what should the pair helper do (total weight of two dumbbells, or which pair makes a target)?
+  - *Recommended:* notes: a row of 4 editable phrase chips in the notes box. Pair helper: skip it; the % and plate tools cover it.
 
 ---
 
