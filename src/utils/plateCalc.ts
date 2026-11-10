@@ -48,7 +48,7 @@ export function calculatePlates(
   return results;
 }
 
-export type PlateLoad = {
+type PlateLoad = {
   results: PlateResult[] | null; // null when the target is lighter than the bar
   loadedLbs: number;             // what actually ends up on the bar: closest loadable at or under the target
   leftoverLbs: number;           // target - loadedLbs (0 when exact)

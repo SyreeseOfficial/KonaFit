@@ -16,7 +16,7 @@ import type { WorkoutFeel } from "../../db/workoutQueries";
 import { confirm } from "../../utils/confirm";
 
 /** "7.5" -> 7.5; blank or nonsense -> null; capped at 24 h. */
-export const parseSleepHours = (text: string): number | null => {
+const parseSleepHours = (text: string): number | null => {
   const n = parseFloat(text.replace(",", "."));
   return Number.isFinite(n) && n > 0 ? Math.min(24, n) : null;
 };

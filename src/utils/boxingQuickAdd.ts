@@ -1,7 +1,7 @@
 import { boxingName, MIN_WORK_SEC } from "./boxingTimer";
 import type { BoxingSession } from "../types/boxing";
 
-export type QuickAddInput = {
+type QuickAddInput = {
   startedAt: number; // unix seconds
   rounds: number;
   /** "plan": rounds x work/rest. "total": just a total time split evenly across the rounds, no rest. */

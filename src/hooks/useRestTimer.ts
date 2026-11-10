@@ -5,7 +5,7 @@ import { haptics } from "../utils/haptics";
 import { formatTime } from "../utils/time";
 import { DEFAULT_REST_SECONDS, DEFAULT_REST_STEP, getDefaultRestSeconds, getRestStep } from "../utils/settings";
 
-export const MAX_REST_SECONDS = 20 * 60;
+const MAX_REST_SECONDS = 20 * 60;
 
 export function useRestTimer() {
   const [remaining, setRemaining] = useState(0);

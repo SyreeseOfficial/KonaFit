@@ -15,7 +15,7 @@ const COLUMNS: Record<string, SetField[]> = {
 
 export const columnsFor = (targetType?: string | null): SetField[] => COLUMNS[targetType ?? ""] ?? COLUMNS.reps;
 /** Everything but RPE: what "filled in" and "same as previous" mean. */
-export const valueFields = (targetType?: string | null): SetField[] => columnsFor(targetType).filter((f) => f !== "rpe");
+const valueFields = (targetType?: string | null): SetField[] => columnsFor(targetType).filter((f) => f !== "rpe");
 
 type Meta = {
   label: string;
@@ -53,7 +53,7 @@ export const clockToSec = (text: string | undefined): number | null => {
 };
 
 /** Stored time/distance/calories for the saved-set rows (history, export). */
-export type SetValues = {
+type SetValues = {
   weight_lbs: number | null; reps: number | null;
   duration_sec: number | null; distance_mi: number | null; calories: number | null;
 };

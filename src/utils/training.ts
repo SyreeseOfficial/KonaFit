@@ -2,14 +2,14 @@ import { estimateOneRm } from "./oneRm";
 
 // Pure training math: overload hints, warm-up ramps, RPE chart, weekly set targets, deload and balance checks. No DB, no React.
 
-export type LastSet = { weightLbs: number | null; reps: number | null; rpe?: number | null };
+type LastSet = { weightLbs: number | null; reps: number | null; rpe?: number | null };
 
 const COMPOUND = /squat|deadlift|bench|press|row|pull-?up|chin-?up|dip|lunge|clean|snatch|thrust/i;
 /** Compound lifts progress in 5 lb steps, isolation work in 2.5 lb steps. */
 export const isCompoundLift = (name: string): boolean => COMPOUND.test(name) && !/curl|fly|raise|extension/i.test(name);
 
 /** Rep count that counts as "top of the range" when no program range is known. */
-export const topOfRange = (compound: boolean): number => (compound ? 8 : 10);
+const topOfRange = (compound: boolean): number => (compound ? 8 : 10);
 
 export type Suggestion = { weight: number; reps: number; label: string };
 
@@ -173,7 +173,7 @@ export function deloadAlert(weeks: WeekLoad[]): string | null {
 
 // ─── Bodyweight ───
 
-export type Point = { x: number; y: number }; // x = ms
+type Point = { x: number; y: number }; // x = ms
 const DAY_MS = 86400000;
 
 /** 7-day trailing average at each point. */
@@ -203,7 +203,7 @@ export function projectGoalDate(points: Point[], goal: number): number | null {
 
 // ─── Workout-complete insights ───
 
-export type InsightInput = {
+type InsightInput = {
   volume: number;
   priorVolumes: number[]; // last sessions of the same workout, newest first
   exercises: { name: string; sets: { weight: number | null; reps: number | null }[] }[]; // ticked working sets, in order

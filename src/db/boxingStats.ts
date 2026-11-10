@@ -50,7 +50,7 @@ export async function hasBoxingSessions(): Promise<boolean> {
 
 // ─── Training load (sRPE x minutes) ──────────────────────────────────────────
 
-export type LoadSession = { rpe: number | null; avgRpe: number | null; durationSec: number | null };
+type LoadSession = { rpe: number | null; avgRpe: number | null; durationSec: number | null };
 
 /**
  * RPE x minutes. RPE is the session's overall RPE if set, else the average of its logged RPEs (lift working sets / boxing

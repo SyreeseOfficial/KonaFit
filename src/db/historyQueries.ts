@@ -34,7 +34,7 @@ export type SetRecord = {
   is_completed: number;
 };
 
-export type ExerciseRecord = {
+type ExerciseRecord = {
   id: number;
   exercise_id: number | null; // null if the exercise row was purged
   exercise_name: string;
@@ -93,7 +93,7 @@ export async function getWorkoutHistory(limit = 20, offset = 0, exerciseQuery = 
   );
 }
 
-export type RepeatExercise = {
+type RepeatExercise = {
   exerciseId: number;
   exerciseName: string;
   muscleGroup: string;
@@ -338,7 +338,7 @@ const PR_BASE = `
     AND w.finished_at IS NOT NULL
 `;
 
-export type RawHistPRs = {
+type RawHistPRs = {
   maxWeight: number | null;
   maxReps: number | null;
   maxVolume: number | null;

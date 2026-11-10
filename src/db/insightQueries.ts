@@ -7,7 +7,7 @@ import type { TrendPoint } from "./statsQueries";
 
 // Queries behind the Stats trend cards, the readiness check-in and the workout-complete insights.
 
-export type WeeklyLoad = WeekLoad & { x: number; current: boolean }; // x = ms of the week's first workout
+type WeeklyLoad = WeekLoad & { x: number; current: boolean }; // x = ms of the week's first workout
 
 /** Weekly volume and average RPE for the last `weeks` weeks (weeks start Monday, local time). `current` marks the unfinished week. */
 export async function getWeeklyLoad(weeks = 12): Promise<WeeklyLoad[]> {

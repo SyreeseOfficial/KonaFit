@@ -5,17 +5,6 @@ import { MAX_1RM_REPS } from "../utils/oneRm";
  * Each takes table aliases (defaults `ls` = logged_sets, `le` = logged_exercises, `w` = workouts) and returns a string
  * to splice into a query. Never re-write these rules inline; a test checks stats, history, detail, trend and muscle volume agree.
  *
- * | Fragment                | What it is                                                | Used in                                   |
- * |-------------------------|-----------------------------------------------------------|-------------------------------------------|
- * | `LATEST_BODYWEIGHT_SQL` | latest logged bodyweight (lbs) or NULL                    | `setLoadSql`; historyQueries (bw_lbs)     |
- * | `isBodyweightSql`       | 1 when the exercise's equipment is bodyweight             | `setLoadSql`, `prVolumeSql`; blank-weight default in workoutQueries (`upsertLoggedSet`); historyQueries (`is_bodyweight`) |
- * | `setLoadSql`            | effective lbs: logged weight (+ bodyweight if BW exercise)| goalQueries, historyQueries (PRs), statsQueries (1RM trend), `setVolumeSql` |
- * | `oneRmSql`              | Epley 1RM from a load expr + reps expr                    | goalQueries (1RM goals), historyQueries, statsQueries |
- * | `workingSetSql`         | WHERE clause: ticked, non-warm-up, has weight and reps    | every volume / PR / stats query (stats, history, insight, goal, boxingStats) |
- * | `handsSql`              | 2 for per-hand exercises, else 1                          | `setVolumeSql`                            |
- * | `setVolumeSql`          | load x reps x hands for one set                           | statsQueries, insightQueries, historyQueries |
- * | `prVolumeSql`           | PR score: volume, but BW sets score at least their reps   | historyQueries (PR ranking)               |
- *
  * Rule of thumb: need a weight number -> `setLoadSql`; need "which sets count" -> `workingSetSql`; need a total -> `setVolumeSql`.
  */
 

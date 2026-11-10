@@ -105,7 +105,7 @@ export function moveExercise(session: ActiveSession, exerciseLocalId: string, di
   return { ...session, exercises: reindex(exercises) };
 }
 
-export type SwapTarget = Pick<ActiveExercise, "exerciseId" | "exerciseName" | "muscleGroup" | "ghostSets" | "histPRs" | "isBodyweight" | "perHand" | "targetType">;
+type SwapTarget = Pick<ActiveExercise, "exerciseId" | "exerciseName" | "muscleGroup" | "ghostSets" | "histPRs" | "isBodyweight" | "perHand" | "targetType">;
 
 /** Replace the movement but keep the sets. PR badges were earned against the old movement, so they're cleared. */
 export function swapExercise(session: ActiveSession, exerciseLocalId: string, target: SwapTarget): ActiveSession {
@@ -127,7 +127,7 @@ const isStr = (x: unknown) => typeof x === "string";
 const isNum = (x: unknown) => typeof x === "number" && Number.isFinite(x);
 
 /** Runtime check of the fields the workout screen reads without a fallback. Optional fields (added over time) are not checked. */
-export function isActiveSession(x: unknown): x is ActiveSession {
+function isActiveSession(x: unknown): x is ActiveSession {
   if (!isObj(x) || !isNum(x.workoutId) || !isNum(x.startedAt) || !Array.isArray(x.exercises)) return false;
   return x.exercises.every(
     (e) =>

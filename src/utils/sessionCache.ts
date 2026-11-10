@@ -4,7 +4,6 @@ import * as R from "./sessionReducers";
 import type { ActiveSession, ActiveSet } from "../types/workout";
 
 const SESSION_KEY = "@konafit_active_session_v1";
-const OLD_SESSION_KEY = "@kinetic_active_session"; // pre-versioning format; never read, just cleaned up
 // Local ids must stay unique across app restarts (a resumed session keeps its old ids), so no per-run counter.
 let localIdFallback = 0;
 export const uid = () =>
@@ -33,7 +32,6 @@ export async function saveToStorage(session: ActiveSession | null) {
 
 export async function loadCachedSession(): Promise<ActiveSession | null> {
   try {
-    await kvStore.removeItem(OLD_SESSION_KEY);
     return R.parseSession(await kvStore.getItem(SESSION_KEY));
   } catch {
     return null;

@@ -188,7 +188,7 @@ const MIGRATIONS: ((database: SQLite.SQLiteDatabase) => Promise<void>)[] = [
   },
 ];
 
-export const DEFAULT_BOXING_CHIPS: [group: string, names: string[]][] = [
+const DEFAULT_BOXING_CHIPS: [group: string, names: string[]][] = [
   ["Punches", ["Jab", "Cross", "Hooks", "Uppercuts"]],
   ["Movement", ["Footwork", "Head movement", "Defense"]],
   ["Intent", ["Power", "Speed", "Endurance"]],

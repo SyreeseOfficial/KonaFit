@@ -9,12 +9,12 @@ export type StatsGrid = {
   latestBodyweightLbs: number | null;
 };
 
-export type OneRMDataPoint = {
+type OneRMDataPoint = {
   date: number; // unix timestamp
   oneRM: number;
 };
 
-export type VolumeByMuscle = {
+type VolumeByMuscle = {
   muscleGroup: string;
   volumeLbs: number;
 };
@@ -22,7 +22,7 @@ export type VolumeByMuscle = {
 // ─── Stats Grid ───────────────────────────────────────────────────────────────
 
 /** A set heavier than this multiple of the best so far is treated as a typo (2250 for 225), not a PR. */
-export const PR_OUTLIER_FACTOR = 3;
+const PR_OUTLIER_FACTOR = 3;
 
 /** Rows must be ordered by exercise then date; each is one workout's best working weight for that exercise. */
 export function countPRs(rows: { exercise_id: number; max_weight: number }[]): number {

@@ -8,7 +8,7 @@ export type PhaseKind = "getReady" | "work" | "rest";
 export type Phase = { kind: PhaseKind; /** 1-based; 0 for get-ready */ round: number; durationSec: number };
 
 /** Per round: seconds added with +30s, and seconds actually worked/rested (pauses excluded). */
-export type RoundStat = { extraSec: number; actualWorkSec: number; actualRestSec: number };
+type RoundStat = { extraSec: number; actualWorkSec: number; actualRestSec: number };
 
 export type TimerState = {
   setup: TimerSetup;
@@ -26,14 +26,14 @@ export type TimerState = {
   warnedIndex: number;
 };
 
-export type TimerEvent =
+type TimerEvent =
   | { type: "phaseStart"; kind: PhaseKind; round: number }
   | { type: "phaseEnd"; kind: PhaseKind; round: number }
   | { type: "warning" }
   | { type: "done" };
 
-export const WARNING_SEC = 10;
-export const ADD_SECONDS = 30;
+const WARNING_SEC = 10;
+const ADD_SECONDS = 30;
 export const MIN_WORK_SEC = 10;
 export const MAX_GET_READY_SEC = 60;
 
@@ -193,7 +193,7 @@ export function endEarly(state: TimerState, now: number): TimerState {
   return { ...state, rounds, paused: null, done: true, endedEarly: true };
 }
 
-export type RoundResult = {
+type RoundResult = {
   round: number;
   plannedWorkSec: number;
   plannedRestSec: number;

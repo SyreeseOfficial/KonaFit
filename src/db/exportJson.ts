@@ -1,7 +1,7 @@
 import { getDatabase } from "./database";
 
 // Full-detail export. Schema is written down in docs/export-schema.md; bump EXPORT_FORMAT_VERSION when a table is added or renamed.
-export const EXPORT_FORMAT_VERSION = 2;
+const EXPORT_FORMAT_VERSION = 2;
 
 const TABLES = [
   "exercises",

@@ -3,8 +3,8 @@ import { buildPhases, validateSetup, type TimerState } from "./boxingTimer";
 
 // Saved copy of a running boxing session, so a killed app can resume. Separate key from the lifting snapshot, and each
 // carries its own shape check, so neither can be loaded as the other.
-export const BOXING_SNAPSHOT_KEY = "@konafit_active_boxing_v1";
-export const BOXING_SNAPSHOT_VERSION = 1;
+const BOXING_SNAPSHOT_KEY = "@konafit_active_boxing_v1";
+const BOXING_SNAPSHOT_VERSION = 1;
 
 /** What the user typed for a round while the timer ran. */
 export type RoundLogEntry = { rpe: number | null; focusTags: number[]; focusNote: string };

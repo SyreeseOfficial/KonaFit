@@ -1,7 +1,7 @@
 import { kvStore } from "./kvStore";
 
 /** Last 50 errors, newest last, kept in kv_store so Settings → Diagnostics can show them. No workout data is stored, only messages. */
-export const ERROR_LOG_KEY = "@konafit_error_log";
+const ERROR_LOG_KEY = "@konafit_error_log";
 export const MAX_LOGGED_ERRORS = 50;
 
 export type LoggedError = { at: string; context: string; message: string; stack?: string };

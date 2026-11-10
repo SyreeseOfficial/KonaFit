@@ -15,7 +15,7 @@ export async function createWorkout(programDayId?: number, appVersion?: string):
   return result.lastInsertRowId;
 }
 
-export type SessionEventType = "start" | "pause" | "resume" | "finish";
+type SessionEventType = "start" | "pause" | "resume" | "finish";
 
 export async function logSessionEvent(workoutId: number, type: SessionEventType): Promise<void> {
   const db = await getDatabase();

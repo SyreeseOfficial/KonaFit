@@ -1,8 +1,6 @@
 /** Work/rest shape of a boxing session (what "6 x 3:00 / 1:00" means). */
 export type BoxingPlan = { rounds: number; workSec: number; restSec: number };
 
-export type BoxingSetup = BoxingPlan & { getReadySec: number };
-
 export type BoxingRound = {
   roundNumber: number;
   rpe: number | null;

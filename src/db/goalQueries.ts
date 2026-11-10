@@ -6,7 +6,7 @@ export type GoalType =
   | "lift_pr" | "bodyweight" | "custom"
   | "boxing_rounds" | "boxing_sessions" | "boxing_minutes" | "boxing_avg_rpe";
 
-export const BOXING_GOAL_TYPES: GoalType[] = ["boxing_rounds", "boxing_sessions", "boxing_minutes", "boxing_avg_rpe"];
+const BOXING_GOAL_TYPES: GoalType[] = ["boxing_rounds", "boxing_sessions", "boxing_minutes", "boxing_avg_rpe"];
 export const isBoxingGoal = (t: GoalType) => BOXING_GOAL_TYPES.includes(t);
 
 export type Goal = {
@@ -163,7 +163,7 @@ export const goalEnded = (goal: Goal, nowMs = Date.now()): boolean => goal.end_d
  * Per-week goals (rounds, sessions, minutes) look at the current week, or the last week of the range once it has ended,
  * cut to the goal's dates. The average-RPE goal looks at the whole range so far.
  */
-export function boxingGoalWindow(goal: Goal, nowMs = Date.now()): { from: number; to: number } | null {
+function boxingGoalWindow(goal: Goal, nowMs = Date.now()): { from: number; to: number } | null {
   const now = nowMs / 1000;
   const start = goal.start_date ?? goal.created_at;
   if (now < start) return null;

@@ -2,12 +2,12 @@ import { kvStore } from "./kvStore";
 import { validateSetup, MAX_GET_READY_SEC } from "./boxingTimer";
 import type { BoxingPlan } from "../types/boxing";
 
-export const BOXING_BELL_KEY = "@konafit_boxing_bell_enabled";
-export const BOXING_WARNING_KEY = "@konafit_boxing_warning_enabled";
-export const BOXING_GET_READY_KEY = "@konafit_boxing_get_ready_sec";
-export const BOXING_LAST_SETUP_KEY = "@konafit_boxing_last_setup";
+const BOXING_BELL_KEY = "@konafit_boxing_bell_enabled";
+const BOXING_WARNING_KEY = "@konafit_boxing_warning_enabled";
+const BOXING_GET_READY_KEY = "@konafit_boxing_get_ready_sec";
+const BOXING_LAST_SETUP_KEY = "@konafit_boxing_last_setup";
 
-export const DEFAULT_GET_READY_SEC = 10;
+const DEFAULT_GET_READY_SEC = 10;
 export const DEFAULT_BOXING_PLAN: BoxingPlan = { rounds: 6, workSec: 180, restSec: 60 };
 
 /** Settings that survive "Wipe All Data" (pass alongside the lifting `PRESERVED_KEYS`). */

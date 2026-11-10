@@ -20,7 +20,7 @@ export const PHASE_BG: Record<PhaseKind, string> = {
 };
 export const onColor = (k: PhaseKind) => (k === "rest" ? "text-text-primary dark:text-white" : "text-white");
 
-export function phaseLabel(kind: PhaseKind, round: number, rounds: number): string {
+function phaseLabel(kind: PhaseKind, round: number, rounds: number): string {
   if (kind === "getReady") return "GET READY";
   if (kind === "rest") return "REST";
   return `ROUND ${round} OF ${rounds}`;

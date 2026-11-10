@@ -12,10 +12,10 @@ export type Recap = {
   comparison: Comparison | null;
 };
 
-export type Comparison = { verdict: "harder" | "easier" | "about the same"; avgRpe: number; usualRpe: number };
+type Comparison = { verdict: "harder" | "easier" | "about the same"; avgRpe: number; usualRpe: number };
 
 /** Prior sessions needed before "harder than usual" is worth saying. */
-export const MIN_PRIOR_SESSIONS = 3;
+const MIN_PRIOR_SESSIONS = 3;
 const SAME_BAND = 0.5;
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);

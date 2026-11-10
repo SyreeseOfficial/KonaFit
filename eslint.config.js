@@ -11,4 +11,17 @@ module.exports = defineConfig([
       "react-hooks/purity": "warn",
     },
   },
+  {
+    // SQL and the database handle stay in src/db.
+    files: ["app/**", "src/components/**", "src/hooks/**"],
+    rules: {
+      "no-restricted-imports": ["error", { paths: ["expo-sqlite"], patterns: [{ group: ["**/db/database"], importNames: ["getDatabase"] }] }],
+    },
+  },
+  {
+    // Use logError, not console.error.
+    files: ["app/**", "src/**"],
+    ignores: ["src/utils/errors.ts", "src/__tests__/**"],
+    rules: { "no-console": ["error", { allow: ["log", "warn"] }] },
+  },
 ]);
