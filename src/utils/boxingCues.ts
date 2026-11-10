@@ -10,16 +10,10 @@ export async function loadCueSettings(): Promise<void> {
   [bell, warning] = await Promise.all([getBellEnabled(), getWarningEnabled()]);
 }
 
-/**
- * The one place a real bell/clapper sound plugs in. No audio dependency is installed (see docs/SPIKE_BOXING_SOUNDS.md,
- * decision D1 in docs/BOXING_BUILD_NOTES.md), so for now the haptic below is the only cue.
- */
-// ponytail: no-op until an audio package is approved; then play one bundled tone per kind here.
-function playSound(_kind: "bell" | "clapper"): void {}
-
+// ponytail: haptics-only until an audio package is approved (docs/BOXING_BUILD_NOTES.md D1); play a bundled tone in these.
 export const cues = {
-  roundStart: () => { if (!bell) return; playSound("bell"); haptics.heavy(); },
-  roundEnd: () => { if (!bell) return; playSound("bell"); haptics.heavy(); },
+  roundStart: () => { if (bell) haptics.heavy(); },
+  roundEnd: () => { if (bell) haptics.heavy(); },
   /** 10s left in a work round. */
-  warning: () => { if (!warning) return; playSound("clapper"); haptics.warn(); },
+  warning: () => { if (warning) haptics.warn(); },
 };

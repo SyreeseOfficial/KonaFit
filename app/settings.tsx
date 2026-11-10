@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react-native";
 import { router } from "expo-router";
-import Constants from "expo-constants";
+import { APP_VERSION } from "../src/utils/appVersion";
 import { kvStore } from "../src/utils/kvStore";
 import { getAllWorkoutDataForExport } from "../src/db/historyQueries";
 import { exportCsvAndShare, exportJsonAndShare } from "../src/utils/exportUtils";
@@ -200,7 +200,7 @@ export default function SettingsScreen() {
 
   const handleExportJson = useCallback(async () => {
     try {
-      await exportJsonAndShare(Constants.expoConfig?.version ?? "unknown");
+      await exportJsonAndShare(APP_VERSION);
     } catch (e) {
       Alert.alert("Export Failed", String(e));
     }
@@ -463,7 +463,7 @@ export default function SettingsScreen() {
               KonaFit
             </Text>
             <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm tracking-widest">
-              Version {Constants.expoConfig?.version ?? "1.0.0"} · Local-first · Completely free
+              Version {APP_VERSION} · Local-first · Completely free
             </Text>
           </View>
 
