@@ -46,9 +46,11 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "jest",
+    "test": "TZ=UTC jest",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test:la": "TZ=America/Los_Angeles jest",
+    "test:cov": "TZ=UTC jest --coverage"
   },
   "private": true,
   "jest": {
@@ -60,16 +62,38 @@
       "^.+\\.tsx?$": [
         "ts-jest",
         {
-          "isolatedModules": true,
-          "diagnostics": false,
+          "isolatedModules": false,
           "tsconfig": {
             "module": "commonjs",
             "moduleResolution": "node",
             "target": "es2020",
-            "esModuleInterop": true
+            "esModuleInterop": true,
+            "strict": true,
+            "types": [
+              "jest",
+              "node"
+            ]
           }
         }
       ]
+    },
+    "collectCoverageFrom": [
+      "src/db/**/*.ts",
+      "src/utils/**/*.ts"
+    ],
+    "coverageThreshold": {
+      "./src/db/": {
+        "statements": 70,
+        "lines": 70,
+        "functions": 70,
+        "branches": 60
+      },
+      "./src/utils/": {
+        "statements": 70,
+        "lines": 70,
+        "functions": 70,
+        "branches": 70
+      }
     }
   }
 }

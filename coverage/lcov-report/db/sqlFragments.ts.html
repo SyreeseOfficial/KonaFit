@@ -1,0 +1,265 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for db/sqlFragments.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">db</a> sqlFragments.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>23/23</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>9/9</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>7/7</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>14/14</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line high'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">75x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">75x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">75x</span>
+<span class="cline-any cline-yes">100x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">75x</span>
+<span class="cline-any cline-yes">67x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">75x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">75x</span>
+<span class="cline-any cline-yes">114x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">75x</span>
+<span class="cline-any cline-yes">50x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">75x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">75x</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { MAX_1RM_REPS } from "../utils/oneRm";
+&nbsp;
+/**
+ * Shared SQL snippets: the one definition of "how heavy is a set" and "what counts" for every stat, PR and goal.
+ * Each takes table aliases (defaults `ls` = logged_sets, `le` = logged_exercises, `w` = workouts) and returns a string
+ * to splice into a query. Never re-write these rules inline; a test checks stats, history, detail, trend and muscle volume agree.
+ *
+ * | Fragment                | What it is                                                | Used in                                   |
+ * |-------------------------|-----------------------------------------------------------|-------------------------------------------|
+ * | `LATEST_BODYWEIGHT_SQL` | latest logged bodyweight (lbs) or NULL                    | `setLoadSql`; historyQueries (bw_lbs)     |
+ * | `isBodyweightSql`       | 1 when the exercise's equipment is bodyweight             | `setLoadSql`, `prVolumeSql`; blank-weight default in workoutQueries (`upsertLoggedSet`); historyQueries (`is_bodyweight`) |
+ * | `setLoadSql`            | effective lbs: logged weight (+ bodyweight if BW exercise)| goalQueries, historyQueries (PRs), statsQueries (1RM trend), `setVolumeSql` |
+ * | `oneRmSql`              | Epley 1RM from a load expr + reps expr                    | goalQueries (1RM goals), historyQueries, statsQueries |
+ * | `workingSetSql`         | WHERE clause: ticked, non-warm-up, has weight and reps    | every volume / PR / stats query (stats, history, insight, goal, boxingStats) |
+ * | `handsSql`              | 2 for per-hand exercises, else 1                          | `setVolumeSql`                            |
+ * | `setVolumeSql`          | load x reps x hands for one set                           | statsQueries, insightQueries, historyQueries |
+ * | `prVolumeSql`           | PR score: volume, but BW sets score at least their reps   | historyQueries (PR ranking)               |
+ *
+ * Rule of thumb: need a weight number -&gt; `setLoadSql`; need "which sets count" -&gt; `workingSetSql`; need a total -&gt; `setVolumeSql`.
+ */
+&nbsp;
+/** Latest logged bodyweight in lbs, NULL when nothing is logged. */
+export const LATEST_BODYWEIGHT_SQL =
+  "(SELECT weight_lbs FROM bodyweight_logs ORDER BY logged_at DESC, id DESC LIMIT 1)";
+&nbsp;
+/** True when the exercise is logged as "added load" on top of bodyweight (pull-ups, dips, push-ups). */
+export const isBodyweightSql = (le = "le") =&gt;
+  `COALESCE((SELECT LOWER(x.equipment_type) LIKE '%bodyweight%' FROM exercises x WHERE x.id = ${le}.exercise_id), 0)`;
+&nbsp;
+/**
+ * Effective load of a set in lbs. Bodyweight exercises log only the added weight (negative when assisted),
+ * so the lifter's latest bodyweight is added; never below 0.
+ * ponytail: uses the latest bodyweight for all history, not the weight at the time; store it per workout if that matters.
+ */
+export const setLoadSql = (ls = "ls", le = "le") =&gt;
+  `MAX(0, ${ls}.weight_lbs + CASE WHEN ${isBodyweightSql(le)} THEN COALESCE(${LATEST_BODYWEIGHT_SQL}, 0) ELSE 0 END)`;
+&nbsp;
+/** Estimated 1RM (Epley, reps capped at MAX_1RM_REPS). Keep in sync with `estimateOneRm` in utils/oneRm.ts. */
+export const oneRmSql = (load: string, reps: string) =&gt; `(${load} * (1.0 + MIN(${reps}, ${MAX_1RM_REPS}) / 30.0))`;
+&nbsp;
+/**
+ * The one rule for what counts as volume and PRs: a ticked, non-warm-up set with weight and reps.
+ * Callers also join `workouts w` and require `w.finished_at IS NOT NULL` (in-progress workouts never count).
+ */
+export const workingSetSql = (ls = "ls") =&gt;
+  `${ls}.is_completed = 1 AND ${ls}.is_warmup = 0 AND ${ls}.weight_lbs IS NOT NULL AND ${ls}.reps IS NOT NULL`;
+&nbsp;
+/** Per-hand exercises (dumbbells, kettlebells) log one hand's weight; a rep moves it twice. */
+export const handsSql = (le = "le") =&gt;
+  `(CASE WHEN COALESCE((SELECT x.per_hand FROM exercises x WHERE x.id = ${le}.exercise_id), 0) = 1 THEN 2 ELSE 1 END)`;
+&nbsp;
+/** Volume of one set: effective load x reps (x2 when per hand). Only meaningful for rows matching `workingSetSql`. */
+export const setVolumeSql = (ls = "ls", le = "le") =&gt; `${setLoadSql(ls, le)} * ${ls}.reps * ${handsSql(le)}`;
+&nbsp;
+/**
+ * PR score of a set: its volume, except bodyweight sets always score at least their reps
+ * (added load 0 would otherwise make every rep PR worth 0). Mirrored live by `volumeScore` in utils/prBadges.ts.
+ */
+export const prVolumeSql = (ls = "ls", le = "le") =&gt;
+  `CASE WHEN ${isBodyweightSql(le)} THEN MAX(1, ${setLoadSql(ls, le)}) ELSE ${ls}.weight_lbs END * ${ls}.reps`;
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-11-10T19:00:44.554Z
+            </div>
+        <script src="../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../sorter.js"></script>
+        <script src="../block-navigation.js"></script>
+    </body>
+</html>
+    

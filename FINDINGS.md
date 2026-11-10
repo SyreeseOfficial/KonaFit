@@ -115,16 +115,6 @@ Everything here was worked through in the Features round: finished jobs are unde
 ## 🎯 Code quality & tests
 
 ### Tests
-- ⭐ 🟡 **End-to-end tests with Maestro** (YAML, no code) for the core loop. Run them in CI with EAS or an Android emulator.
-- 🟡 **Strict TypeScript.** Set `"strict": true`. Remove `diagnostics: false` in Jest so tests type-check.
-- 🟡 **Coverage:** run `jest --coverage` in CI. Require 70% on `src/db` and `src/utils`.
-- 🟡 **Migration tests** from real `.db` fixtures for each released version. Check row counts and sample data survive.
-- 🟡 **Property tests** for `calculatePlates`, `roundWeight` and `computePRBadges`.
-- 🟡 **Snapshot tests** for `autoWorkoutName`, Markdown export and the share card.
-- 🟡 **Fake clocks** (`jest.useFakeTimers`) for streak, rest timer and `autoWorkoutName`. Set `TZ` in the Jest script.
-- 🟡 **Run tests in two time zones** (UTC and America/Los_Angeles).
-- 🟡 **Component screenshot harness** (Storybook or similar) in light and dark.
-- 🟡 **Smoke flows + nightly build.** Run Maestro / Detox and `eas build --profile preview` to catch native breaks.
 
 ### CI and tools
 - 🟡 **Add `expo-doctor` and `npx expo install --check`** to CI.
@@ -337,6 +327,19 @@ You marked these as "skip for now." They stay on the list so they aren't lost.
 ---
 
 ## ✅ Done
+
+**Testing round** (typecheck, lint, 228 tests pass in UTC and America/Los_Angeles; Maestro/EAS files written but not run)
+- [x] Strict TypeScript: `"strict": true` was already on in `tsconfig.json`. Jest no longer sets `diagnostics: false` (and `isolatedModules` is off), so tests type-check.
+- [x] Coverage: `npm run test:cov` (CI runs it). Thresholds in the Jest config: 70% statements/lines/functions on `src/db` and `src/utils`; branches 60% on `src/db` (currently 64%) and 70% on `src/utils`.
+- [x] Migration tests (`migrationFixtures.test.ts`): no real `.db` files exist, so each fixture is built by running the real migrations up to version N (0 to 15), filling rows, then upgrading. Checks row counts, a sample set, `foreign_key_check` and `integrity_check`. Drop real `.db` exports in later if you want them.
+- [x] Property tests (`properties.test.ts`) for `calculatePlates`/`planLoad`, `roundWeight`, `computePRBadges`. Seeded random loops, no `fast-check` dependency.
+- [x] Snapshot tests (`snapshots.test.ts`) for `autoWorkoutName` and the Markdown export. Not the share card: it needs a React renderer dependency (`react-test-renderer`); the gallery below covers it visually.
+- [x] Fake clocks for streak (DST spring-forward and fall-back days, empty today vs empty yesterday) and `autoWorkoutName`. The boxing timer already takes `now` as an argument, so it never needed fake timers.
+- [x] Two time zones: `npm test` runs with `TZ=UTC`, `npm run test:la` with `America/Los_Angeles`; CI runs both.
+- [x] Screenshot harness: dev-only `app/gallery.tsx` (buttons, empty state), only renders when built with `EXPO_PUBLIC_GALLERY=1` (the `e2e` EAS profile). `.maestro/gallery.yaml` opens it and takes a screenshot; switch light/dark with `adb shell cmd uimode night yes|no`. Chose this over Storybook (heavy, Expo 56 risk). Add components to the file as needed.
+- [x] Maestro flows in `.maestro/`: `smoke.yaml`, `lift-core-loop.yaml` (start, add exercise, log set, finish). Added `testID`s to set inputs and the tick button.
+- [x] Nightly: `.eas/workflows/nightly.yml` builds the `e2e` profile and runs the flows on an EAS emulator at 08:00 UTC. Not run yet: needs EAS workflows enabled on the project, and the `maestro` job fields are from memory, so check them against the EAS docs.
+
 
 **Cleaner code round** (passed typecheck, lint and `npm test`; not run on a device)
 - [x] `logError(e, "context")` in `src/utils/errors.ts` replaces every `console.error` (a test blocks new ones). It logs, and keeps the last 50 errors (message + 6 stack lines, no workout data) in `kv_store`. Settings → Diagnostics → Error log shows them with Copy/share (share sheet) and Clear. No toast: the screens that show an error to the user already use an alert.

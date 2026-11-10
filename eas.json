@@ -24,6 +24,15 @@
       "android": {
         "buildType": "app-bundle"
       }
+    },
+    "e2e": {
+      "extends": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_GALLERY": "1"
+      }
     }
   }
 }

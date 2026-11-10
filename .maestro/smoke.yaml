@@ -1,0 +1,10 @@
+# Smoke: the app boots, tabs render, nothing crashes. Cheap enough for every build.
+appId: com.syreeseofficial.konafit
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Start"
+- tapOn: "Stats"
+- assertVisible: ".*"
+- tapOn: "Train"
+- assertVisible: "Start"

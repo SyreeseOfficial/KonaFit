@@ -1,0 +1,9 @@
+# Screenshot harness. Needs a build with EXPO_PUBLIC_GALLERY=1. Compare the PNGs between runs by eye or with a diff tool.
+# Dark first, then light:  adb shell cmd uimode night yes   /   adb shell cmd uimode night no
+appId: com.syreeseofficial.konafit
+---
+- launchApp:
+    clearState: true
+- openLink: konafit://gallery
+- assertVisible: "Gallery"
+- takeScreenshot: gallery

@@ -133,6 +133,7 @@ export const SetRow = memo(function SetRow({ set, bodyweight, targetType, ghost,
         return (
           <TextInput
             key={f}
+            testID={`set-${f}`}
             ref={(r) => { inputRefs.current[f] = r; if (i === 0) firstRef?.(id, r); }}
             className={`${inputBase} ${meta.width} mr-1.5`}
             value={set[f] ?? ""}
@@ -154,6 +155,7 @@ export const SetRow = memo(function SetRow({ set, bodyweight, targetType, ghost,
 
       {/* Complete */}
       <TouchableOpacity
+        testID="set-complete"
         onPress={() => { if (completed) haptics.tap(); else haptics.setDone(); onToggleComplete(); }}
         className="w-12 h-12 items-center justify-center"
         activeOpacity={0.7}

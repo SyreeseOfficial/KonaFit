@@ -1,0 +1,26 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`buildWorkoutMarkdown matches the snapshot 1`] = `
+"# Thursday, January 15, 2026
+**Duration:** 1:02:05
+**Total Volume:** 12.4K lbs
+
+---
+## Barbell Bench Press
+*Chest, Triceps*
+
+**Warm-up:**
+- W1: 95 lbs × 10 reps
+
+- Set 2: 185 lbs × 8 reps @ RPE 8 ✓
+- Set 3: 185 lbs × 6 reps — grindy
+
+---
+## Plank
+*Core*
+
+- Set 1: 1:00 ✓
+
+---
+_Logged with KonaFit_"
+`;

@@ -1,0 +1,193 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for utils/prBadges.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">utils</a> prBadges.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">93.1% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>27/29</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">80.76% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>21/26</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">81.81% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>9/11</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>17/17</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line high'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">1511x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1009x</span>
+<span class="cline-any cline-yes">742x</span>
+<span class="cline-any cline-yes">742x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1009x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">913x</span>
+<span class="cline-any cline-yes">1511x</span>
+<span class="cline-any cline-yes">1826x</span>
+<span class="cline-any cline-yes">913x</span>
+<span class="cline-any cline-yes">913x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1515x</span>
+<span class="cline-any cline-yes">991x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">913x</span>
+<span class="cline-any cline-yes">913x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import type { ActiveExercise, HistPRs, PRBadge } from "../types/workout";
+&nbsp;
+/** Badges that deserve a celebration (everything except the "first time" marker). */
+export const isRealPR = <span class="fstat-no" title="function not covered" >(b</span>adges?: PRBadge[]) =&gt; <span class="cstat-no" title="statement not covered" >!!badges?.some(<span class="fstat-no" title="function not covered" >(b</span>) =&gt; <span class="cstat-no" title="statement not covered" >b !== "F")</span>;</span>
+&nbsp;
+/** Volume score of a set; mirrors `prVolumeSql`: a bodyweight set is worth at least its reps, so rep PRs register at 0 added load. */
+const volumeScore = (isBodyweight: boolean | undefined, bodyweightLbs: number, weight: number, reps: number) =&gt;
+  isBodyweight ? Math.max(1, weight + bodyweightLbs) * reps : weight * reps;
+&nbsp;
+export function computePRBadges(
+  exercise: ActiveExercise,
+  excludeSetLocalId: string,
+  weight: number,
+  reps: number,
+  hist: HistPRs
+): PRBadge[] {
+  const others = exercise.sets
+    .filter((s) =&gt; s.localId !== excludeSetLocalId &amp;&amp; s.isCompleted &amp;&amp; !s.isWarmup &amp;&amp; (s.weightLbs !== "" || <span class="branch-4 cbranch-no" title="branch not covered" >exercise.isBodyweight)</span> &amp;&amp; s.reps !== "")
+    .map((s) =&gt; ({ weight: parseFloat(s.weightLbs) || <span class="branch-1 cbranch-no" title="branch not covered" >0,</span> reps: parseInt(s.reps, 10) }));
+&nbsp;
+  // No history for this exercise: nothing to beat. Mark the first set instead of faking PRs.
+  if (hist.maxVolume == null) return others.length === 0 ? ["F"] : [];
+&nbsp;
+  const bw = exercise.isBodyweight ? hist.bodyweightLbs ?? <span class="branch-1 cbranch-no" title="branch not covered" >0 </span>: 0;
+  const volume = (o: { weight: number; reps: number }) =&gt; volumeScore(exercise.isBodyweight, bw, o.weight, o.reps);
+  const maxOf = (nums: number[], base: number) =&gt; Math.max(base, ...nums);
+  const badges: PRBadge[] = [];
+  if (weight &gt; maxOf(others.map((o) =&gt; o.weight), hist.maxWeight ?? <span class="branch-1 cbranch-no" title="branch not covered" >0)</span>) badges.push("W");
+&nbsp;
+  // Reps only count against sets at the same or a heavier weight (20 @ 45 lb is not a PR over 12 @ 225 lb).
+  const comparable = [...(hist.repsByWeight ?? <span class="branch-1 cbranch-no" title="branch not covered" >[])</span>, ...others].filter((o) =&gt; o.weight &gt;= weight);
+  if (comparable.length &gt; 0 &amp;&amp; reps &gt; Math.max(...comparable.map((o) =&gt; o.reps))) badges.push("R");
+&nbsp;
+  if (volume({ weight, reps }) &gt; maxOf(others.map(volume), hist.maxVolume)) badges.push("V");
+  return badges;
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-11-10T19:00:44.554Z
+            </div>
+        <script src="../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../sorter.js"></script>
+        <script src="../block-navigation.js"></script>
+    </body>
+</html>
+    
