@@ -70,13 +70,10 @@ describe("weekStartSecs", () => {
 });
 
 describe("estimateOneRm / repsAtPercent", () => {
-  it("caps reps at 12 and offers three formulas", () => {
+  it("caps reps at 12", () => {
     expect(estimateOneRm(100, 30)).toBeCloseTo(140);
-    expect(estimateOneRm(100, 5, "brzycki")).toBeCloseTo(112.5);
-    expect(estimateOneRm(100, 5, "lombardi")).toBeCloseTo(117.5, 1);
     expect(repsAtPercent(100)).toBe(1);
-    expect(repsAtPercent(80, "epley")).toBe(8);
-    expect(repsAtPercent(80, "brzycki")).toBe(8);
+    expect(repsAtPercent(80)).toBe(8);
   });
 });
 

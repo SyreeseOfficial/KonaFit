@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { View, Text, TextInput } from "react-native";
-import { ONE_RM_FORMULAS, MAX_1RM_REPS, estimateOneRm } from "../../utils/oneRm";
+import { MAX_1RM_REPS, estimateOneRm } from "../../utils/oneRm";
 import { RPE_CHART, warmupRamp } from "../../utils/training";
 
 const input = "flex-1 h-13 bg-surface-2 dark:bg-zinc-800 px-4 font-mono-medium text-text-primary dark:text-white text-xl text-center rounded-xl";
@@ -19,12 +19,12 @@ export function OneRmCalculator() {
         <TextInput className={input} placeholder="Weight" placeholderTextColor="#94A3B8" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" selectTextOnFocus />
         <TextInput className={input} placeholder="Reps" placeholderTextColor="#94A3B8" value={reps} onChangeText={setReps} keyboardType="number-pad" selectTextOnFocus />
       </View>
-      {ok && ONE_RM_FORMULAS.map((f) => (
-        <View key={f.key} className={row}>
-          <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">{f.label}</Text>
-          <Text className="font-mono-medium text-text-primary dark:text-white text-lg">{Math.round(estimateOneRm(w, r, f.key))} lb</Text>
+      {ok && (
+        <View className={row}>
+          <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Estimated 1RM</Text>
+          <Text className="font-mono-medium text-text-primary dark:text-white text-lg">{Math.round(estimateOneRm(w, r))} lb</Text>
         </View>
-      ))}
+      )}
       <Text className={`${mono} mt-4`}>Estimate only. Sets over {MAX_1RM_REPS} reps are counted as {MAX_1RM_REPS}, since the formulas drift past that.</Text>
     </View>
   );

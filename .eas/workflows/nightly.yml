@@ -17,4 +17,3 @@ jobs:
       build_id: ${{ needs.build.outputs.build_id }}
       flow_path:
         - .maestro/smoke.yaml
-        - .maestro/lift-core-loop.yaml

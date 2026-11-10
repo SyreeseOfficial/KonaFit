@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { PERCENTAGES, roundWeight } from "../../utils/plateCalc";
-import { ONE_RM_FORMULAS, MAX_1RM_REPS, repsAtPercent, type OneRmFormula } from "../../utils/oneRm";
+import { MAX_1RM_REPS, repsAtPercent } from "../../utils/oneRm";
 
 type Rounding = 0 | 2.5 | 5;
 
@@ -13,7 +13,6 @@ type Props = {
 export function PercentageCalculator({ initialOneRM, onSelectWeight }: Props) {
   const [oneRMInput, setOneRMInput] = useState(initialOneRM ? String(Math.round(initialOneRM)) : "");
   const [rounding, setRounding] = useState<Rounding>(2.5);
-  const [formula, setFormula] = useState<OneRmFormula>("epley");
 
   const oneRM = parseFloat(oneRMInput);
   const isValid = !isNaN(oneRM) && oneRM > 0;
@@ -62,23 +61,6 @@ export function PercentageCalculator({ initialOneRM, onSelectWeight }: Props) {
         ))}
       </View>
 
-      {/* Rep estimate formula */}
-      <View className="flex-row items-center gap-2 mb-5">
-        <Text className="font-mono text-text-muted dark:text-zinc-500 text-xs mr-1">Reps:</Text>
-        {ONE_RM_FORMULAS.map((f) => (
-          <TouchableOpacity
-            key={f.key}
-            onPress={() => setFormula(f.key)}
-            className={`px-4 py-2 rounded-full ${formula === f.key ? "bg-crimson dark:bg-blue-500" : "bg-surface-2 dark:bg-zinc-800"}`}
-            activeOpacity={0.7}
-          >
-            <Text className={`font-mono text-xs ${formula === f.key ? "text-white" : "text-text-muted dark:text-zinc-500"}`}>
-              {f.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       {/* Table */}
       {isValid ? (
         <View className="bg-surface dark:bg-zinc-900 rounded-2xl overflow-hidden">
@@ -90,7 +72,7 @@ export function PercentageCalculator({ initialOneRM, onSelectWeight }: Props) {
 
           {rows.map(({ pct, exact, rounded }) => {
             const isHighlight = highlightRange.includes(pct);
-            const reps = repsAtPercent(pct, formula);
+            const reps = repsAtPercent(pct);
             const displayWeight = rounding === 0 ? exact.toFixed(1) : String(rounded);
 
             return (

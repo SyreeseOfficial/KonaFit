@@ -21,15 +21,6 @@ This repository utilizes a multi-file documentation context strategy to keep bui
 * **State Management:** Strict auto-save states during active training sessions to ensure zero data loss.
 * **Data Portability:** Local database backed up via raw CSV/Excel export engines.
 
----
-
-## 📁 Repository Context Map
-
-When building or modifying components, refer to these specialized context files in the directory:
-
-* 📄 **docs/SYSTEM_ARCHITECTURE.md** — Explicit coding conventions, database schemas, and state management guidelines.
-
----
 
 ## 🔧 Development Setup
 
@@ -87,7 +78,6 @@ Then scan the QR code with your dev client app on your phone. The tunnel mode by
 
 ## 🛑 Coding Conventions for AI Contributors
 
-1. **Read the Spec First:** Read `docs/SYSTEM_ARCHITECTURE.md` before generating or modifying code.
 2. **Preserve Visual Theme:** Never deviate from the existing light and dark design tokens (blue accent) in `tailwind.config.js`.
 3. **No Decorative Fluff:** Code features with high utility, minimal micro-interactions, and tight data density.
 
