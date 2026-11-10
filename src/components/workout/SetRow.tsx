@@ -1,10 +1,17 @@
-import { useState, useEffect, useRef } from "react";
+import { memo, useState, useEffect, useRef } from "react";
 import { View, Text, TextInput, TouchableOpacity, Modal, Pressable, useColorScheme } from "react-native";
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { Check, Trash2 } from "lucide-react-native";
 import { haptics } from "../../utils/haptics";
 import { columnsFor, isFilled, copyFields, ghostText, FIELD_META, type SetField } from "../../utils/setFields";
 import type { ActiveSet, GhostSet, PRBadge, SetPatch, SetType } from "../../types/workout";
+
+// Hoisted so rows don't allocate fresh style objects every render.
+const BADGE_TEXT = { fontSize: 11, lineHeight: 14 } as const;
+const FOCUS_LIGHT = { borderWidth: 1, borderColor: "#2563EB" } as const;
+const FOCUS_DARK = { borderWidth: 1, borderColor: "#3B82F6" } as const;
+const RPE_INPUT = { fontSize: 14 } as const;
+const GHOST_INPUT = { opacity: 0.65 } as const;
 
 const PR_LABELS: Record<PRBadge, string> = { W: "PR WT", R: "PR REP", V: "PR VOL", F: "FIRST TIME" };
 
@@ -29,7 +36,7 @@ function PRBadgeChip({ badge }: { badge: PRBadge }) {
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
     <Animated.View style={style} className={`${badge === "F" ? "bg-zinc-500" : "bg-amber-700"} px-1.5 py-0.5 rounded`}>
-      <Text className="font-mono-medium text-white" style={{ fontSize: 11, lineHeight: 14 }}>
+      <Text className="font-mono-medium text-white" style={BADGE_TEXT}>
         {PR_LABELS[badge]}
       </Text>
     </Animated.View>
@@ -43,16 +50,25 @@ type Props = {
   ghost?: GhostSet;
   prevSet?: ActiveSet;
   isNext?: boolean; // the set to do now
-  onUpdate: (patch: SetPatch) => void;
-  onCommitEdit: () => void;
-  onToggleComplete: () => void;
-  onToggleWarmup: () => void;
-  onRemove: () => void;
-  firstRef?: (input: TextInput | null) => void; // lets the parent focus this row's first field
-  onNextRow?: () => void; // "Next" on the last field jumps to the next row
+  // Callbacks take the set's id so the parent can pass the same functions to every row (keeps memo() effective).
+  onUpdate: (setLocalId: string, patch: SetPatch) => void;
+  onCommitEdit: (setLocalId: string) => void;
+  onToggleComplete: (setLocalId: string) => void;
+  onToggleWarmup: (setLocalId: string) => void;
+  onRemove: (setLocalId: string) => void;
+  firstRef?: (setLocalId: string, input: TextInput | null) => void; // lets the parent focus this row's first field
+  nextRowId?: string; // "Next" on the last field jumps to this row
+  onFocusRow?: (setLocalId: string) => void;
 };
 
-export function SetRow({ set, bodyweight, targetType, ghost, prevSet, isNext, onUpdate, onCommitEdit, onToggleComplete, onToggleWarmup, onRemove, firstRef, onNextRow }: Props) {
+export const SetRow = memo(function SetRow({ set, bodyweight, targetType, ghost, prevSet, isNext, onUpdate: update, onCommitEdit: commitEdit, onToggleComplete: toggleComplete, onToggleWarmup: toggleWarmup, onRemove: remove, firstRef, nextRowId, onFocusRow }: Props) {
+  const id = set.localId;
+  const onUpdate = (patch: SetPatch) => update(id, patch);
+  const onCommitEdit = () => commitEdit(id);
+  const onToggleComplete = () => toggleComplete(id);
+  const onToggleWarmup = () => toggleWarmup(id);
+  const onRemove = () => remove(id);
+  const onNextRow = nextRowId && onFocusRow ? () => onFocusRow(nextRowId) : undefined;
   const completed = set.isCompleted;
   const [focused, setFocused] = useState<SetField | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
@@ -72,7 +88,7 @@ export function SetRow({ set, bodyweight, targetType, ghost, prevSet, isNext, on
   const previousText = set.isGhostFilled ? "—" : ghostText(ghost, targetType);
 
   const inputBase = "h-12 bg-surface-2 dark:bg-zinc-800 text-center font-mono-medium text-text-primary dark:text-white text-base rounded-lg";
-  const focusBorder = { borderWidth: 1, borderColor: useColorScheme() === "dark" ? "#3B82F6" : "#2563EB" };
+  const focusBorder = useColorScheme() === "dark" ? FOCUS_DARK : FOCUS_LIGHT;
 
   // Completed sets stay editable; re-run the PR check once the user leaves the field.
   const handleBlur = () => {
@@ -117,7 +133,7 @@ export function SetRow({ set, bodyweight, targetType, ghost, prevSet, isNext, on
         return (
           <TextInput
             key={f}
-            ref={(r) => { inputRefs.current[f] = r; if (i === 0) firstRef?.(r); }}
+            ref={(r) => { inputRefs.current[f] = r; if (i === 0) firstRef?.(id, r); }}
             className={`${inputBase} ${meta.width} mr-1.5`}
             value={set[f] ?? ""}
             onChangeText={(v) => { const c = meta.clean(v, bodyweight); if (c !== null) onUpdate({ [f]: c }); }}
@@ -129,7 +145,7 @@ export function SetRow({ set, bodyweight, targetType, ghost, prevSet, isNext, on
             onFocus={() => setFocused(f)}
             onBlur={handleBlur}
             style={[
-              f === "rpe" ? { fontSize: 14 } : set.isGhostFilled ? { opacity: 0.65 } : undefined,
+              f === "rpe" ? RPE_INPUT : set.isGhostFilled ? GHOST_INPUT : undefined,
               focused === f ? focusBorder : undefined,
             ]}
           />
@@ -157,7 +173,7 @@ export function SetRow({ set, bodyweight, targetType, ghost, prevSet, isNext, on
       <View className="flex-row items-center gap-1 px-3 pb-2">
         {set.setType && (
           <View className="bg-surface-3 dark:bg-zinc-700 px-1.5 py-0.5 rounded">
-            <Text className="font-mono-medium text-text-primary dark:text-white" style={{ fontSize: 11, lineHeight: 14 }}>
+            <Text className="font-mono-medium text-text-primary dark:text-white" style={BADGE_TEXT}>
               {TYPE_LABELS[set.setType]}
             </Text>
           </View>
@@ -212,7 +228,7 @@ export function SetRow({ set, bodyweight, targetType, ghost, prevSet, isNext, on
     ) : null}
 
     {/* Set type / delete */}
-    <Modal visible={sheetOpen} transparent animationType="fade" onRequestClose={() => setSheetOpen(false)}>
+    {sheetOpen && <Modal visible transparent animationType="fade" onRequestClose={() => setSheetOpen(false)}>
       <Pressable className="flex-1 bg-black/50 justify-end" onPress={() => setSheetOpen(false)}>
         <Pressable>
           <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl pb-10">
@@ -243,8 +259,8 @@ export function SetRow({ set, bodyweight, targetType, ghost, prevSet, isNext, on
           </View>
         </Pressable>
       </Pressable>
-    </Modal>
+    </Modal>}
 
     </View>
   );
-}
+});

@@ -1,4 +1,4 @@
-import React, { useId } from "react";
+import React, { useId, useMemo } from "react";
 import { View, Text, useWindowDimensions, useColorScheme } from "react-native";
 import Svg, { Path, Circle, Line, Defs, LinearGradient, Stop, Text as SvgText } from "react-native-svg";
 import type { TrendPoint } from "../../db/statsQueries";
@@ -39,11 +39,20 @@ function smoothPath(pts: Pt[]): string {
   return d;
 }
 
+const MAX_POINTS = 200;
+
+/** Keep at most MAX_POINTS evenly spaced points (always the first and last); a phone screen can't show more anyway. */
+function downsample(pts: TrendPoint[]): TrendPoint[] {
+  if (pts.length <= MAX_POINTS) return pts;
+  const step = (pts.length - 1) / (MAX_POINTS - 1);
+  return Array.from({ length: MAX_POINTS }, (_, i) => pts[Math.round(i * step)]);
+}
+
 function fmtDate(ts: number): string {
   return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export function LineChart({
+export const LineChart = React.memo(function LineChart({
   data,
   color = "#2563EB",
   height = 150,
@@ -60,30 +69,47 @@ export function LineChart({
   const plotW = width - 40 - PAD_L - PAD_R;
   const plotH = height - PAD_T - PAD_B;
 
-  if (data.length < 2) {
+  const geo = useMemo(() => {
+    if (data.length < 2) return null;
+    const pts = downsample(data);
+    const minX = pts[0].x;
+    const maxX = pts[pts.length - 1].x;
+    const ys = [...pts.map((d) => d.y), ...(goal != null ? [goal] : [])];
+    const rawMin = Math.min(...ys);
+    const rawMax = Math.max(...ys);
+    const range = rawMax - rawMin || 1;
+    const minY = rawMin - range * 0.1;
+    const maxY = rawMax + range * 0.1;
+
+    const toX = (x: number) => maxX === minX ? plotW / 2 : ((x - minX) / (maxX - minX)) * plotW;
+    const toY = (y: number) => plotH - ((y - minY) / (maxY - minY)) * plotH;
+    const toPt = (d: TrendPoint): Pt => [PAD_L + toX(d.x), PAD_T + toY(d.y)];
+
+    const line = pts.map(toPt);
+    const last = line[line.length - 1];
+    const pathD = smoothPath(line);
+    const ov = overlay && overlay.length > 1 ? smoothPath(downsample(overlay).map(toPt)) : null;
+    return {
+      pathD,
+      areaD: `${pathD} L ${last[0]} ${PAD_T + plotH} L ${line[0][0]} ${PAD_T + plotH} Z`,
+      overlayD: ov,
+      last,
+      dots: pts.length <= 12 ? line.slice(0, -1) : [],
+      ticks: [0, 1 / 3, 2 / 3, 1].map((t) => ({ val: minY + t * (maxY - minY), y: PAD_T + toY(minY + t * (maxY - minY)) })),
+      goalY: goal != null ? PAD_T + toY(goal) : null,
+      first: pts[0].x,
+      end: pts[pts.length - 1].x,
+    };
+  }, [data, overlay, goal, plotW, plotH]);
+
+  if (!geo) {
     return (
       <View style={{ height }} className="items-center justify-center px-4">
         <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-xs text-center">{emptyText}</Text>
       </View>
     );
   }
-
-  const minX = data[0].x;
-  const maxX = data[data.length - 1].x;
-  const ys = [...data.map((d) => d.y), ...(goal != null ? [goal] : [])];
-  const rawMin = Math.min(...ys);
-  const rawMax = Math.max(...ys);
-  const range = rawMax - rawMin || 1;
-  const minY = rawMin - range * 0.1;
-  const maxY = rawMax + range * 0.1;
-
-  const toX = (x: number) => maxX === minX ? plotW / 2 : ((x - minX) / (maxX - minX)) * plotW;
-  const toY = (y: number) => plotH - ((y - minY) / (maxY - minY)) * plotH;
-
-  const toPt = (d: TrendPoint): Pt => [PAD_L + toX(d.x), PAD_T + toY(d.y)];
-  const pathD = smoothPath(data.map(toPt));
-  const last = toPt(data[data.length - 1]);
-  const yTicks = [0, 1 / 3, 2 / 3, 1].map((t) => minY + t * (maxY - minY));
+  const { pathD, areaD, overlayD, last, dots, ticks, goalY } = geo;
 
   return (
     <Svg width={PAD_L + plotW + PAD_R} height={height}>
@@ -93,8 +119,7 @@ export function LineChart({
           <Stop offset="1" stopColor={color} stopOpacity={0} />
         </LinearGradient>
       </Defs>
-      {yTicks.map((val, i) => {
-        const y = PAD_T + toY(val);
+      {ticks.map(({ val, y }, i) => {
         return (
           <React.Fragment key={i}>
             <Line x1={PAD_L} y1={y} x2={PAD_L + plotW} y2={y} stroke={gridColor} strokeWidth={1} strokeDasharray="2 4" />
@@ -106,39 +131,39 @@ export function LineChart({
       })}
 
       <Path
-        d={`${pathD} L ${last[0]} ${PAD_T + plotH} L ${PAD_L + toX(data[0].x)} ${PAD_T + plotH} Z`}
+        d={areaD}
         fill={`url(#${gradId})`}
       />
       <Path d={pathD} stroke={color} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
 
-      {overlay && overlay.length > 1 && (
+      {overlayD && (
         <Path
-          d={smoothPath(overlay.map(toPt))}
+          d={overlayD}
           stroke="#F59E0B" strokeWidth={1.5} strokeOpacity={0.9} fill="none" strokeLinejoin="round" strokeLinecap="round"
         />
       )}
-      {goal != null && (
+      {goal != null && goalY != null && (
         <>
-          <Line x1={PAD_L} y1={PAD_T + toY(goal)} x2={PAD_L + plotW} y2={PAD_T + toY(goal)} stroke="#10B981" strokeWidth={1.5} strokeDasharray="5 4" />
-          <SvgText x={PAD_L + plotW} y={PAD_T + toY(goal) - 4} textAnchor="end" fill="#10B981" fontSize={9} fontFamily="JetBrainsMono_400Regular">
+          <Line x1={PAD_L} y1={goalY} x2={PAD_L + plotW} y2={goalY} stroke="#10B981" strokeWidth={1.5} strokeDasharray="5 4" />
+          <SvgText x={PAD_L + plotW} y={goalY - 4} textAnchor="end" fill="#10B981" fontSize={9} fontFamily="JetBrainsMono_400Regular">
             goal {formatY(goal)}
           </SvgText>
         </>
       )}
 
       {/* Small dots for sparse data; the latest point always gets a halo + ring so the current value reads at a glance */}
-      {data.length <= 12 && data.slice(0, -1).map((d, i) => (
-        <Circle key={i} cx={PAD_L + toX(d.x)} cy={PAD_T + toY(d.y)} r={2.5} fill={color} />
+      {dots.map(([cx, cy], i) => (
+        <Circle key={i} cx={cx} cy={cy} r={2.5} fill={color} />
       ))}
       <Circle cx={last[0]} cy={last[1]} r={7} fill={color} fillOpacity={0.18} />
       <Circle cx={last[0]} cy={last[1]} r={4} fill={dark ? "#18181B" : "#FFFFFF"} stroke={color} strokeWidth={2.5} />
 
       <SvgText x={PAD_L} y={height - 6} fill={labelColor} fontSize={9} fontFamily="JetBrainsMono_400Regular">
-        {fmtDate(data[0].x)}
+        {fmtDate(geo.first)}
       </SvgText>
       <SvgText x={PAD_L + plotW} y={height - 6} textAnchor="end" fill={labelColor} fontSize={9} fontFamily="JetBrainsMono_400Regular">
-        {fmtDate(data[data.length - 1].x)}
+        {fmtDate(geo.end)}
       </SvgText>
     </Svg>
   );
-}
+});

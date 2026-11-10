@@ -107,15 +107,8 @@ Everything here was worked through in the Features round: finished jobs are unde
 
 ## ⚡ Speed
 
-- 🟡 **Gate the three always-on modals per `ExerciseBlock`.** Wrap `SetRow` in `React.memo` with stable callbacks. Profile a 10-exercise workout.
-- 🟡 **Split big files.** `train.tsx` is 27 KB. `useWorkoutSession.ts` is 22 KB. Smaller pieces mean fewer re-renders.
-- 🟡 **Use `FlatList` / `FlashList`** on the workout detail screen (`app/workout/[id].tsx`, 27 KB) and custom exercises.
-- 🟡 **Combine Train's startup reads** (`getLastUsedDatesByDay`, goals, streak) into one query.
-- 🟡 **Hold the splash until fonts and DB are ready** (`expo-splash-screen`).
-- 🟡 **Check the bundle:** turn on Hermes bytecode, use `source-map-explorer`, import each `lucide-react-native` icon on its own.
-- 🟡 **Memoize `LineChart` math.** Don't rebuild SVG paths every render. Downsample above 200 points.
-- 🟡 **Hoist the 90 inline `style={{…}}` objects** (or use NativeWind) so list rows stop re-rendering.
-- 🟡 **Try `reactCompiler`** in `app.json`. Measure re-renders.
+- 🟡 **`app/workout/[id].tsx` as a `FlatList`.** Skipped on purpose: a workout is about 5 to 15 exercise cards, and edit mode has a `TextInput` in every set row, which a virtualized list would unmount while scrolling. Revisit only if long workouts stutter. (Custom exercises already uses `FlatList`.)
+- 🟡 **`reactCompiler` in `app.json`.** Tried, left off: it works (the bundle builds), but Hermes bytecode grew from 4.0 MB to 5.0 MB and I couldn't measure re-renders without a device. `SetRow` and `ExerciseBlock` are now hand-memoized, which covers the hot path. To retry: `npx expo install babel-plugin-react-compiler`, set `experiments.reactCompiler`, profile a 10-exercise workout on the phone.
 
 ---
 
@@ -349,6 +342,16 @@ You marked these as "skip for now." They stay on the list so they aren't lost.
 ---
 
 ## ✅ Done
+
+**Speed round** (passed typecheck, lint and `npm test`; not profiled on a device)
+- [x] Workout screen: `SetRow` and `ExerciseBlock` are wrapped in `React.memo`. Every handler now takes the exercise/set id, so the screen passes the same stable functions to all blocks and only the row you edit re-renders. The hook's `addSet`, `removeSet`, `addWarmups`, `togglePerHand`, `swapExercise`, `removeExercise`, `addExercise` read `latestRef` instead of `session`, so they stay stable too.
+- [x] The per-block menu and notes modals, and the per-set type sheet, only mount while open (they used to sit in the tree for every row). Side effect: they no longer play the close animation.
+- [x] `train.tsx` 34.7 KB to 17.7 KB: the idle screen (programs, history, boxing resume, readiness) moved to `src/components/train/TrainIdle.tsx`. Session cache helpers moved from `useWorkoutSession.ts` to `src/utils/sessionCache.ts` (the hook itself is still 29 KB; it is one hook and splitting it wouldn't cut re-renders).
+- [x] Train's startup reads: `WeeklyGoal` and `WeekStrip` each ran their own focus query; now one focus load feeds both. (`getLastUsedDatesByDay` and the streak aren't read on Train; the old note was out of date.)
+- [x] Splash stays up until fonts and the database are ready (`expo-splash-screen`, `app/_layout.tsx`). **Needs a new dev-client build**: it's a new native module.
+- [x] Bundle: Hermes bytecode was already on. Barrel-importing `lucide-react-native` pulled in all 1,713 icons; `src/icons.js` now exports only the 50 used, wired through a `tsconfig` path. Android bytecode 5.2 MB to 4.0 MB. To use a new icon, add a line to `src/icons.js` and `src/icons.d.ts`.
+- [x] `LineChart`: path and tick math are in `useMemo`, the component is `React.memo`, and series over 200 points are downsampled.
+- [x] Hoisted the static inline `style={{…}}` objects in `SetRow`, `ExerciseBlock`, `AddExerciseSheet` and `custom-exercises`. About 60 remain in one-off screens, not list rows.
 
 **Look & feel round** (passed typecheck, lint and `npm test`)
 - [x] Haptics: set done, PR (delayed success buzz) and rest end (double thump) feel different. Ticks at 10 s and 5 s left in rest. Settings > Haptics is Off / Normal / Strong. iOS can't read the system "reduce haptics" switch from JS, so the in-app level is the control.

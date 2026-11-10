@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
 import {
   Montserrat_400Regular,
   Montserrat_500Medium,
@@ -16,7 +17,7 @@ import {
 import { initializeDatabase } from "../src/db/database";
 import { deleteUnfinishedWorkouts, purgeDeletedExercises } from "../src/db/workoutQueries";
 import { removeOrphanPhotos } from "../src/utils/photoFiles";
-import { loadCachedSession } from "../src/hooks/useWorkoutSession";
+import { loadCachedSession } from "../src/utils/sessionCache";
 import { loadHapticsSetting } from "../src/utils/haptics";
 import { loadTheme } from "../src/utils/theme";
 import { Platform, UIManager, View, Text, TouchableOpacity, Share } from "react-native";
@@ -25,6 +26,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 if (Platform.OS === "android") {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
 }
+
+SplashScreen.preventAutoHideAsync().catch(() => {}); // keep the native splash up until fonts and the database are ready
 
 type Boot = { status: "loading" } | { status: "ready" } | { status: "error"; message: string };
 
@@ -62,6 +65,11 @@ export default function RootLayout() {
     return () => { cancelled = true; };
   }, [attempt]);
 
+  const ready = fontsLoaded && state.status === "ready";
+  useEffect(() => {
+    if (ready || state.status === "error") SplashScreen.hide();
+  }, [ready, state.status]);
+
   if (state.status === "error") {
     return (
       <SafeAreaProvider>
@@ -89,13 +97,7 @@ export default function RootLayout() {
     );
   }
 
-  if (!fontsLoaded || state.status !== "ready") {
-    return (
-      <SafeAreaProvider>
-        <View className="flex-1 bg-obsidian dark:bg-zinc-950" />
-      </SafeAreaProvider>
-    );
-  }
+  if (!ready) return null; // the splash is still showing
 
   return (
     <SafeAreaProvider>

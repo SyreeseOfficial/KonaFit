@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { AppState, Alert } from "react-native";
 import { useFocusEffect } from "expo-router";
-import { kvStore } from "../utils/kvStore";
 import { haptics } from "../utils/haptics";
 import type { ActiveSession, ActiveExercise, ActiveSet, SetPatch } from "../types/workout";
 import {
@@ -32,53 +31,11 @@ import * as R from "../utils/sessionReducers";
 import { warmupRamp } from "../utils/training";
 import { ghostExtra, copyFields } from "../utils/setFields";
 import { APP_VERSION } from "../utils/appVersion";
-
-const SESSION_KEY = "@konafit_active_session_v1";
-const OLD_SESSION_KEY = "@kinetic_active_session"; // pre-versioning format; never read, just cleaned up
-// Local ids must stay unique across app restarts (a resumed session keeps its old ids), so no per-run counter.
-let localIdFallback = 0;
-const uid = () =>
-  `local_${globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}_${++localIdFallback}`}`;
+import { uid, defaultSet, saveToStorage } from "../utils/sessionCache";
 
 // Write the order the user sees (array position) to the DB in one transaction.
 const persistOrder = (exercises: ActiveExercise[]) =>
   setLoggedExerciseOrder(exercises.flatMap((e) => (e.dbId != null ? [e.dbId] : []))).catch(console.error);
-
-function defaultSet(setNumber: number): ActiveSet {
-  return {
-    localId: uid(),
-    setNumber,
-    weightLbs: "",
-    reps: "",
-    rpe: "",
-    notes: "",
-    isWarmup: false,
-    isCompleted: false,
-  };
-}
-
-async function saveToStorage(session: ActiveSession | null) {
-  if (session) {
-    await kvStore.setItem(SESSION_KEY, R.serializeSession(session));
-  } else {
-    await kvStore.removeItem(SESSION_KEY);
-  }
-}
-
-export async function loadCachedSession(): Promise<ActiveSession | null> {
-  try {
-    await kvStore.removeItem(OLD_SESSION_KEY);
-    return R.parseSession(await kvStore.getItem(SESSION_KEY));
-  } catch {
-    return null;
-  }
-}
-
-/** Throw away a saved session the user chose not to resume: its half-finished workout and the saved copy. */
-export async function discardCachedSession(cached: ActiveSession): Promise<void> {
-  await deleteWorkout(cached.workoutId);
-  await saveToStorage(null);
-}
 
 export function useWorkoutSession() {
   const [session, setSession] = useState<ActiveSession | null>(null);
@@ -210,6 +167,7 @@ export function useWorkoutSession() {
 
   const addExercise = useCallback(
     async (exerciseId: number, exerciseName: string, muscleGroup: string) => {
+      const session = latestRef.current; // read the ref, not state, so this callback stays stable across edits
       if (!session) return;
       const orderIndex = session.exercises.length;
       const dbId = await createLoggedExercise(
@@ -270,11 +228,12 @@ export function useWorkoutSession() {
         exercises: [...prev.exercises, newExercise],
       }));
     },
-    [session, updateSession]
+    [updateSession]
   );
 
   const addExerciseAsSuperset = useCallback(
     async (targetLocalId: string, exerciseId: number, exerciseName: string, muscleGroup: string) => {
+      const session = latestRef.current; // read the ref, not state, so this callback stays stable across edits
       if (!session) return;
       const target = session.exercises.find((e) => e.localId === targetLocalId);
       if (!target?.dbId) return;
@@ -333,11 +292,12 @@ export function useWorkoutSession() {
         return next;
       });
     },
-    [session, updateSession]
+    [updateSession]
   );
 
   const addSet = useCallback(
     async (exerciseLocalId: string) => {
+      const session = latestRef.current; // read the ref, not state, so this callback stays stable across edits
       const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
       if (!exercise?.dbId) return;
       const setNumber = exercise.sets.length + 1;
@@ -356,11 +316,12 @@ export function useWorkoutSession() {
         ),
       }));
     },
-    [session, updateSession]
+    [updateSession]
   );
 
   const removeSet = useCallback(
     async (exerciseLocalId: string, setLocalId: string) => {
+      const session = latestRef.current; // read the ref, not state, so this callback stays stable across edits
       const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
       const index = exercise ? exercise.sets.findIndex((s) => s.localId === setLocalId) : -1;
       if (!exercise || index === -1) return;
@@ -382,7 +343,7 @@ export function useWorkoutSession() {
         },
       });
     },
-    [session, updateSession]
+    [updateSession]
   );
 
   const updateSet = useCallback(
@@ -453,6 +414,7 @@ export function useWorkoutSession() {
   /** `count` ramp sets from the heaviest working weight entered (or last time's). Returns false when there's no weight to build from. */
   const addWarmups = useCallback(
     async (exerciseLocalId: string, count = 3): Promise<boolean> => {
+      const session = latestRef.current; // read the ref, not state, so this callback stays stable across edits
       const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
       if (!exercise?.dbId) return false;
       const weights = [
@@ -479,11 +441,12 @@ export function useWorkoutSession() {
       });
       return true;
     },
-    [session, updateSession]
+    [updateSession]
   );
 
   const togglePerHand = useCallback(
     (exerciseLocalId: string) => {
+      const session = latestRef.current; // read the ref, not state, so this callback stays stable across edits
       const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
       if (!exercise) return;
       const perHand = !exercise.perHand;
@@ -493,7 +456,7 @@ export function useWorkoutSession() {
         exercises: prev.exercises.map((e) => (e.exerciseId === exercise.exerciseId ? { ...e, perHand } : e)),
       }));
     },
-    [session, updateSession]
+    [updateSession]
   );
 
   // Re-evaluate PR badges for an already-completed set after its values were edited.
@@ -609,6 +572,7 @@ export function useWorkoutSession() {
 
   const swapExercise = useCallback(
     async (exerciseLocalId: string, newExerciseId: number, newExerciseName: string, newMuscleGroup: string) => {
+      const session = latestRef.current; // read the ref, not state, so this callback stays stable across edits
       const exercise = session?.exercises.find((e) => e.localId === exerciseLocalId);
       if (!exercise?.dbId) return;
       await swapLoggedExercise(exercise.dbId, newExerciseId, newExerciseName);
@@ -630,11 +594,12 @@ export function useWorkoutSession() {
         })
       );
     },
-    [session, updateSession]
+    [updateSession]
   );
 
   const removeExercise = useCallback(
     async (exerciseLocalId: string) => {
+      const session = latestRef.current; // read the ref, not state, so this callback stays stable across edits
       const index = session ? session.exercises.findIndex((e) => e.localId === exerciseLocalId) : -1;
       if (!session || index === -1) return;
       const exercise = session.exercises[index];
@@ -666,7 +631,7 @@ export function useWorkoutSession() {
         },
       });
     },
-    [session, updateSession]
+    [updateSession]
   );
 
   const launchFromExercises = useCallback(async (

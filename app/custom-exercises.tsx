@@ -113,7 +113,7 @@ function EditModal({
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
+        style={FILL}
       >
         <Pressable className="flex-1 bg-black/50 justify-end" onPress={onClose}>
           <Pressable>
@@ -130,7 +130,7 @@ function EditModal({
               <ScrollView
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={{ padding: 20, paddingBottom: 8, gap: 20 }}
-                style={{ flexShrink: 1 }}
+                style={SHRINK}
               >
                 <View>
                   <Text className="font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase mb-2">
@@ -149,7 +149,7 @@ function EditModal({
                   <Text className="font-montserrat-semibold text-text-muted dark:text-zinc-500 text-xs tracking-widest uppercase mb-2">
                     Target Type
                   </Text>
-                  <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                  <View className="flex-row flex-wrap" style={GAP_8}>
                     {TARGET_TYPES.map((t) => (
                       <TouchableOpacity
                         key={t.key}
@@ -174,7 +174,7 @@ function EditModal({
                       </Text>
                     )}
                   </View>
-                  <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                  <View className="flex-row flex-wrap" style={GAP_8}>
                     {MUSCLE_GROUPS.map((mg) => (
                       <TouchableOpacity
                         key={mg}
@@ -199,7 +199,7 @@ function EditModal({
                       </Text>
                     )}
                   </View>
-                  <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                  <View className="flex-row flex-wrap" style={GAP_8}>
                     {EQUIPMENT_TYPES.map((eq) => (
                       <TouchableOpacity
                         key={eq}
@@ -245,6 +245,11 @@ function EditModal({
     </Modal>
   );
 }
+
+const FILL = { flex: 1 } as const;
+const SHRINK = { flexShrink: 1 } as const;
+const GAP_8 = { gap: 8 } as const;
+const GAP_16 = { gap: 16 } as const;
 
 export default function CustomExercisesScreen() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -326,7 +331,7 @@ export default function CustomExercisesScreen() {
                 <Text className="font-mono text-text-muted dark:text-zinc-500 text-sm">{item.equipment_type}</Text>
               ) : null}
             </View>
-            <View className="flex-row items-center" style={{ gap: 16 }}>
+            <View className="flex-row items-center" style={GAP_16}>
               <TouchableOpacity
                 onPress={() => setEditingExercise(item)}
                 hitSlop={8}

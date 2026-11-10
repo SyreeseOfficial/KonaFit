@@ -1,21 +1,23 @@
 import { useState, useCallback } from "react";
 import { View, Text } from "react-native";
 import { useFocusEffect } from "expo-router";
-import { getWorkoutsThisWeek } from "../../db/statsQueries";
+import { getWorkoutsThisWeek, getActivityDays, weekStartSecs } from "../../db/statsQueries";
+import { WeekStrip } from "./WeekStrip";
 import { getWeeklyGoal } from "../../utils/settings";
 
-/** "2 / 4 this week" with a progress bar; the goal itself is set in Settings. */
+/** "2 / 4 this week" with a progress bar, plus the week strip; one focus load feeds both. The goal itself is set in Settings. */
 export function WeeklyGoal() {
-  const [week, setWeek] = useState<{ done: number; goal: number } | null>(null);
+  const [week, setWeek] = useState<{ done: number; goal: number; days: Record<string, { lift: boolean; boxing: boolean }> } | null>(null);
 
   useFocusEffect(useCallback(() => {
-    Promise.all([getWorkoutsThisWeek(), getWeeklyGoal()])
-      .then(([done, goal]) => setWeek({ done, goal }))
+    Promise.all([getWorkoutsThisWeek(), getWeeklyGoal(), getActivityDays(weekStartSecs())])
+      .then(([done, goal, days]) => setWeek({ done, goal, days }))
       .catch(console.error);
   }, []));
 
   if (!week) return null;
   return (
+    <>
     <View className="mx-5 mb-4">
       <Text className="font-mono text-text-secondary dark:text-zinc-400 text-xs">
         {week.done} / {week.goal} this week
@@ -27,5 +29,7 @@ export function WeeklyGoal() {
         />
       </View>
     </View>
+    <WeekStrip days={week.days} />
+    </>
   );
 }

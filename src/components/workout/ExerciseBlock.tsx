@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { memo, useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,8 @@ import { ExerciseHint } from "./ExerciseHint";
 import type { ActiveExercise, SetPatch } from "../../types/workout";
 import { columnsFor, FIELD_META } from "../../utils/setFields";
 
+const NOTES_KAV = { flex: 1, justifyContent: "flex-end" } as const;
+
 type Props = {
   isCurrent?: boolean;
   exercise: ActiveExercise;
@@ -26,34 +28,35 @@ type Props = {
   reorderMode?: boolean;
   canMoveUp?: boolean;
   canMoveDown?: boolean;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
-  onAddSet: () => void;
-  onRemoveSet: (setLocalId: string) => void;
-  onUpdateSet: (setLocalId: string, patch: SetPatch) => void;
-  onCopyLastToAll: () => void;
-  onApplySuggestion: (weight: number, reps: number) => void;
-  onAddWarmups: (count: number) => void;
-  onTogglePerHand: () => void;
-  onToggleDone: () => void;
-  onCommitSetEdit: (setLocalId: string) => void;
-  onToggleComplete: (setLocalId: string) => void;
-  onToggleWarmup: (setLocalId: string) => void;
-  onUpdateNotes: (notes: string, saveAsDefault: boolean) => void;
-  onRemoveExercise: () => void;
-  onSwap: () => void;
-  onAddSuperset?: () => void;
+  hasSuperset?: boolean; // show "Superset with…" in the menu
+  // Every handler takes this exercise's localId first, so the screen can pass the same stable functions to every block (keeps memo() effective).
+  onMove: (exerciseLocalId: string, dir: "up" | "down") => void;
+  onAddSet: (exerciseLocalId: string) => void;
+  onRemoveSet: (exerciseLocalId: string, setLocalId: string) => void;
+  onUpdateSet: (exerciseLocalId: string, setLocalId: string, patch: SetPatch) => void;
+  onCopyLastToAll: (exerciseLocalId: string) => void;
+  onApplySuggestion: (exerciseLocalId: string, weight: number, reps: number) => void;
+  onAddWarmups: (exerciseLocalId: string, count: number) => void;
+  onTogglePerHand: (exerciseLocalId: string) => void;
+  onToggleDone: (exerciseLocalId: string) => void;
+  onCommitSetEdit: (exerciseLocalId: string, setLocalId: string) => void;
+  onToggleComplete: (exerciseLocalId: string, setLocalId: string) => void;
+  onToggleWarmup: (exerciseLocalId: string, setLocalId: string) => void;
+  onUpdateNotes: (exerciseLocalId: string, notes: string, saveAsDefault: boolean) => void;
+  onRemoveExercise: (exerciseLocalId: string) => void;
+  onSwap: (exerciseLocalId: string) => void;
+  onAddSuperset: (exerciseLocalId: string) => void;
 };
 
-export function ExerciseBlock({
+export const ExerciseBlock = memo(function ExerciseBlock({
   isCurrent = false,
   exercise,
   supersetId,
   reorderMode = false,
   canMoveUp = false,
   canMoveDown = false,
-  onMoveUp,
-  onMoveDown,
+  hasSuperset = false,
+  onMove,
   onAddSet,
   onRemoveSet,
   onUpdateSet,
@@ -85,6 +88,17 @@ export function ExerciseBlock({
   const firstInputs = useRef<Record<string, TextInput | null>>({}); // first field of each row, for the "Next" key
   const [notesText, setNotesText] = useState(exercise.notes);
   const [saveAsDefault, setSaveAsDefault] = useState(false);
+  const exId = exercise.localId;
+
+  // One stable function per row action, shared by every SetRow so unchanged rows skip rendering.
+  const rowUpdate = useCallback((setId: string, patch: SetPatch) => onUpdateSet(exId, setId, patch), [onUpdateSet, exId]);
+  const rowCommit = useCallback((setId: string) => onCommitSetEdit(exId, setId), [onCommitSetEdit, exId]);
+  const rowToggle = useCallback((setId: string) => onToggleComplete(exId, setId), [onToggleComplete, exId]);
+  const rowWarmup = useCallback((setId: string) => onToggleWarmup(exId, setId), [onToggleWarmup, exId]);
+  const rowRemove = useCallback((setId: string) => onRemoveSet(exId, setId), [onRemoveSet, exId]);
+  const registerFirst = useCallback((setId: string, input: TextInput | null) => { firstInputs.current[setId] = input; }, []);
+  const focusRow = useCallback((setId: string) => firstInputs.current[setId]?.focus(), []);
+  const applySuggestion = useCallback((w: number, r: number) => onApplySuggestion(exId, w, r), [onApplySuggestion, exId]);
 
   const doneCount = exercise.sets.filter((s) => s.isCompleted).length;
   const setsDone = exercise.sets.length > 0 && doneCount === exercise.sets.length;
@@ -128,7 +142,7 @@ export function ExerciseBlock({
         {reorderMode ? (
           <View className="flex-row gap-1 ml-2">
             <TouchableOpacity
-              onPress={onMoveUp}
+              onPress={() => onMove(exId, "up")}
               disabled={!canMoveUp}
               className={`w-9 h-9 items-center justify-center bg-surface-2 dark:bg-zinc-800 rounded-xl ${!canMoveUp ? "opacity-30" : ""}`}
               activeOpacity={0.7}
@@ -136,7 +150,7 @@ export function ExerciseBlock({
               <ArrowUp size={16} color="#64748B" />
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={onMoveDown}
+              onPress={() => onMove(exId, "down")}
               disabled={!canMoveDown}
               className={`w-9 h-9 items-center justify-center bg-surface-2 dark:bg-zinc-800 rounded-xl ${!canMoveDown ? "opacity-30" : ""}`}
               activeOpacity={0.7}
@@ -150,7 +164,7 @@ export function ExerciseBlock({
             onPress={() => {
               haptics.tap();
               if (!exercise.isDone) { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setCollapsed(true); }
-              onToggleDone();
+              onToggleDone(exId);
             }}
             disabled={setsDone}
             hitSlop={8}
@@ -179,7 +193,7 @@ export function ExerciseBlock({
       {/* ── Expanded content ─────────────────────────────────── */}
       {!collapsed && (
         <>
-          <ExerciseHint exercise={exercise} onApply={onApplySuggestion} />
+          <ExerciseHint exercise={exercise} onApply={applySuggestion} />
 
           {/* Column headers */}
           <View className="flex-row items-center px-3 pt-1 pb-2">
@@ -203,13 +217,14 @@ export function ExerciseBlock({
               prevSet={exercise.sets[i - 1]}
               isNext={isCurrent && i === exercise.sets.findIndex((x) => !x.isCompleted)}
               ghost={exercise.ghostSets.find((g) => g.setNumber === set.setNumber)}
-              onUpdate={(patch) => onUpdateSet(set.localId, patch)}
-              onCommitEdit={() => onCommitSetEdit(set.localId)}
-              onToggleComplete={() => onToggleComplete(set.localId)}
-              onToggleWarmup={() => onToggleWarmup(set.localId)}
-              onRemove={() => onRemoveSet(set.localId)}
-              firstRef={(r) => { firstInputs.current[set.localId] = r; }}
-              onNextRow={exercise.sets[i + 1] ? () => firstInputs.current[exercise.sets[i + 1].localId]?.focus() : undefined}
+              onUpdate={rowUpdate}
+              onCommitEdit={rowCommit}
+              onToggleComplete={rowToggle}
+              onToggleWarmup={rowWarmup}
+              onRemove={rowRemove}
+              firstRef={registerFirst}
+              nextRowId={exercise.sets[i + 1]?.localId}
+              onFocusRow={focusRow}
             />
           ))}
 
@@ -229,7 +244,7 @@ export function ExerciseBlock({
 
           {/* Footer */}
           <View className="flex-row items-center px-3 py-3 border-t border-surface-2 dark:border-zinc-800 gap-2">
-            <TouchableOpacity onPress={onAddSet} className="flex-1 flex-row items-center justify-center gap-1.5 h-11 rounded-xl bg-surface-2 dark:bg-zinc-800" activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => onAddSet(exId)} className="flex-1 flex-row items-center justify-center gap-1.5 h-11 rounded-xl bg-surface-2 dark:bg-zinc-800" activeOpacity={0.7}>
               <PlusCircle size={16} color="#64748B" />
               <Text className="font-montserrat-semibold text-text-secondary dark:text-zinc-400 text-sm">Add set</Text>
             </TouchableOpacity>
@@ -238,11 +253,11 @@ export function ExerciseBlock({
               <History size={18} color="#64748B" />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={onSwap} accessibilityLabel="Swap exercise" className="w-11 h-11 items-center justify-center" activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => onSwap(exId)} accessibilityLabel="Swap exercise" className="w-11 h-11 items-center justify-center" activeOpacity={0.7}>
               <ArrowLeftRight size={18} color="#64748B" />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => setMenuOpen(true)} accessibilityLabel="More actions" className="w-11 h-11 items-center justify-center" activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => { setWarmupPickOpen(false); setMenuOpen(true); }} accessibilityLabel="More actions" className="w-11 h-11 items-center justify-center" activeOpacity={0.7}>
               <MoreHorizontal size={20} color="#94A3B8" />
             </TouchableOpacity>
           </View>
@@ -250,7 +265,7 @@ export function ExerciseBlock({
       )}
 
       {/* ── Context menu ─────────────────────────────────────── */}
-      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)} onShow={() => setWarmupPickOpen(false)}>
+      {menuOpen && <Modal visible transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
         <Pressable className="flex-1 bg-black/50 justify-end" onPress={() => setMenuOpen(false)}>
           <Pressable>
             <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl pb-10">
@@ -282,7 +297,7 @@ export function ExerciseBlock({
                   {[1, 2, 3, 4].map((n) => (
                     <TouchableOpacity
                       key={n}
-                      onPress={() => { setMenuOpen(false); setWarmupPickOpen(false); onAddWarmups(n); }}
+                      onPress={() => { setMenuOpen(false); setWarmupPickOpen(false); onAddWarmups(exId, n); }}
                       className="w-11 h-11 items-center justify-center rounded-full bg-surface-2 dark:bg-zinc-800"
                       activeOpacity={0.7}
                     >
@@ -292,7 +307,7 @@ export function ExerciseBlock({
                 </View>
               )}
               <TouchableOpacity
-                onPress={() => { setMenuOpen(false); onTogglePerHand(); }}
+                onPress={() => { setMenuOpen(false); onTogglePerHand(exId); }}
                 className="px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
                 activeOpacity={0.7}
               >
@@ -301,15 +316,15 @@ export function ExerciseBlock({
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => { setMenuOpen(false); onCopyLastToAll(); }}
+                onPress={() => { setMenuOpen(false); onCopyLastToAll(exId); }}
                 className="px-5 py-4 border-b border-surface-2 dark:border-zinc-800"
                 activeOpacity={0.7}
               >
                 <Text className="font-montserrat-semibold text-text-primary dark:text-white text-base">Copy last set to all</Text>
               </TouchableOpacity>
-              {onAddSuperset && (
+              {hasSuperset && (
                 <TouchableOpacity
-                  onPress={() => { setMenuOpen(false); onAddSuperset(); }}
+                  onPress={() => { setMenuOpen(false); onAddSuperset(exId); }}
                   className="px-5 py-4 border-b border-surface-2 dark:border-zinc-800 flex-row items-center gap-3"
                   activeOpacity={0.7}
                 >
@@ -318,7 +333,7 @@ export function ExerciseBlock({
                 </TouchableOpacity>
               )}
               <TouchableOpacity
-                onPress={() => { setMenuOpen(false); haptics.warn(); onRemoveExercise(); }}
+                onPress={() => { setMenuOpen(false); haptics.warn(); onRemoveExercise(exId); }}
                 className="px-5 py-4"
                 activeOpacity={0.5}
               >
@@ -327,14 +342,14 @@ export function ExerciseBlock({
             </View>
           </Pressable>
         </Pressable>
-      </Modal>
+      </Modal>}
 
       {/* ── Notes modal ──────────────────────────────────────── */}
-      <Modal visible={notesOpen} transparent animationType="slide" onRequestClose={() => setNotesOpen(false)}>
+      {notesOpen && <Modal visible transparent animationType="slide" onRequestClose={() => setNotesOpen(false)}>
         <Pressable className="flex-1 bg-black/50" onPress={() => setNotesOpen(false)}>
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={{ flex: 1, justifyContent: "flex-end" }}
+            style={NOTES_KAV}
           >
             <Pressable>
               <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl pb-10 px-5 pt-5">
@@ -358,7 +373,7 @@ export function ExerciseBlock({
                   <Switch value={saveAsDefault} onValueChange={setSaveAsDefault} />
                 </View>
                 <TouchableOpacity
-                  onPress={() => { haptics.tap(); onUpdateNotes(notesText, saveAsDefault); setNotesOpen(false); }}
+                  onPress={() => { haptics.tap(); onUpdateNotes(exId, notesText, saveAsDefault); setNotesOpen(false); }}
                   className="mt-3 bg-crimson dark:bg-blue-500 py-4 items-center rounded-2xl"
                   activeOpacity={0.85}
                 >
@@ -370,7 +385,7 @@ export function ExerciseBlock({
             </Pressable>
           </KeyboardAvoidingView>
         </Pressable>
-      </Modal>
+      </Modal>}
     </View>
   );
-}
+});

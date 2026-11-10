@@ -198,6 +198,10 @@ type Props = {
   multiSelect?: boolean;
 };
 
+const FULL_WIDTH = { width: "100%" } as const;
+const SPINNER = { marginTop: 32 } as const;
+const EMPTY_BOX = { alignItems: "center", marginTop: 48, paddingHorizontal: 24 } as const;
+
 export function AddExerciseSheet({ visible, onClose, onSelect, multiSelect = false }: Props) {
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>("search");
@@ -278,7 +282,7 @@ export function AddExerciseSheet({ visible, onClose, onSelect, multiSelect = fal
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable className="flex-1 bg-black/50 justify-end" onPress={onClose}>
-        <Pressable style={{ width: "100%" }}>
+        <Pressable style={FULL_WIDTH}>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
             <View className="bg-surface dark:bg-zinc-900 rounded-t-3xl overflow-hidden" style={{ height: screenHeight * 0.88 }}>
 
@@ -340,7 +344,7 @@ export function AddExerciseSheet({ visible, onClose, onSelect, multiSelect = fal
 
                   <View className="flex-1">
                     {loading ? (
-                      <ActivityIndicator color="#2563EB" style={{ marginTop: 32 }} />
+                      <ActivityIndicator color="#2563EB" style={SPINNER} />
                     ) : (
                       <FlatList
                         data={results}
@@ -355,7 +359,7 @@ export function AddExerciseSheet({ visible, onClose, onSelect, multiSelect = fal
                           />
                         )}
                         ListEmptyComponent={
-                          <View style={{ alignItems: "center", marginTop: 48, paddingHorizontal: 24 }}>
+                          <View style={EMPTY_BOX}>
                             <Text className="font-montserrat text-text-muted dark:text-zinc-500 text-sm text-center">
                               {query || muscleFilter || equipFilter
                                 ? "No exercises match your search"

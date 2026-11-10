@@ -1,20 +1,12 @@
-import { useState, useCallback } from "react";
 import { View, Text } from "react-native";
-import { useFocusEffect } from "expo-router";
-import { getActivityDays, weekStartSecs } from "../../db/statsQueries";
+import { weekStartSecs } from "../../db/statsQueries";
 import { localDateKey } from "../../utils/time";
 import { BOXING_DOT } from "../../utils/theme";
 
 const LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
 /** Monday to Sunday of this week; a blue dot for a lifting day, an orange one for boxing, both when both. */
-export function WeekStrip() {
-  const [days, setDays] = useState<Record<string, { lift: boolean; boxing: boolean }>>({});
-
-  useFocusEffect(useCallback(() => {
-    getActivityDays(weekStartSecs()).then(setDays).catch(console.error);
-  }, []));
-
+export function WeekStrip({ days }: { days: Record<string, { lift: boolean; boxing: boolean }> }) {
   const start = new Date(weekStartSecs() * 1000);
   const today = localDateKey(new Date());
   return (

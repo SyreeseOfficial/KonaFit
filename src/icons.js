@@ -1,0 +1,54 @@
+// Only the icons the app uses. Importing "lucide-react-native" directly pulls in all ~1700 icon modules
+// (about 1.3 MB of source, evaluated at startup). tsconfig "paths" points that package name here for both
+// TypeScript and Metro. The files are reached by relative path because the package's "exports" blocks deep imports.
+// To use a new icon: add a line here.
+export { default as Archive } from "../node_modules/lucide-react-native/dist/esm/icons/archive.mjs";
+export { default as ArchiveRestore } from "../node_modules/lucide-react-native/dist/esm/icons/archive-restore.mjs";
+export { default as ArrowDown } from "../node_modules/lucide-react-native/dist/esm/icons/arrow-down.mjs";
+export { default as ArrowLeftRight } from "../node_modules/lucide-react-native/dist/esm/icons/arrow-left-right.mjs";
+export { default as ArrowUp } from "../node_modules/lucide-react-native/dist/esm/icons/arrow-up.mjs";
+export { default as ArrowUpDown } from "../node_modules/lucide-react-native/dist/esm/icons/arrow-up-down.mjs";
+export { default as ArrowUpRight } from "../node_modules/lucide-react-native/dist/esm/icons/arrow-up-right.mjs";
+export { default as BarChart2 } from "../node_modules/lucide-react-native/dist/esm/icons/chart-no-axes-column.mjs";
+export { default as Calculator } from "../node_modules/lucide-react-native/dist/esm/icons/calculator.mjs";
+export { default as Calendar } from "../node_modules/lucide-react-native/dist/esm/icons/calendar.mjs";
+export { default as Camera } from "../node_modules/lucide-react-native/dist/esm/icons/camera.mjs";
+export { default as Check } from "../node_modules/lucide-react-native/dist/esm/icons/check.mjs";
+export { default as CheckCircle } from "../node_modules/lucide-react-native/dist/esm/icons/circle-check-big.mjs";
+export { default as ChevronDown } from "../node_modules/lucide-react-native/dist/esm/icons/chevron-down.mjs";
+export { default as ChevronLeft } from "../node_modules/lucide-react-native/dist/esm/icons/chevron-left.mjs";
+export { default as ChevronRight } from "../node_modules/lucide-react-native/dist/esm/icons/chevron-right.mjs";
+export { default as ChevronUp } from "../node_modules/lucide-react-native/dist/esm/icons/chevron-up.mjs";
+export { default as Clock } from "../node_modules/lucide-react-native/dist/esm/icons/clock.mjs";
+export { default as Copy } from "../node_modules/lucide-react-native/dist/esm/icons/copy.mjs";
+export { default as Download } from "../node_modules/lucide-react-native/dist/esm/icons/download.mjs";
+export { default as Dumbbell } from "../node_modules/lucide-react-native/dist/esm/icons/dumbbell.mjs";
+export { default as Eye } from "../node_modules/lucide-react-native/dist/esm/icons/eye.mjs";
+export { default as EyeOff } from "../node_modules/lucide-react-native/dist/esm/icons/eye-off.mjs";
+export { default as FileText } from "../node_modules/lucide-react-native/dist/esm/icons/file-text.mjs";
+export { default as History } from "../node_modules/lucide-react-native/dist/esm/icons/history.mjs";
+export { default as Link } from "../node_modules/lucide-react-native/dist/esm/icons/link.mjs";
+export { default as MapPin } from "../node_modules/lucide-react-native/dist/esm/icons/map-pin.mjs";
+export { default as Minus } from "../node_modules/lucide-react-native/dist/esm/icons/minus.mjs";
+export { default as MoreHorizontal } from "../node_modules/lucide-react-native/dist/esm/icons/ellipsis.mjs";
+export { default as Pause } from "../node_modules/lucide-react-native/dist/esm/icons/pause.mjs";
+export { default as Pencil } from "../node_modules/lucide-react-native/dist/esm/icons/pencil.mjs";
+export { default as Play } from "../node_modules/lucide-react-native/dist/esm/icons/play.mjs";
+export { default as Plus } from "../node_modules/lucide-react-native/dist/esm/icons/plus.mjs";
+export { default as PlusCircle } from "../node_modules/lucide-react-native/dist/esm/icons/circle-plus.mjs";
+export { default as Repeat } from "../node_modules/lucide-react-native/dist/esm/icons/repeat.mjs";
+export { default as RotateCcw } from "../node_modules/lucide-react-native/dist/esm/icons/rotate-ccw.mjs";
+export { default as Scale } from "../node_modules/lucide-react-native/dist/esm/icons/scale.mjs";
+export { default as Search } from "../node_modules/lucide-react-native/dist/esm/icons/search.mjs";
+export { default as Settings } from "../node_modules/lucide-react-native/dist/esm/icons/settings.mjs";
+export { default as Settings2 } from "../node_modules/lucide-react-native/dist/esm/icons/settings-2.mjs";
+export { default as SkipForward } from "../node_modules/lucide-react-native/dist/esm/icons/skip-forward.mjs";
+export { default as SlidersHorizontal } from "../node_modules/lucide-react-native/dist/esm/icons/sliders-horizontal.mjs";
+export { default as Square } from "../node_modules/lucide-react-native/dist/esm/icons/square.mjs";
+export { default as Swords } from "../node_modules/lucide-react-native/dist/esm/icons/swords.mjs";
+export { default as Timer } from "../node_modules/lucide-react-native/dist/esm/icons/timer.mjs";
+export { default as Trash2 } from "../node_modules/lucide-react-native/dist/esm/icons/trash-2.mjs";
+export { default as TrendingUp } from "../node_modules/lucide-react-native/dist/esm/icons/trending-up.mjs";
+export { default as Trophy } from "../node_modules/lucide-react-native/dist/esm/icons/trophy.mjs";
+export { default as X } from "../node_modules/lucide-react-native/dist/esm/icons/x.mjs";
+export { default as Zap } from "../node_modules/lucide-react-native/dist/esm/icons/zap.mjs";
