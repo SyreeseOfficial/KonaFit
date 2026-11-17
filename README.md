@@ -14,7 +14,7 @@ An ultra-modern, minimal, and high-performance workout tracking application buil
 
 ## 🛠️ System Architecture & Tech Stack
 
-This repository utilizes a multi-file documentation context strategy to keep builds modular and highly focused.
+Project rules and map: see `AGENTS.md`. Export format: `docs/export-schema.md`.
 
 * **Framework:** Expo (React Native) — Cross-platform iOS/Android
 * **Database:** Expo SQLite — Fully local, relational, zero-backend
